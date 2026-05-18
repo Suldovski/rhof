@@ -165,8 +165,8 @@ async function importFromFile(file: File): Promise<void> {
   };
   console.info("[import] mapeamento de colunas:", col);
 
-  if (col.name < 0 || col.cpf < 0) {
-    toast.error("Colunas NOME ou CPF não encontradas.");
+  if (col.name < 0) {
+    toast.error("Coluna NOME não encontrada na planilha.");
     return;
   }
 
