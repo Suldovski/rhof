@@ -101,24 +101,18 @@ function RootComponent() {
     }
   }, [auth.currentUserId, isLogin, navigate, pathname]);
 
+  const showShell = !isLogin && !!auth.currentUserId;
   return (
     <QueryClientProvider client={queryClient}>
-      {isLogin || !auth.currentUserId ? (
-        <>
-          <Outlet />
-          <Toaster />
-        </>
-      ) : (
-        <SidebarProvider>
-          <div className="flex min-h-screen w-full bg-background">
-            <AppSidebar />
-            <div className="flex-1 min-w-0">
-              <Outlet />
-            </div>
+      <SidebarProvider>
+        <div className="flex min-h-screen w-full bg-background">
+          {showShell && <AppSidebar />}
+          <div className="flex-1 min-w-0">
+            <Outlet />
           </div>
-          <Toaster />
-        </SidebarProvider>
-      )}
+        </div>
+        <Toaster />
+      </SidebarProvider>
     </QueryClientProvider>
   );
 }
