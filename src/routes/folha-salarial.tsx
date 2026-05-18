@@ -292,9 +292,14 @@ function FolhaSalarial() {
             <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Total geral da folha</p>
             <p className="font-display text-3xl text-foreground">{fmtBRL(totalGeral)}</p>
           </div>
-          <Button size="lg" onClick={exportPDF}>
-            <Download className="mr-1 h-4 w-4" /> Exportar PDF
-          </Button>
+          <div className="flex gap-2">
+            <Button size="lg" variant="outline" onClick={exportPDF}>
+              <Download className="mr-1 h-4 w-4" /> PDF único
+            </Button>
+            <Button size="lg" onClick={exportPerObra}>
+              <Download className="mr-1 h-4 w-4" /> PDF por obra
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </PageShell>
