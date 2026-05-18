@@ -1,20 +1,21 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
 
 export default defineConfig({
-  plugins: [
-    TanStackRouterVite(),
-    react()
-  ],
-  base: '/rhof/',  // ← importante para o GitHub Pages
+  plugins: [react()],
+  base: '/rhof/',
   define: {
-    'import.meta.env.SSR': false,  // Força ambiente browser
+    'process.env.NODE_ENV': '"production"',
   },
-  optimizeDeps: {
-    exclude: ['@tanstack/start-storage-context']  // ← Ignora este pacote
+  resolve: {
+    alias: {
+      // Substitui o módulo problemático por um stub vazio
+      '@tanstack/start-storage-context': '/dev/null'
+    }
   },
-  ssr: {
-    noExternal: [],  // Garante que nada seja tratado como SSR
+  build: {
+    rollupOptions: {
+      external: ['node:async_hooks'],  // Exclui do bundle
+    }
   }
 })
