@@ -9,9 +9,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { useEmployees, type Employee } from "@/lib/employees";
 import { useSites } from "@/lib/sites-store";
-import { payrollStore, usePayroll } from "@/lib/payroll-store";
+import { payrollStore, usePayroll, currentMonth } from "@/lib/payroll-store";
 
 export const Route = createFileRoute("/folha-salarial")({
   head: () => ({ meta: [{ title: "Folha Salarial · Bucagrans RH" }] }),
@@ -21,14 +24,35 @@ export const Route = createFileRoute("/folha-salarial")({
 const fmtBRL = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+const MESES_PT = [
+  "Janeiro","Fevereiro","Março","Abril","Maio","Junho",
+  "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro",
+];
+function monthLabel(m: string): string {
+  const [y, mm] = m.split("-");
+  return `${MESES_PT[parseInt(mm, 10) - 1]} / ${y}`;
+}
+function buildMonthOptions(extra: string[]): string[] {
+  const set = new Set<string>(extra);
+  const now = new Date();
+  for (let i = -6; i <= 6; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    set.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+  }
+  return Array.from(set).sort().reverse();
+}
+
 function FolhaSalarial() {
   const sites = useSites();
   const employees = useEmployees();
   const overrides = usePayroll();
   const [q, setQ] = useState("");
+  const [month, setMonth] = useState<string>(currentMonth());
+  const [exportObra, setExportObra] = useState<string>("__all__");
 
+  const monthMap = overrides[month] ?? {};
   const getValue = (e: Employee) =>
-    overrides[e.id] !== undefined ? overrides[e.id] : e.salary;
+    monthMap[e.id] !== undefined ? monthMap[e.id] : e.salary;
 
   const grouped = useMemo(() => {
     const map = new Map<string, Employee[]>();
@@ -46,7 +70,7 @@ function FolhaSalarial() {
       }
     });
     return Array.from(map.entries());
-  }, [sites, q]);
+  }, [sites, employees, q]);
 
   const totalGeral = useMemo(
     () =>
@@ -54,76 +78,11 @@ function FolhaSalarial() {
         (acc, [, list]) => acc + list.reduce((s, e) => s + getValue(e), 0),
         0,
       ),
-    [grouped, overrides],
+    [grouped, monthMap],
   );
 
-  function exportPDF() {
-    const doc = new jsPDF({ orientation: "landscape" });
-    const today = new Date().toLocaleDateString("pt-BR");
-    doc.setFontSize(16);
-    doc.text("Folha Salarial — Bucagrans RH", 14, 15);
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text(`Emitido em ${today}`, 14, 21);
-
-    let cursorY = 28;
-    let totalPDF = 0;
-
-    grouped.forEach(([siteName, list]) => {
-      if (list.length === 0) return;
-      const subtotal = list.reduce((s, e) => s + getValue(e), 0);
-      totalPDF += subtotal;
-
-      autoTable(doc, {
-        startY: cursorY,
-        head: [[
-          { content: `Obra: ${siteName}`, colSpan: 7, styles: { halign: "left", fillColor: [15, 27, 61], textColor: 255, fontStyle: "bold" } },
-        ]],
-        body: [],
-        theme: "plain",
-        margin: { left: 14, right: 14 },
-      });
-
-      autoTable(doc, {
-        startY: (doc as any).lastAutoTable.finalY,
-        head: [["Matrícula", "Nome", "Função", "Banco", "Ag.", "Conta", "PIX", "Salário"]],
-        body: list.map((e) => [
-          e.id,
-          e.name,
-          e.role,
-          e.bank.bank,
-          e.bank.agency,
-          `${e.bank.account} (${e.bank.type})`,
-          e.bank.pix,
-          fmtBRL(getValue(e)),
-        ]),
-        foot: [[
-          { content: "Subtotal", colSpan: 7, styles: { halign: "right", fontStyle: "bold" } },
-          { content: fmtBRL(subtotal), styles: { fontStyle: "bold" } },
-        ]],
-        styles: { fontSize: 8, cellPadding: 2 },
-        headStyles: { fillColor: [230, 235, 245], textColor: 20 },
-        footStyles: { fillColor: [245, 247, 250], textColor: 20 },
-        margin: { left: 14, right: 14 },
-      });
-
-      cursorY = (doc as any).lastAutoTable.finalY + 6;
-    });
-
-    autoTable(doc, {
-      startY: cursorY + 2,
-      body: [[
-        { content: "TOTAL GERAL", styles: { halign: "right", fontStyle: "bold", fillColor: [15, 27, 61], textColor: 255 } },
-        { content: fmtBRL(totalPDF), styles: { halign: "right", fontStyle: "bold", fillColor: [15, 27, 61], textColor: 255 } },
-      ]],
-      theme: "plain",
-      margin: { left: 14, right: 14 },
-      columnStyles: { 0: { cellWidth: 230 }, 1: { cellWidth: 40 } },
-    });
-
-    doc.save(`folha-salarial-${today.replace(/\//g, "-")}.pdf`);
-    toast.success("PDF gerado.");
-  }
+  const monthOptions = buildMonthOptions(Object.keys(overrides));
+  const mLabel = monthLabel(month);
 
   function buildObraPDF(siteName: string, list: Employee[]) {
     const doc = new jsPDF({ orientation: "landscape" });
@@ -132,7 +91,7 @@ function FolhaSalarial() {
     doc.text(`Folha Salarial — ${siteName}`, 14, 15);
     doc.setFontSize(10);
     doc.setTextColor(100);
-    doc.text(`Bucagrans RH · Emitido em ${today}`, 14, 21);
+    doc.text(`Competência: ${mLabel} · Emitido em ${today}`, 14, 21);
     doc.setTextColor(20);
     const subtotal = list.reduce((s, e) => s + getValue(e), 0);
     autoTable(doc, {
@@ -154,34 +113,41 @@ function FolhaSalarial() {
     return doc;
   }
 
-  function exportPerObra() {
-    const today = new Date().toLocaleDateString("pt-BR").replace(/\//g, "-");
-    let count = 0;
-    grouped.forEach(([siteName, list]) => {
-      if (list.length === 0) return;
-      const doc = buildObraPDF(siteName, list);
-      const safe = siteName.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
-      doc.save(`folha-${safe}-${today}.pdf`);
-      count++;
-    });
-    if (count === 0) toast.error("Nenhuma obra com colaboradores.");
-    else toast.success(`${count} PDF(s) gerado(s) — um por obra.`);
+  function doExport() {
+    const safeMonth = month;
+    if (exportObra === "__all__") {
+      let count = 0;
+      grouped.forEach(([siteName, list]) => {
+        if (list.length === 0) return;
+        const doc = buildObraPDF(siteName, list);
+        const safe = siteName.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+        doc.save(`folha-${safe}-${safeMonth}.pdf`);
+        count++;
+      });
+      if (count === 0) toast.error("Nenhuma obra com colaboradores.");
+      else toast.success(`${count} PDF(s) gerado(s).`);
+      return;
+    }
+    const entry = grouped.find(([n]) => n === exportObra);
+    if (!entry || entry[1].length === 0) {
+      toast.error("Esta obra não tem colaboradores.");
+      return;
+    }
+    const doc = buildObraPDF(entry[0], entry[1]);
+    const safe = entry[0].replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+    doc.save(`folha-${safe}-${safeMonth}.pdf`);
+    toast.success("PDF gerado.");
   }
 
   return (
     <PageShell
       eyebrow="Pagamentos"
       title="Folha Salarial"
-      description="Lance o valor pago a cada colaborador, agrupado por obra, e exporte em PDF."
+      description="Selecione o mês, lance os valores por obra e exporte em PDF."
       actions={
-        <>
-          <Button variant="outline" onClick={exportPDF}>
-            <Download className="mr-1 h-4 w-4" /> PDF único
-          </Button>
-          <Button onClick={exportPerObra}>
-            <Download className="mr-1 h-4 w-4" /> PDF por obra
-          </Button>
-        </>
+        <Button onClick={doExport}>
+          <Download className="mr-1 h-4 w-4" /> Exportar PDF
+        </Button>
       }
     >
       <Card className="mb-4 p-4">
@@ -195,8 +161,34 @@ function FolhaSalarial() {
               className="h-10 border-0 bg-transparent shadow-none focus-visible:ring-0"
             />
           </div>
+
+          <div className="flex flex-col">
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Mês</span>
+            <Select value={month} onValueChange={setMonth}>
+              <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {monthOptions.map((m) => (
+                  <SelectItem key={m} value={m}>{monthLabel(m)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex flex-col">
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Exportar</span>
+            <Select value={exportObra} onValueChange={setExportObra}>
+              <SelectTrigger className="w-[240px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">Todas as obras (um PDF por obra)</SelectItem>
+                {sites.map((s) => (
+                  <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <Badge variant="secondary" className="text-sm">
-            Total geral: <span className="ml-2 font-display">{fmtBRL(totalGeral)}</span>
+            Total {mLabel}: <span className="ml-2 font-display">{fmtBRL(totalGeral)}</span>
           </Badge>
         </div>
       </Card>
@@ -235,7 +227,7 @@ function FolhaSalarial() {
                           <th className="px-4 py-3 text-left">Banco</th>
                           <th className="px-4 py-3 text-left">Ag. / Conta</th>
                           <th className="px-4 py-3 text-left">PIX</th>
-                          <th className="px-4 py-3 text-right">Salário (R$)</th>
+                          <th className="px-4 py-3 text-right">Salário {mLabel}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
@@ -259,7 +251,7 @@ function FolhaSalarial() {
                                 value={getValue(e)}
                                 onChange={(ev) => {
                                   const v = parseFloat(ev.target.value);
-                                  payrollStore.set(e.id, isNaN(v) ? 0 : v);
+                                  payrollStore.set(month, e.id, isNaN(v) ? 0 : v);
                                 }}
                                 className="ml-auto h-9 w-32 text-right font-semibold"
                               />
@@ -289,17 +281,12 @@ function FolhaSalarial() {
       <Card className="mt-6 border-accent/40 bg-accent/5">
         <CardContent className="flex items-center justify-between p-5">
           <div>
-            <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Total geral da folha</p>
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Total do mês ({mLabel})</p>
             <p className="font-display text-3xl text-foreground">{fmtBRL(totalGeral)}</p>
           </div>
-          <div className="flex gap-2">
-            <Button size="lg" variant="outline" onClick={exportPDF}>
-              <Download className="mr-1 h-4 w-4" /> PDF único
-            </Button>
-            <Button size="lg" onClick={exportPerObra}>
-              <Download className="mr-1 h-4 w-4" /> PDF por obra
-            </Button>
-          </div>
+          <Button size="lg" onClick={doExport}>
+            <Download className="mr-1 h-4 w-4" /> Exportar PDF
+          </Button>
         </CardContent>
       </Card>
     </PageShell>

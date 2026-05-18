@@ -1,16 +1,8 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import {
-  ArrowLeft,
-  Mail,
-  Phone,
-  MapPin,
-  Calendar,
-  Briefcase,
-  HardHat,
-  ShieldCheck,
-  Pencil,
-  FileText,
-  Download,
+  ArrowLeft, Mail, Phone, MapPin, Calendar, Briefcase, HardHat,
+  ShieldCheck, Pencil, FileText, Download, Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/page-shell";
@@ -19,7 +11,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/status-badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useEmployee } from "@/lib/employees";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { employeesStore, useEmployee } from "@/lib/employees";
 import { downloadFRE } from "@/lib/fre-pdf";
 
 export const Route = createFileRoute("/funcionarios/$id")({
@@ -41,6 +37,8 @@ export const Route = createFileRoute("/funcionarios/$id")({
 function Detail() {
   const { id } = Route.useParams();
   const e = useEmployee(id);
+  const navigate = useNavigate();
+  const [confirmDel, setConfirmDel] = useState(false);
   if (!e) {
     return (
       <PageShell title="Funcionário não encontrado" eyebrow="Quadro">
@@ -67,6 +65,9 @@ function Detail() {
             <Download className="mr-1 h-4 w-4" /> Exportar FRE
           </Button>
           <Button><Pencil className="mr-1 h-4 w-4" /> Editar</Button>
+          <Button variant="destructive" onClick={() => setConfirmDel(true)}>
+            <Trash2 className="mr-1 h-4 w-4" /> Apagar
+          </Button>
         </>
       }
     >
@@ -181,6 +182,25 @@ function Detail() {
           </Tabs>
         </div>
       </div>
+
+      <AlertDialog open={confirmDel} onOpenChange={setConfirmDel}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Apagar {e.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação remove o funcionário e seus dados desta plataforma. Não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              employeesStore.remove(e.id);
+              toast.success("Funcionário apagado.");
+              navigate({ to: "/funcionarios" });
+            }}>Apagar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageShell>
   );
 }
