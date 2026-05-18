@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { Plus, Search, Filter, Download, ChevronRight } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { Plus, Search, Filter, Download, ChevronRight, Upload } from "lucide-react";
 import { toast } from "sonner";
+import * as XLSX from "xlsx";
 import { PageShell } from "@/components/page-shell";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,8 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useEmployees, type Employee } from "@/lib/employees";
-import { useSites } from "@/lib/sites-store";
+import { employeesStore, useEmployees, type Employee, type EmployeeStatus } from "@/lib/employees";
+import { sitesStore, useSites, slugify } from "@/lib/sites-store";
 
 export const Route = createFileRoute("/funcionarios/")({
   head: () => ({
