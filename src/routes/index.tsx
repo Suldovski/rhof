@@ -32,8 +32,6 @@ function Dashboard() {
   const sites = useSites();
   const title = `${getGreetingByHour()}, ${getUserName()}!`;
   const ativos = employees.filter((e) => e.status === "ativo").length;
-  const ferias = employees.filter((e) => e.status === "ferias").length;
-  const afastados = employees.filter((e) => e.status === "afastado").length;
 
   type Kpi = {
     label: string; value: number; hint: string;
@@ -156,7 +154,6 @@ function Dashboard() {
             })}
             <div className="mt-4 flex items-center gap-2 rounded-md border border-border bg-muted/40 p-3 text-xs">
               <TrendingUp className="h-4 w-4 text-success" />
-              <span>Crescimento de 12% no quadro vs trimestre anterior</span>
             </div>
           </CardContent>
         </Card>
@@ -169,7 +166,6 @@ function Dashboard() {
               <ShieldCheck className="h-5 w-5 text-warning-foreground" />
             </div>
             <div>
-              <p className="font-semibold">Entrega de EPIs pendente</p>
               <p className="text-xs text-muted-foreground">5 colaboradores no Edifício Atlântico.</p>
             </div>
           </CardContent>
@@ -180,8 +176,6 @@ function Dashboard() {
               <AlertTriangle className="h-5 w-5 text-accent" />
             </div>
             <div>
-              <p className="font-semibold">{afastados} afastamento(s) ativo(s)</p>
-              <p className="text-xs text-muted-foreground">Acompanhar perícias e retornos.</p>
             </div>
           </CardContent>
         </Card>
