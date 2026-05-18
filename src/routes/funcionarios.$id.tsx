@@ -182,6 +182,25 @@ function Detail() {
           </Tabs>
         </div>
       </div>
+
+      <AlertDialog open={confirmDel} onOpenChange={setConfirmDel}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Apagar {e.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação remove o funcionário e seus dados desta plataforma. Não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              employeesStore.remove(e.id);
+              toast.success("Funcionário apagado.");
+              navigate({ to: "/funcionarios" });
+            }}>Apagar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageShell>
   );
 }
