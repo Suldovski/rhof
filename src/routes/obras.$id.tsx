@@ -15,7 +15,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { employees } from "@/lib/employees";
+import { useEmployees } from "@/lib/employees";
 import { sitesStore, useSite } from "@/lib/sites-store";
 
 export const Route = createFileRoute("/obras/$id")({
