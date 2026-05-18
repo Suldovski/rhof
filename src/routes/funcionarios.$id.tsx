@@ -37,6 +37,8 @@ export const Route = createFileRoute("/funcionarios/$id")({
 function Detail() {
   const { id } = Route.useParams();
   const e = useEmployee(id);
+  const navigate = useNavigate();
+  const [confirmDel, setConfirmDel] = useState(false);
   if (!e) {
     return (
       <PageShell title="Funcionário não encontrado" eyebrow="Quadro">
