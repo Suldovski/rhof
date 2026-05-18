@@ -125,15 +125,63 @@ function FolhaSalarial() {
     toast.success("PDF gerado.");
   }
 
+  function buildObraPDF(siteName: string, list: Employee[]) {
+    const doc = new jsPDF({ orientation: "landscape" });
+    const today = new Date().toLocaleDateString("pt-BR");
+    doc.setFontSize(16);
+    doc.text(`Folha Salarial — ${siteName}`, 14, 15);
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Bucagrans RH · Emitido em ${today}`, 14, 21);
+    doc.setTextColor(20);
+    const subtotal = list.reduce((s, e) => s + getValue(e), 0);
+    autoTable(doc, {
+      startY: 28,
+      head: [["Matrícula", "Nome", "Função", "Banco", "Ag.", "Conta", "PIX", "Salário"]],
+      body: list.map((e) => [
+        e.id, e.name, e.role, e.bank.bank, e.bank.agency,
+        `${e.bank.account} (${e.bank.type})`, e.bank.pix, fmtBRL(getValue(e)),
+      ]),
+      foot: [[
+        { content: "Total da obra", colSpan: 7, styles: { halign: "right", fontStyle: "bold" } },
+        { content: fmtBRL(subtotal), styles: { fontStyle: "bold" } },
+      ]],
+      styles: { fontSize: 9, cellPadding: 2 },
+      headStyles: { fillColor: [15, 27, 61], textColor: 255 },
+      footStyles: { fillColor: [230, 235, 245], textColor: 20 },
+      margin: { left: 14, right: 14 },
+    });
+    return doc;
+  }
+
+  function exportPerObra() {
+    const today = new Date().toLocaleDateString("pt-BR").replace(/\//g, "-");
+    let count = 0;
+    grouped.forEach(([siteName, list]) => {
+      if (list.length === 0) return;
+      const doc = buildObraPDF(siteName, list);
+      const safe = siteName.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+      doc.save(`folha-${safe}-${today}.pdf`);
+      count++;
+    });
+    if (count === 0) toast.error("Nenhuma obra com colaboradores.");
+    else toast.success(`${count} PDF(s) gerado(s) — um por obra.`);
+  }
+
   return (
     <PageShell
       eyebrow="Pagamentos"
       title="Folha Salarial"
       description="Lance o valor pago a cada colaborador, agrupado por obra, e exporte em PDF."
       actions={
-        <Button onClick={exportPDF}>
-          <Download className="mr-1 h-4 w-4" /> Exportar PDF
-        </Button>
+        <>
+          <Button variant="outline" onClick={exportPDF}>
+            <Download className="mr-1 h-4 w-4" /> PDF único
+          </Button>
+          <Button onClick={exportPerObra}>
+            <Download className="mr-1 h-4 w-4" /> PDF por obra
+          </Button>
+        </>
       }
     >
       <Card className="mb-4 p-4">
