@@ -9,38 +9,206 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ObrasRouteImport } from './routes/obras'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as FolhaSalarialRouteImport } from './routes/folha-salarial'
+import { Route as DocumentosRouteImport } from './routes/documentos'
+import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as FuncionariosIndexRouteImport } from './routes/funcionarios.index'
+import { Route as ObrasIdRouteImport } from './routes/obras.$id'
+import { Route as FuncionariosNovoRouteImport } from './routes/funcionarios.novo'
+import { Route as FuncionariosFeriasRouteImport } from './routes/funcionarios.ferias'
+import { Route as FuncionariosIdRouteImport } from './routes/funcionarios.$id'
 
+const ObrasRoute = ObrasRouteImport.update({
+  id: '/obras',
+  path: '/obras',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FolhaSalarialRoute = FolhaSalarialRouteImport.update({
+  id: '/folha-salarial',
+  path: '/folha-salarial',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DocumentosRoute = DocumentosRouteImport.update({
+  id: '/documentos',
+  path: '/documentos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FuncionariosIndexRoute = FuncionariosIndexRouteImport.update({
+  id: '/funcionarios/',
+  path: '/funcionarios/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ObrasIdRoute = ObrasIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ObrasRoute,
+} as any)
+const FuncionariosNovoRoute = FuncionariosNovoRouteImport.update({
+  id: '/funcionarios/novo',
+  path: '/funcionarios/novo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FuncionariosFeriasRoute = FuncionariosFeriasRouteImport.update({
+  id: '/funcionarios/ferias',
+  path: '/funcionarios/ferias',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FuncionariosIdRoute = FuncionariosIdRouteImport.update({
+  id: '/funcionarios/$id',
+  path: '/funcionarios/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/configuracoes': typeof ConfiguracoesRoute
+  '/documentos': typeof DocumentosRoute
+  '/folha-salarial': typeof FolhaSalarialRoute
+  '/login': typeof LoginRoute
+  '/obras': typeof ObrasRouteWithChildren
+  '/funcionarios/$id': typeof FuncionariosIdRoute
+  '/funcionarios/ferias': typeof FuncionariosFeriasRoute
+  '/funcionarios/novo': typeof FuncionariosNovoRoute
+  '/obras/$id': typeof ObrasIdRoute
+  '/funcionarios/': typeof FuncionariosIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/configuracoes': typeof ConfiguracoesRoute
+  '/documentos': typeof DocumentosRoute
+  '/folha-salarial': typeof FolhaSalarialRoute
+  '/login': typeof LoginRoute
+  '/obras': typeof ObrasRouteWithChildren
+  '/funcionarios/$id': typeof FuncionariosIdRoute
+  '/funcionarios/ferias': typeof FuncionariosFeriasRoute
+  '/funcionarios/novo': typeof FuncionariosNovoRoute
+  '/obras/$id': typeof ObrasIdRoute
+  '/funcionarios': typeof FuncionariosIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/configuracoes': typeof ConfiguracoesRoute
+  '/documentos': typeof DocumentosRoute
+  '/folha-salarial': typeof FolhaSalarialRoute
+  '/login': typeof LoginRoute
+  '/obras': typeof ObrasRouteWithChildren
+  '/funcionarios/$id': typeof FuncionariosIdRoute
+  '/funcionarios/ferias': typeof FuncionariosFeriasRoute
+  '/funcionarios/novo': typeof FuncionariosNovoRoute
+  '/obras/$id': typeof ObrasIdRoute
+  '/funcionarios/': typeof FuncionariosIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/configuracoes'
+    | '/documentos'
+    | '/folha-salarial'
+    | '/login'
+    | '/obras'
+    | '/funcionarios/$id'
+    | '/funcionarios/ferias'
+    | '/funcionarios/novo'
+    | '/obras/$id'
+    | '/funcionarios/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/configuracoes'
+    | '/documentos'
+    | '/folha-salarial'
+    | '/login'
+    | '/obras'
+    | '/funcionarios/$id'
+    | '/funcionarios/ferias'
+    | '/funcionarios/novo'
+    | '/obras/$id'
+    | '/funcionarios'
+  id:
+    | '__root__'
+    | '/'
+    | '/configuracoes'
+    | '/documentos'
+    | '/folha-salarial'
+    | '/login'
+    | '/obras'
+    | '/funcionarios/$id'
+    | '/funcionarios/ferias'
+    | '/funcionarios/novo'
+    | '/obras/$id'
+    | '/funcionarios/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ConfiguracoesRoute: typeof ConfiguracoesRoute
+  DocumentosRoute: typeof DocumentosRoute
+  FolhaSalarialRoute: typeof FolhaSalarialRoute
+  LoginRoute: typeof LoginRoute
+  ObrasRoute: typeof ObrasRouteWithChildren
+  FuncionariosIdRoute: typeof FuncionariosIdRoute
+  FuncionariosFeriasRoute: typeof FuncionariosFeriasRoute
+  FuncionariosNovoRoute: typeof FuncionariosNovoRoute
+  FuncionariosIndexRoute: typeof FuncionariosIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/obras': {
+      id: '/obras'
+      path: '/obras'
+      fullPath: '/obras'
+      preLoaderRoute: typeof ObrasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/folha-salarial': {
+      id: '/folha-salarial'
+      path: '/folha-salarial'
+      fullPath: '/folha-salarial'
+      preLoaderRoute: typeof FolhaSalarialRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/documentos': {
+      id: '/documentos'
+      path: '/documentos'
+      fullPath: '/documentos'
+      preLoaderRoute: typeof DocumentosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/configuracoes': {
+      id: '/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/configuracoes'
+      preLoaderRoute: typeof ConfiguracoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +216,66 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/funcionarios/': {
+      id: '/funcionarios/'
+      path: '/funcionarios'
+      fullPath: '/funcionarios/'
+      preLoaderRoute: typeof FuncionariosIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/obras/$id': {
+      id: '/obras/$id'
+      path: '/$id'
+      fullPath: '/obras/$id'
+      preLoaderRoute: typeof ObrasIdRouteImport
+      parentRoute: typeof ObrasRoute
+    }
+    '/funcionarios/novo': {
+      id: '/funcionarios/novo'
+      path: '/funcionarios/novo'
+      fullPath: '/funcionarios/novo'
+      preLoaderRoute: typeof FuncionariosNovoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/funcionarios/ferias': {
+      id: '/funcionarios/ferias'
+      path: '/funcionarios/ferias'
+      fullPath: '/funcionarios/ferias'
+      preLoaderRoute: typeof FuncionariosFeriasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/funcionarios/$id': {
+      id: '/funcionarios/$id'
+      path: '/funcionarios/$id'
+      fullPath: '/funcionarios/$id'
+      preLoaderRoute: typeof FuncionariosIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
+interface ObrasRouteChildren {
+  ObrasIdRoute: typeof ObrasIdRoute
+}
+
+const ObrasRouteChildren: ObrasRouteChildren = {
+  ObrasIdRoute: ObrasIdRoute,
+}
+
+const ObrasRouteWithChildren = ObrasRoute._addFileChildren(ObrasRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ConfiguracoesRoute: ConfiguracoesRoute,
+  DocumentosRoute: DocumentosRoute,
+  FolhaSalarialRoute: FolhaSalarialRoute,
+  LoginRoute: LoginRoute,
+  ObrasRoute: ObrasRouteWithChildren,
+  FuncionariosIdRoute: FuncionariosIdRoute,
+  FuncionariosFeriasRoute: FuncionariosFeriasRoute,
+  FuncionariosNovoRoute: FuncionariosNovoRoute,
+  FuncionariosIndexRoute: FuncionariosIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
