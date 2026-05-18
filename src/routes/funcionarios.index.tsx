@@ -180,10 +180,9 @@ async function importFromFile(file: File): Promise<void> {
     if (!row || row.every((c) => c === "" || c == null)) continue;
 
     const name = String(row[col.name] ?? "").trim();
-    const cpfRaw = row[col.cpf];
+    const cpfRaw = col.cpf >= 0 ? row[col.cpf] : "";
     const cpf = String(cpfRaw ?? "").trim();
     if (!name) { skipReason("nome vazio"); continue; }
-    if (!cpf)  { skipReason("cpf vazio"); continue; }
 
     const site = col.site >= 0 ? String(row[col.site] ?? "").trim() : "";
     if (site && !existingSites.has(site.toLowerCase())) {
