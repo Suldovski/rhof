@@ -280,7 +280,7 @@ function NewEmployee() {
             <Field label="% Periculosidade"><Input type="number" value={form.percentualPericulosidade || ""} onChange={(e) => set("percentualPericulosidade", parseFloat(e.target.value) || 0)} /></Field>
             <Field label="% Insalubridade"><Input type="number" value={form.percentualInsalubridade || ""} onChange={(e) => set("percentualInsalubridade", parseFloat(e.target.value) || 0)} /></Field>
             <Field label="Ajuda de custo (R$)"><Input type="number" step="0.01" value={form.ajudaCusto || ""} onChange={(e) => set("ajudaCusto", parseFloat(e.target.value) || 0)} /></Field>
-            <Field label="Horas extras"><Input value={form.horasExtras} onChange={(e) => set("horasExtras", e.target.value)} placeholder="Ex: 50%/100%" /></Field>
+            <Field label="Horas extras"><Input value={form.horasExtras} onChange={(e) => set("horasExtras", e.target.value)} /></Field>
 
             <Field label="Vale Transporte" className="md:col-span-3">
               <div className="flex flex-wrap items-center gap-4 pt-1">
