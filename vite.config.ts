@@ -9,13 +9,15 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      // Substitui o módulo problemático por um stub vazio
-      '@tanstack/start-storage-context': '/dev/null'
+      // NOVO: Resolve o módulo problemático sem usar /dev/null
+      '@tanstack/start-storage-context': '@tanstack/start-storage-context/browser'
     }
   },
-  build: {
-    rollupOptions: {
-      external: ['node:async_hooks'],  // Exclui do bundle
-    }
+  optimizeDeps: {
+    exclude: ['@tanstack/start-storage-context', '@tanstack/start-client-core']
+  },
+  ssr: {
+    noExternal: [],
+    target: 'web'
   }
 })
