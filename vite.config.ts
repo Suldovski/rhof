@@ -1,10 +1,15 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import tsconfigPaths from 'vite-tsconfig-paths'
 
 export default defineConfig({
-  plugins: [react()],
-  base: '/rhof/',  // ← Nome do seu repositório
-  define: {
-    'process.env.NODE_ENV': '"production"',
+  plugins: [react(), tsconfigPaths()],
+  base: '/rhof/',
+  server: {
+    middlewareMode: false,
+  },
+  build: {
+    outDir: 'dist',
+    emptyOutDir: true,
   }
 })
