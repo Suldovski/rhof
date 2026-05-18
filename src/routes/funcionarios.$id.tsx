@@ -47,6 +47,7 @@ function Detail() {
   const e = useEmployee(id);
   const navigate = useNavigate();
   const [confirmDel, setConfirmDel] = useState(false);
+  const [editing, setEditing] = useState(false);
   if (!e) {
     return (
       <PageShell title="Funcionário não encontrado" eyebrow="Quadro">
