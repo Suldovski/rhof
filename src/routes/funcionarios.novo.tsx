@@ -296,6 +296,8 @@ function NewEmployee() {
                 <label className="flex items-center gap-2 text-sm">
                   <Checkbox checked={form.adiantamento} onCheckedChange={(c) => set("adiantamento", !!c)} /> Adiantamento
                 </label>
+                  {form.adiantamento && (
+                  <Input type="number" step="0.01" placeholder="Valor de adiantamento" className="w-32" value={form.valorAdiantamento || ""} onChange={(e) => set("valorAdiantamento", parseFloat(e.target.value) || 0)} />
                 <label className="flex items-center gap-2 text-sm">
                   <Checkbox checked={form.valeAlimentacao} onCheckedChange={(c) => set("valeAlimentacao", !!c)} /> Vale Alimentação
                 </label>
