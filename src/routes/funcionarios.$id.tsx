@@ -1,34 +1,31 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowLeft,
   Mail,
   Phone,
   MapPin,
   Calendar,
-  IdCard,
   Briefcase,
   HardHat,
   ShieldCheck,
   Pencil,
   FileText,
+  Download,
 } from "lucide-react";
+import { toast } from "sonner";
 import { PageShell } from "@/components/page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/status-badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getEmployee } from "@/lib/employees";
+import { useEmployee } from "@/lib/employees";
+import { downloadFRE } from "@/lib/fre-pdf";
 
 export const Route = createFileRoute("/funcionarios/$id")({
   head: ({ params }) => ({
     meta: [{ title: `Funcionário #${params.id} · Bucagrans RH` }],
   }),
-  loader: ({ params }) => {
-    const employee = getEmployee(params.id);
-    if (!employee) throw notFound();
-    return { employee: employee! };
-  },
   notFoundComponent: () => (
     <div className="p-12 text-center">
       <p className="text-sm text-muted-foreground">Funcionário não encontrado.</p>
@@ -42,7 +39,18 @@ export const Route = createFileRoute("/funcionarios/$id")({
 });
 
 function Detail() {
-  const { employee: e } = Route.useLoaderData() as { employee: import("@/lib/employees").Employee };
+  const { id } = Route.useParams();
+  const e = useEmployee(id);
+  if (!e) {
+    return (
+      <PageShell title="Funcionário não encontrado" eyebrow="Quadro">
+        <Card><CardContent className="p-8 text-center text-sm text-muted-foreground">
+          Este funcionário não existe ou foi removido.
+          <div className="mt-4"><Button asChild><Link to="/funcionarios">Voltar</Link></Button></div>
+        </CardContent></Card>
+      </PageShell>
+    );
+  }
   const initials = e.name.split(" ").slice(0, 2).map((n: string) => n[0]).join("");
 
   return (
@@ -54,6 +62,9 @@ function Detail() {
         <>
           <Button variant="outline" asChild>
             <Link to="/funcionarios"><ArrowLeft className="mr-1 h-4 w-4" /> Voltar</Link>
+          </Button>
+          <Button variant="outline" onClick={() => { downloadFRE(e); toast.success("FRE exportada."); }}>
+            <Download className="mr-1 h-4 w-4" /> Exportar FRE
           </Button>
           <Button><Pencil className="mr-1 h-4 w-4" /> Editar</Button>
         </>
@@ -152,11 +163,16 @@ function Detail() {
                   <CardTitle className="font-display text-lg">Documentos anexados</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  {["RG (frente e verso).pdf", "CPF.pdf", "Carteira de Trabalho.pdf", "Comprovante endereço.pdf"].map((d) => (
-                    <div key={d} className="flex items-center gap-3 rounded-md border border-border px-4 py-3">
+                  {(!e.documentos || e.documentos.length === 0) ? (
+                    <p className="text-sm text-muted-foreground">Nenhum documento anexado.</p>
+                  ) : e.documentos.map((d) => (
+                    <div key={d.id} className="flex items-center gap-3 rounded-md border border-border px-4 py-3">
                       <FileText className="h-4 w-4 text-accent" />
-                      <span className="flex-1 text-sm">{d}</span>
-                      <Button size="sm" variant="ghost">Ver</Button>
+                      <span className="flex-1 text-sm">{d.name}</span>
+                      <span className="text-xs text-muted-foreground">{(d.size / 1024).toFixed(0)} KB</span>
+                      <Button size="sm" variant="ghost" asChild>
+                        <a href={d.data} download={d.name} target="_blank" rel="noopener noreferrer">Abrir</a>
+                      </Button>
                     </div>
                   ))}
                 </CardContent>

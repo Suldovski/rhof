@@ -15,7 +15,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { employees } from "@/lib/employees";
+import { useEmployees } from "@/lib/employees";
 import { sitesStore, useSite } from "@/lib/sites-store";
 
 export const Route = createFileRoute("/obras/$id")({
@@ -26,6 +26,7 @@ export const Route = createFileRoute("/obras/$id")({
 function ObraDetail() {
   const { id } = Route.useParams();
   const obra = useSite(id);
+  const employees = useEmployees();
   const navigate = useNavigate();
   const [confirmDel, setConfirmDel] = useState(false);
   const [q, setQ] = useState("");
@@ -34,7 +35,7 @@ function ObraDetail() {
 
   const team = useMemo(
     () => (obra ? employees.filter((e) => e.site === obra.name) : []),
-    [obra],
+    [obra, employees],
   );
 
   const filtered = useMemo(() => {

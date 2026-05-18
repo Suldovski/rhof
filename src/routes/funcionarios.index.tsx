@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Plus, Search, Filter, Download, ChevronRight } from "lucide-react";
+import { toast } from "sonner";
 import { PageShell } from "@/components/page-shell";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { employees } from "@/lib/employees";
+import { useEmployees, type Employee } from "@/lib/employees";
 import { useSites } from "@/lib/sites-store";
 
 export const Route = createFileRoute("/funcionarios/")({
@@ -23,8 +24,39 @@ export const Route = createFileRoute("/funcionarios/")({
   component: List,
 });
 
+function exportCSV(rows: Employee[]) {
+  const headers = [
+    "matricula", "nome", "cpf", "rg", "ctps", "pis", "nascimento",
+    "cargo", "departamento", "obra", "admissao", "status",
+    "email", "telefone", "endereco", "municipio", "estado", "cep",
+    "salario_mensal", "salario_hora",
+    "banco", "agencia", "conta", "tipo_conta", "pix",
+    "sindicato", "sindicato_uf", "nome_mae",
+  ];
+  const esc = (v: any) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const csv = [
+    headers.join(","),
+    ...rows.map((e) => [
+      e.id, e.name, e.cpf, e.rg, e.ctps, e.pis, e.nascimento,
+      e.cargoFuncao || e.role, e.departamento || e.department, e.organograma || e.site, e.admission, e.status,
+      e.email, e.telefone || e.phone, e.endereco, e.municipio, e.estado, e.cep,
+      e.salary, e.salarioHora,
+      e.bank.bank, e.bank.agency, e.bank.account, e.bank.type, e.bank.pix,
+      e.sindicato, e.sindicatoUf, e.nomeMae,
+    ].map(esc).join(",")),
+  ].join("\n");
+  const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `funcionarios-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast.success(`${rows.length} funcionário(s) exportado(s).`);
+}
+
 function List() {
   const sites = useSites();
+  const employees = useEmployees();
   const [q, setQ] = useState("");
   const [site, setSite] = useState<string>("todos");
   const [dept, setDept] = useState<string>("todos");
@@ -40,7 +72,7 @@ function List() {
       const matchesDept = dept === "todos" || e.department === dept;
       return matchesQ && matchesSite && matchesDept;
     });
-  }, [q, site, dept]);
+  }, [employees, q, site, dept]);
 
   return (
     <PageShell
@@ -49,8 +81,8 @@ function List() {
       description={`${employees.length} colaboradores cadastrados em ${sites.length} canteiros.`}
       actions={
         <>
-          <Button variant="outline">
-            <Download className="mr-1 h-4 w-4" /> Exportar
+          <Button variant="outline" onClick={() => exportCSV(filtered)}>
+            <Download className="mr-1 h-4 w-4" /> Exportar CSV
           </Button>
           <Button asChild>
             <Link to="/funcionarios/novo">
