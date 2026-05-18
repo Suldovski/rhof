@@ -208,13 +208,12 @@ function NewEmployee() {
             </Field>
             <Field label="Telefone"><Input value={form.telefone} onChange={(e) => set("telefone", e.target.value)} /></Field>
             <Field label="Telefone recado"><Input value={form.telefoneRecado} onChange={(e) => set("telefoneRecado", e.target.value)} /></Field>
-            <Field label="E-mail"><Input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} /></Field>
           </CardContent>
         </Card>
 
         {/* CNH */}
         <Card>
-          <CardHeader><CardTitle className="font-display text-lg">CNH (se possuir)</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="font-display text-lg">CNH (OBRIGATÓRIO PARA MOTORISTAS)</CardTitle></CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-3">
             <Field label="Nº CNH"><Input value={form.cnh?.numero ?? ""} onChange={(e) => set("cnh", { ...(form.cnh ?? { numero: "", primeiraHabilitacao: "", expedicao: "", validade: "", uf: "", categoria: "" }), numero: e.target.value })} /></Field>
             <Field label="Categoria"><Input value={form.cnh?.categoria ?? ""} onChange={(e) => set("cnh", { ...(form.cnh ?? { numero: "", primeiraHabilitacao: "", expedicao: "", validade: "", uf: "", categoria: "" }), categoria: e.target.value })} /></Field>
