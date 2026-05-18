@@ -111,6 +111,16 @@ function mapStatus(v: any): EmployeeStatus {
   return "ativo";
 }
 
+/** Procura o índice de coluna cujo header normalizado contenha qualquer um dos termos */
+function findCol(headers: string[], terms: string[]): number {
+  for (let i = 0; i < headers.length; i++) {
+    const h = headers[i];
+    if (!h) continue;
+    if (terms.some((t) => h === t || h.includes(t))) return i;
+  }
+  return -1;
+}
+
 async function importFromFile(file: File): Promise<void> {
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type: "array", cellDates: true });
@@ -118,33 +128,67 @@ async function importFromFile(file: File): Promise<void> {
   const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: true });
   if (rows.length < 2) { toast.error("Planilha vazia."); return; }
 
-  let headerIdx = 0;
-  for (let i = 0; i < Math.min(10, rows.length); i++) {
+  // Detecta a linha de cabeçalho: a que tenha mais cabeçalhos reconhecíveis
+  let headerIdx = -1;
+  let bestScore = 0;
+  for (let i = 0; i < Math.min(15, rows.length); i++) {
     const keys = rows[i].map(normKey);
-    if (keys.includes("nome") && keys.includes("cpf")) { headerIdx = i; break; }
+    const score =
+      (keys.some((k) => k.includes("nome")) ? 2 : 0) +
+      (keys.some((k) => k.includes("cpf")) ? 2 : 0) +
+      (keys.some((k) => k.includes("obra")) ? 1 : 0) +
+      (keys.some((k) => k.includes("funcao") || k === "cargo") ? 1 : 0) +
+      (keys.some((k) => k.includes("admiss")) ? 1 : 0);
+    if (score > bestScore) { bestScore = score; headerIdx = i; }
+  }
+  if (headerIdx < 0 || bestScore < 4) {
+    toast.error("Não encontrei cabeçalho com NOME e CPF na planilha.");
+    console.warn("[import] primeiras linhas:", rows.slice(0, 5));
+    return;
   }
 
   const headers = rows[headerIdx].map(normKey);
-  const fields = headers.map((h) => HEADER_ALIASES[h] ?? h);
+  console.info("[import] cabeçalhos detectados:", headers);
 
-  let created = 0, skipped = 0;
+  const col = {
+    id:        findCol(headers, ["re", "matricula"]),
+    name:      findCol(headers, ["nome", "funcionario"]),
+    cpf:       findCol(headers, ["cpf"]),
+    nasc:      findCol(headers, ["datanasc", "nascimento"]),
+    admission: findCol(headers, ["dataadmissao", "datadeadmissao", "admissao"]),
+    cbo:       findCol(headers, ["cbo"]),
+    role:      findCol(headers, ["funcao", "cargo"]),
+    site:      findCol(headers, ["obra"]),
+    salHora:   findCol(headers, ["salariohora", "salhora", "hora"]),
+    salMensal: findCol(headers, ["salariomensal", "salmensal", "mensal", "salario"]),
+    status:    findCol(headers, ["situacao", "status"]),
+  };
+  console.info("[import] mapeamento de colunas:", col);
+
+  if (col.name < 0) {
+    toast.error("Coluna NOME não encontrada na planilha.");
+    return;
+  }
+
+  let created = 0;
+  const reasons: Record<string, number> = {};
+  const skipReason = (r: string) => { reasons[r] = (reasons[r] ?? 0) + 1; };
   const existingSites = new Set(sitesStore.list().map((s) => s.name.toLowerCase()));
 
   for (let i = headerIdx + 1; i < rows.length; i++) {
     const row = rows[i];
     if (!row || row.every((c) => c === "" || c == null)) continue;
-    const rec: Record<string, any> = {};
-    fields.forEach((f, idx) => { rec[f] = row[idx]; });
 
-    const name = String(rec.name ?? "").trim();
-    const cpf = String(rec.cpf ?? "").trim();
-    if (!name || !cpf) { skipped++; continue; }
+    const name = String(row[col.name] ?? "").trim();
+    const cpfRaw = col.cpf >= 0 ? row[col.cpf] : "";
+    const cpf = String(cpfRaw ?? "").trim();
+    if (!name) { skipReason("nome vazio"); continue; }
 
-    const site = String(rec.site ?? "").trim();
+    const site = col.site >= 0 ? String(row[col.site] ?? "").trim() : "";
     if (site && !existingSites.has(site.toLowerCase())) {
       try {
         sitesStore.add({
-          id: slugify(site),
+          id: slugify(site) || `obra-${Date.now()}`,
           name: site,
           status: "Em execução",
           start: new Date().toISOString().slice(0, 10),
@@ -154,32 +198,64 @@ async function importFromFile(file: File): Promise<void> {
       } catch {}
     }
 
-    const role = String(rec.role ?? "").trim();
-    const salaryMensal = parseNumberBR(rec.salary);
-    const salaryHora = parseNumberBR(rec.salarioHora);
+    const role = col.role >= 0 ? String(row[col.role] ?? "").trim() : "";
+    const salaryHora = col.salHora >= 0 ? parseNumberBR(row[col.salHora]) : 0;
+    const salaryMensal = col.salMensal >= 0 ? parseNumberBR(row[col.salMensal]) : 0;
+    const idRaw = col.id >= 0 ? row[col.id] : undefined;
+    const id = idRaw != null && idRaw !== "" ? String(idRaw).trim() : undefined;
 
     try {
       employeesStore.add({
-        id: rec.id ? String(rec.id).trim() : undefined,
-        name, cpf,
-        nascimento: parseAnyDate(rec.nascimento),
-        admission: parseAnyDate(rec.admission),
+        id, name, cpf,
+        nascimento: col.nasc >= 0 ? parseAnyDate(row[col.nasc]) : "",
+        admission: col.admission >= 0 ? parseAnyDate(row[col.admission]) : "",
         role, cargoFuncao: role,
         site, organograma: site,
-        status: mapStatus(rec.status),
+        status: col.status >= 0 ? mapStatus(row[col.status]) : "ativo",
         salary: salaryMensal || salaryHora * 220,
         salarioHora: salaryHora,
-        department: "Obra",
-        departamento: "Obra",
+        department: "Obra", departamento: "Obra",
       });
       created++;
-    } catch {
-      skipped++;
+    } catch (err: any) {
+      const msg = err?.message ?? "erro";
+      // Se for conflito de matrícula, tenta de novo sem id (auto-gera)
+      if (msg.includes("matrícula") && id) {
+        try {
+          employeesStore.add({
+            name, cpf,
+            nascimento: col.nasc >= 0 ? parseAnyDate(row[col.nasc]) : "",
+            admission: col.admission >= 0 ? parseAnyDate(row[col.admission]) : "",
+            role, cargoFuncao: role,
+            site, organograma: site,
+            status: col.status >= 0 ? mapStatus(row[col.status]) : "ativo",
+            salary: salaryMensal || salaryHora * 220,
+            salarioHora: salaryHora,
+            department: "Obra", departamento: "Obra",
+          });
+          created++;
+          continue;
+        } catch (err2: any) {
+          skipReason(err2?.message ?? "erro ao adicionar");
+        }
+      } else {
+        skipReason(msg);
+      }
     }
   }
 
-  toast.success(`Importação: ${created} criado(s)${skipped ? `, ${skipped} ignorado(s)` : ""}.`);
+  const skippedTotal = Object.values(reasons).reduce((a, b) => a + b, 0);
+  if (created === 0) {
+    const detail = Object.entries(reasons)
+      .map(([r, n]) => `${n}× ${r}`).join(" · ") || "sem detalhes";
+    console.warn("[import] motivos:", reasons);
+    toast.error(`Nenhum funcionário importado. Motivos: ${detail}`);
+  } else {
+    toast.success(`Importação: ${created} criado(s)${skippedTotal ? `, ${skippedTotal} ignorado(s)` : ""}.`);
+    if (skippedTotal) console.warn("[import] motivos:", reasons);
+  }
 }
+
 function List() {
   const sites = useSites();
   const employees = useEmployees();
