@@ -163,11 +163,16 @@ function Detail() {
                   <CardTitle className="font-display text-lg">Documentos anexados</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  {["RG (frente e verso).pdf", "CPF.pdf", "Carteira de Trabalho.pdf", "Comprovante endereço.pdf"].map((d) => (
-                    <div key={d} className="flex items-center gap-3 rounded-md border border-border px-4 py-3">
+                  {(!e.documentos || e.documentos.length === 0) ? (
+                    <p className="text-sm text-muted-foreground">Nenhum documento anexado.</p>
+                  ) : e.documentos.map((d) => (
+                    <div key={d.id} className="flex items-center gap-3 rounded-md border border-border px-4 py-3">
                       <FileText className="h-4 w-4 text-accent" />
-                      <span className="flex-1 text-sm">{d}</span>
-                      <Button size="sm" variant="ghost">Ver</Button>
+                      <span className="flex-1 text-sm">{d.name}</span>
+                      <span className="text-xs text-muted-foreground">{(d.size / 1024).toFixed(0)} KB</span>
+                      <Button size="sm" variant="ghost" asChild>
+                        <a href={d.data} download={d.name} target="_blank" rel="noopener noreferrer">Abrir</a>
+                      </Button>
                     </div>
                   ))}
                 </CardContent>
