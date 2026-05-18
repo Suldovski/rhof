@@ -7,5 +7,14 @@ export default defineConfig({
     TanStackRouterVite(),
     react()
   ],
-  base: '/rhof/'  // ← LINHA CRUCIAL - use o nome EXATO do seu repositório
+  base: '/rhof/',  // ← importante para o GitHub Pages
+  define: {
+    'import.meta.env.SSR': false,  // Força ambiente browser
+  },
+  optimizeDeps: {
+    exclude: ['@tanstack/start-storage-context']  // ← Ignora este pacote
+  },
+  ssr: {
+    noExternal: [],  // Garante que nada seja tratado como SSR
+  }
 })
