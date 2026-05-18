@@ -39,17 +39,19 @@ function ObraDetail() {
   );
 
   const filtered = useMemo(() => {
-    return team.filter((e) => {
-      const matchesQ =
-        !q ||
-        e.name.toLowerCase().includes(q.toLowerCase()) ||
-        e.cpf.includes(q) ||
-        e.id.includes(q) ||
-        e.role.toLowerCase().includes(q.toLowerCase());
-      const matchesDept = dept === "todos" || e.department === dept;
-      const matchesStatus = status === "todos" || e.status === status;
-      return matchesQ && matchesDept && matchesStatus;
-    });
+    return team
+      .filter((e) => {
+        const matchesQ =
+          !q ||
+          e.name.toLowerCase().includes(q.toLowerCase()) ||
+          e.cpf.includes(q) ||
+          e.id.includes(q) ||
+          e.role.toLowerCase().includes(q.toLowerCase());
+        const matchesDept = dept === "todos" || e.department === dept;
+        const matchesStatus = status === "todos" || e.status === status;
+        return matchesQ && matchesDept && matchesStatus;
+      })
+      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
   }, [team, q, dept, status]);
 
   if (!obra) {
@@ -146,28 +148,40 @@ function ObraDetail() {
                   {team.length === 0 ? "Nenhum colaborador alocado nesta obra." : "Nenhum resultado para os filtros aplicados."}
                 </p>
               ) : (
-                <ul className="divide-y divide-border rounded-md border border-border">
-                  {filtered.map((p) => (
-                    <li key={p.id}>
-                      <Link
-                        to="/funcionarios/$id"
-                        params={{ id: p.id }}
-                        className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50"
-                      >
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-                          {p.name.split(" ").slice(0, 2).map((n) => n[0]).join("")}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate font-semibold text-sm">{p.name}</p>
-                          <p className="truncate text-xs text-muted-foreground">
-                            #{p.id} · {p.role} · {p.department === "Seguranca" ? "Segurança" : p.department}
-                          </p>
-                        </div>
-                        <StatusBadge status={p.status} />
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
+                <Card className="overflow-hidden p-0">
+                  <div className="grid grid-cols-[80px_1.5fr_1fr_1fr_120px] items-center gap-3 border-b border-border bg-muted/40 px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <div>Matrícula</div>
+                    <div>Nome / Função</div>
+                    <div>Obra</div>
+                    <div>Departamento</div>
+                    <div>Status</div>
+                  </div>
+                  <ul className="divide-y divide-border">
+                    {filtered.map((p) => (
+                      <li key={p.id}>
+                        <Link
+                          to="/funcionarios/$id"
+                          params={{ id: p.id }}
+                          className="grid grid-cols-[80px_1.5fr_1fr_1fr_120px] items-center gap-3 px-5 py-4 transition hover:bg-muted/50"
+                        >
+                          <div className="font-mono text-xs text-muted-foreground">#{p.id}</div>
+                          <div className="flex min-w-0 items-center gap-3">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+                              {p.name.split(" ").slice(0, 2).map((n) => n[0]).join("")}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="truncate font-semibold">{p.name}</p>
+                              <p className="truncate text-xs text-muted-foreground">{p.role}</p>
+                            </div>
+                          </div>
+                          <div className="truncate text-sm">{p.site}</div>
+                          <div className="text-sm">{p.department === "Seguranca" ? "Segurança" : p.department}</div>
+                          <div><StatusBadge status={p.status} /></div>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
               )}
             </CardContent>
           </Card>

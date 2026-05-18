@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { authStore, useAuth } from "@/lib/auth-store";
+import { setUserName } from "@/lib/user";
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Entrar · Bucagrans RH" }] }),
@@ -34,6 +35,7 @@ function Login() {
       toast.error("E-mail ou senha incorretos.");
       return;
     }
+    setUserName(user.name);
     toast.success(`Bem-vindo(a), ${user.name}.`);
     navigate({ to: redirect || "/" });
   }

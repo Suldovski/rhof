@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
 import { employees } from "@/lib/employees";
 import { useSites } from "@/lib/sites-store";
+import { getGreetingByHour } from "@/lib/greeting";
+import { getUserName } from "@/lib/user";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -28,6 +30,7 @@ export const Route = createFileRoute("/")({
 
 function Dashboard() {
   const sites = useSites();
+  const title = `${getGreetingByHour()}, ${getUserName()}!`;
   const ativos = employees.filter((e) => e.status === "ativo").length;
   const ferias = employees.filter((e) => e.status === "ferias").length;
   const afastados = employees.filter((e) => e.status === "afastado").length;
@@ -47,7 +50,7 @@ function Dashboard() {
   return (
     <PageShell
       eyebrow="Painel geral"
-      title="Bom dia, Carla"
+      title={title}
       description="Acompanhe os indicadores de pessoal e movimentações nos canteiros."
       actions={
         <>
