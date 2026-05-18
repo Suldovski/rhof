@@ -236,3 +236,129 @@ function Field({ label, value, icon: Icon }: { label: string; value: string; ico
     </div>
   );
 }
+
+import { useSites } from "@/lib/sites-store";
+import type { Employee, EmployeeStatus } from "@/lib/employees";
+
+function EditEmployeeDialog({
+  open, onOpenChange, employee,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  employee: Employee;
+}) {
+  const sites = useSites();
+  const [name, setName] = useState(employee.name);
+  const [cpf, setCpf] = useState(employee.cpf);
+  const [role, setRole] = useState(employee.role);
+  const [site, setSite] = useState(employee.site);
+  const [admission, setAdmission] = useState(employee.admission || "");
+  const [salary, setSalary] = useState(String(employee.salary || 0));
+  const [salarioHora, setSalarioHora] = useState(String(employee.salarioHora || 0));
+  const [status, setStatus] = useState<EmployeeStatus>(employee.status);
+  const [phone, setPhone] = useState(employee.phone || employee.telefone || "");
+  const [email, setEmail] = useState(employee.email || "");
+
+  // Resync quando muda funcionário
+  const lastId = (EditEmployeeDialog as any)._lastId as string | undefined;
+  if (lastId !== employee.id) {
+    (EditEmployeeDialog as any)._lastId = employee.id;
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="font-display">Editar funcionário</DialogTitle>
+          <DialogDescription>Atualize os dados principais do colaborador.</DialogDescription>
+        </DialogHeader>
+        <form
+          className="grid gap-4"
+          onSubmit={(ev) => {
+            ev.preventDefault();
+            if (!name.trim()) { toast.error("Informe o nome."); return; }
+            employeesStore.update(employee.id, {
+              name: name.trim(),
+              cpf: cpf.trim(),
+              role: role.trim(),
+              cargoFuncao: role.trim(),
+              site: site.trim(),
+              organograma: site.trim(),
+              admission,
+              salary: parseFloat(salary) || 0,
+              salarioHora: parseFloat(salarioHora) || 0,
+              status,
+              phone: phone.trim(),
+              telefone: phone.trim(),
+              email: email.trim(),
+            });
+            toast.success("Funcionário atualizado.");
+            onOpenChange(false);
+          }}
+        >
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-1.5">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Nome *</Label>
+              <Input value={name} onChange={(e) => setName(e.target.value)} required />
+            </div>
+            <div className="grid gap-1.5">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">CPF</Label>
+              <Input value={cpf} onChange={(e) => setCpf(e.target.value)} />
+            </div>
+            <div className="grid gap-1.5">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Função / Cargo</Label>
+              <Input value={role} onChange={(e) => setRole(e.target.value)} />
+            </div>
+            <div className="grid gap-1.5">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Obra</Label>
+              <Select value={site} onValueChange={setSite}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  {sites.map((s) => (
+                    <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-1.5">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Admissão</Label>
+              <Input type="date" value={admission} onChange={(e) => setAdmission(e.target.value)} />
+            </div>
+            <div className="grid gap-1.5">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Status</Label>
+              <Select value={status} onValueChange={(v) => setStatus(v as EmployeeStatus)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ativo">Ativo</SelectItem>
+                  <SelectItem value="ferias">Férias</SelectItem>
+                  <SelectItem value="afastado">Afastado</SelectItem>
+                  <SelectItem value="desligado">Desligado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-1.5">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Salário mensal (R$)</Label>
+              <Input type="number" step="0.01" value={salary} onChange={(e) => setSalary(e.target.value)} />
+            </div>
+            <div className="grid gap-1.5">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Salário hora (R$)</Label>
+              <Input type="number" step="0.01" value={salarioHora} onChange={(e) => setSalarioHora(e.target.value)} />
+            </div>
+            <div className="grid gap-1.5">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Telefone</Label>
+              <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
+            </div>
+            <div className="grid gap-1.5">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">E-mail</Label>
+              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <Button type="submit">Salvar alterações</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
