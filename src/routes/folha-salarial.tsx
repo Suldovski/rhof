@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { employees, type Employee } from "@/lib/employees";
+import { useEmployees, type Employee } from "@/lib/employees";
 import { useSites } from "@/lib/sites-store";
 import { payrollStore, usePayroll } from "@/lib/payroll-store";
 
