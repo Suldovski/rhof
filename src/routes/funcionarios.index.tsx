@@ -186,6 +186,7 @@ function List() {
   const [q, setQ] = useState("");
   const [site, setSite] = useState<string>("todos");
   const [dept, setDept] = useState<string>("todos");
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const filtered = useMemo(() => {
     return employees.filter((e) => {
@@ -207,6 +208,22 @@ function List() {
       description={`${employees.length} colaboradores cadastrados em ${sites.length} canteiros.`}
       actions={
         <>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            className="hidden"
+            onChange={async (e) => {
+              const f = e.target.files?.[0];
+              if (!f) return;
+              try { await importFromFile(f); }
+              catch (err: any) { toast.error("Falha ao importar: " + (err?.message ?? err)); }
+              if (fileRef.current) fileRef.current.value = "";
+            }}
+          />
+          <Button variant="outline" onClick={() => fileRef.current?.click()}>
+            <Upload className="mr-1 h-4 w-4" /> Importar planilha
+          </Button>
           <Button variant="outline" onClick={() => exportCSV(filtered)}>
             <Download className="mr-1 h-4 w-4" /> Exportar CSV
           </Button>
