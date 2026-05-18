@@ -23,6 +23,7 @@ const fmtBRL = (n: number) =>
 
 function FolhaSalarial() {
   const sites = useSites();
+  const employees = useEmployees();
   const overrides = usePayroll();
   const [q, setQ] = useState("");
 
