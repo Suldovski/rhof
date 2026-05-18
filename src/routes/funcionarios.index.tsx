@@ -55,6 +55,131 @@ function exportCSV(rows: Employee[]) {
   toast.success(`${rows.length} funcionário(s) exportado(s).`);
 }
 
+function normKey(s: any): string {
+  return String(s ?? "")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+const HEADER_ALIASES: Record<string, string> = {
+  re: "id", matricula: "id",
+  nome: "name", funcionario: "name",
+  cpf: "cpf",
+  datanasc: "nascimento", datanascimento: "nascimento", nascimento: "nascimento",
+  idade: "idade",
+  datadeadmissao: "admission", admissao: "admission", dataadmissao: "admission",
+  cbo: "cbo",
+  funcao: "role", cargo: "role", cargofuncao: "role",
+  obra: "site",
+  salariohora: "salarioHora", salhora: "salarioHora", hora: "salarioHora",
+  salariomensal: "salary", salario: "salary", salmensal: "salary", mensal: "salary",
+  situacao: "status", status: "status",
+};
+
+function parseAnyDate(v: any): string {
+  if (!v) return "";
+  if (v instanceof Date) return v.toISOString().slice(0, 10);
+  if (typeof v === "number" && isFinite(v)) {
+    const d = XLSX.SSF.parse_date_code(v);
+    if (d) return `${d.y}-${String(d.m).padStart(2,"0")}-${String(d.d).padStart(2,"0")}`;
+  }
+  const s = String(v).trim();
+  const br = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+  if (br) {
+    const [, d, m, y] = br;
+    const yy = y.length === 2 ? `20${y}` : y;
+    return `${yy}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`;
+  }
+  const iso = s.match(/^\d{4}-\d{2}-\d{2}/);
+  if (iso) return s.slice(0, 10);
+  return "";
+}
+
+function parseNumberBR(v: any): number {
+  if (typeof v === "number") return v;
+  if (v == null) return 0;
+  const s = String(v).replace(/[R$\s]/g, "").replace(/\./g, "").replace(",", ".");
+  const n = parseFloat(s);
+  return isFinite(n) ? n : 0;
+}
+
+function mapStatus(v: any): EmployeeStatus {
+  const s = normKey(v);
+  if (s.includes("ferias")) return "ferias";
+  if (s.includes("afast")) return "afastado";
+  if (s.includes("deslig") || s.includes("demit") || s.includes("inativ")) return "desligado";
+  return "ativo";
+}
+
+async function importFromFile(file: File): Promise<void> {
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type: "array", cellDates: true });
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: true });
+  if (rows.length < 2) { toast.error("Planilha vazia."); return; }
+
+  let headerIdx = 0;
+  for (let i = 0; i < Math.min(10, rows.length); i++) {
+    const keys = rows[i].map(normKey);
+    if (keys.includes("nome") && keys.includes("cpf")) { headerIdx = i; break; }
+  }
+
+  const headers = rows[headerIdx].map(normKey);
+  const fields = headers.map((h) => HEADER_ALIASES[h] ?? h);
+
+  let created = 0, skipped = 0;
+  const existingSites = new Set(sitesStore.list().map((s) => s.name.toLowerCase()));
+
+  for (let i = headerIdx + 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || row.every((c) => c === "" || c == null)) continue;
+    const rec: Record<string, any> = {};
+    fields.forEach((f, idx) => { rec[f] = row[idx]; });
+
+    const name = String(rec.name ?? "").trim();
+    const cpf = String(rec.cpf ?? "").trim();
+    if (!name || !cpf) { skipped++; continue; }
+
+    const site = String(rec.site ?? "").trim();
+    if (site && !existingSites.has(site.toLowerCase())) {
+      try {
+        sitesStore.add({
+          id: slugify(site),
+          name: site,
+          status: "Em execução",
+          start: new Date().toISOString().slice(0, 10),
+          manager: "—",
+        });
+        existingSites.add(site.toLowerCase());
+      } catch {}
+    }
+
+    const role = String(rec.role ?? "").trim();
+    const salaryMensal = parseNumberBR(rec.salary);
+    const salaryHora = parseNumberBR(rec.salarioHora);
+
+    try {
+      employeesStore.add({
+        id: rec.id ? String(rec.id).trim() : undefined,
+        name, cpf,
+        nascimento: parseAnyDate(rec.nascimento),
+        admission: parseAnyDate(rec.admission),
+        role, cargoFuncao: role,
+        site, organograma: site,
+        status: mapStatus(rec.status),
+        salary: salaryMensal || salaryHora * 220,
+        salarioHora: salaryHora,
+        department: "Obra",
+        departamento: "Obra",
+      });
+      created++;
+    } catch {
+      skipped++;
+    }
+  }
+
+  toast.success(`Importação: ${created} criado(s)${skipped ? `, ${skipped} ignorado(s)` : ""}.`);
+}
 function List() {
   const sites = useSites();
   const employees = useEmployees();
