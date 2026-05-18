@@ -13,7 +13,7 @@ import { PageShell } from "@/components/page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
-import { employees } from "@/lib/employees";
+import { useEmployees } from "@/lib/employees";
 import { useSites } from "@/lib/sites-store";
 import { getGreetingByHour } from "@/lib/greeting";
 import { getUserName } from "@/lib/user";
@@ -29,21 +29,48 @@ export const Route = createFileRoute("/")({
 });
 
 function Dashboard() {
+  const employees = useEmployees();
   const sites = useSites();
   const title = `${getGreetingByHour()}, ${getUserName()}!`;
   const ativos = employees.filter((e) => e.status === "ativo").length;
 
   type Kpi = {
-    label: string; value: number; hint: string;
-    icon: typeof Users; tone: string; to: "/funcionarios" | "/obras" | "/funcionarios/ferias";
+    label: string;
+    value: number;
+    hint: string;
+    icon: typeof Users;
+    tone: string;
+    to: "/funcionarios" | "/obras" | "/funcionarios/ferias";
   };
   const kpis: Kpi[] = [
-    { label: "Funcionários ativos", value: ativos, hint: "ver lista completa", icon: Users, tone: "text-accent", to: "/funcionarios" },
-    { label: "Obras em andamento", value: sites.length, hint: "gerenciar canteiros", icon: HardHat, tone: "text-primary", to: "/obras" },
-    { label: "Em férias", value: ferias, hint: "ver colaboradores", icon: CalendarClock, tone: "text-success", to: "/funcionarios/ferias" },
+    {
+      label: "Funcionários ativos",
+      value: ativos,
+      hint: "ver lista completa",
+      icon: Users,
+      tone: "text-accent",
+      to: "/funcionarios",
+    },
+    {
+      label: "Obras em andamento",
+      value: sites.length,
+      hint: "gerenciar canteiros",
+      icon: HardHat,
+      tone: "text-primary",
+      to: "/obras",
+    },
+    {
+      label: "Em férias",
+      value: ferias,
+      hint: "ver colaboradores",
+      icon: CalendarClock,
+      tone: "text-success",
+      to: "/funcionarios/ferias",
+    },
   ];
 
-  const recentes = [...employees].slice(0, 5);
+  const recentes = [...employees].sort((a, b) => a.name.localeCompare(b.name, "pt-BR")).slice(0, 5);
+  const orderedSites = [...sites].sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
 
   return (
     <PageShell
@@ -108,7 +135,11 @@ function Dashboard() {
               {recentes.map((e) => (
                 <li key={e.id} className="flex items-center gap-4 px-6 py-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
-                    {e.name.split(" ").slice(0, 2).map((n) => n[0]).join("")}
+                    {e.name
+                      .split(" ")
+                      .slice(0, 2)
+                      .map((n) => n[0])
+                      .join("")}
                   </div>
                   <div className="min-w-0 flex-1">
                     <Link
@@ -135,13 +166,17 @@ function Dashboard() {
             <p className="text-xs text-muted-foreground">Pessoal alocado por canteiro</p>
           </CardHeader>
           <CardContent className="space-y-4">
-            {sites.map((s) => {
+            {orderedSites.map((s) => {
               const count = employees.filter((e) => e.site === s.name).length;
               const pct = employees.length ? (count / employees.length) * 100 : 0;
               return (
                 <div key={s.id}>
                   <div className="mb-1 flex items-center justify-between text-sm">
-                    <Link to="/obras/$id" params={{ id: s.id }} className="font-medium hover:text-accent">
+                    <Link
+                      to="/obras/$id"
+                      params={{ id: s.id }}
+                      className="font-medium hover:text-accent"
+                    >
                       {s.name}
                     </Link>
                     <span className="text-muted-foreground">{count}</span>
@@ -166,7 +201,14 @@ function Dashboard() {
               <ShieldCheck className="h-5 w-5 text-warning-foreground" />
             </div>
             <div>
+             copilot/convert-to-spa-github-pages-again
+              <p className="font-semibold">Entrega de EPIs pendente</p>
+              <p className="text-xs text-muted-foreground">
+                5 colaboradores no Edifício Atlântico.
+              </p>
+=======
               <p className="text-xs text-muted-foreground">5 colaboradores no Edifício Atlântico.</p>
+   main
             </div>
           </CardContent>
         </Card>

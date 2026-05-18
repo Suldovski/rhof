@@ -1,17 +1,9 @@
-import React from "react";
 import ReactDOM from "react-dom/client";
-import { QueryClient } from "@tanstack/react-query";
-import { RouterProvider, createRouter } from "@tanstack/react-router";
-import { routeTree } from "./routeTree.gen";
+import { RouterProvider } from "@tanstack/react-router";
+import { getRouter } from "./router";
 import "./styles.css";
 
-const queryClient = new QueryClient();
-
-const router = createRouter({
-  routeTree,
-  context: { queryClient },
-  defaultPreloadStaleTime: 0,
-});
+const router = getRouter();
 
 declare module "@tanstack/react-router" {
   interface Register {
