@@ -192,6 +192,8 @@ function Detail() {
         </div>
       </div>
 
+      <EditEmployeeDialog open={editing} onOpenChange={setEditing} employee={e} />
+
       <AlertDialog open={confirmDel} onOpenChange={setConfirmDel}>
         <AlertDialogContent>
           <AlertDialogHeader>
