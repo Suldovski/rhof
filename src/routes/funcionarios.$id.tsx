@@ -73,7 +73,7 @@ function Detail() {
           <Button variant="outline" onClick={() => { downloadFRE(e); toast.success("FRE exportada."); }}>
             <Download className="mr-1 h-4 w-4" /> Exportar FRE
           </Button>
-          <Button><Pencil className="mr-1 h-4 w-4" /> Editar</Button>
+          <Button onClick={() => setEditing(true)}><Pencil className="mr-1 h-4 w-4" /> Editar</Button>
           <Button variant="destructive" onClick={() => setConfirmDel(true)}>
             <Trash2 className="mr-1 h-4 w-4" /> Apagar
           </Button>
