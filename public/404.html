@@ -1,0 +1,16 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Redirecting…</title>
+    <script>
+      (function () {
+        const [_, repo, ...rest] = window.location.pathname.split("/");
+        const appPath = "/" + rest.join("/");
+        const target = `/${repo}/#${appPath}${window.location.search}${window.location.hash}`;
+        window.location.replace(target);
+      })();
+    </script>
+  </head>
+  <body></body>
+</html>
