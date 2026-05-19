@@ -27,6 +27,7 @@ export const Route = createFileRoute("/obras")({
   component: Obras,
 });
 
+const statusOptions = ["Planejamento", "Fundação", "Estrutura", "Acabamento", "Em execução", "Operação", "Concluída"];
 
 function Obras() {
   const sites = useSites();

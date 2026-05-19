@@ -208,12 +208,13 @@ function NewEmployee() {
             </Field>
             <Field label="Telefone"><Input value={form.telefone} onChange={(e) => set("telefone", e.target.value)} /></Field>
             <Field label="Telefone recado"><Input value={form.telefoneRecado} onChange={(e) => set("telefoneRecado", e.target.value)} /></Field>
+            <Field label="E-mail"><Input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} /></Field>
           </CardContent>
         </Card>
 
         {/* CNH */}
         <Card>
-          <CardHeader><CardTitle className="font-display text-lg">CNH (OBRIGATÓRIO PARA MOTORISTAS)</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="font-display text-lg">CNH (se possuir)</CardTitle></CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-3">
             <Field label="Nº CNH"><Input value={form.cnh?.numero ?? ""} onChange={(e) => set("cnh", { ...(form.cnh ?? { numero: "", primeiraHabilitacao: "", expedicao: "", validade: "", uf: "", categoria: "" }), numero: e.target.value })} /></Field>
             <Field label="Categoria"><Input value={form.cnh?.categoria ?? ""} onChange={(e) => set("cnh", { ...(form.cnh ?? { numero: "", primeiraHabilitacao: "", expedicao: "", validade: "", uf: "", categoria: "" }), categoria: e.target.value })} /></Field>
@@ -280,7 +281,7 @@ function NewEmployee() {
             <Field label="% Periculosidade"><Input type="number" value={form.percentualPericulosidade || ""} onChange={(e) => set("percentualPericulosidade", parseFloat(e.target.value) || 0)} /></Field>
             <Field label="% Insalubridade"><Input type="number" value={form.percentualInsalubridade || ""} onChange={(e) => set("percentualInsalubridade", parseFloat(e.target.value) || 0)} /></Field>
             <Field label="Ajuda de custo (R$)"><Input type="number" step="0.01" value={form.ajudaCusto || ""} onChange={(e) => set("ajudaCusto", parseFloat(e.target.value) || 0)} /></Field>
-            <Field label="Horas extras"><Input value={form.horasExtras} onChange={(e) => set("horasExtras", e.target.value)} /></Field>
+            <Field label="Horas extras"><Input value={form.horasExtras} onChange={(e) => set("horasExtras", e.target.value)} placeholder="Ex: 50%/100%" /></Field>
 
             <Field label="Vale Transporte" className="md:col-span-3">
               <div className="flex flex-wrap items-center gap-4 pt-1">
@@ -296,25 +297,9 @@ function NewEmployee() {
                 <label className="flex items-center gap-2 text-sm">
                   <Checkbox checked={form.adiantamento} onCheckedChange={(c) => set("adiantamento", !!c)} /> Adiantamento
                 </label>
-                {form.adiantamento && (
-                <>
-                  <Input 
-                  type="number" 
-                  step="0.01" 
-                  placeholder="Valor de adiantamento" 
-                  className="w-32" 
-                  value={form.valorAdiantamento || ""} 
-                  onChange={(e) => set("valorAdiantamento", parseFloat(e.target.value) || 0)} 
-                  />
-                  <label className="flex items-center gap-2 text-sm">
-                  <Checkbox 
-                  checked={form.valeAlimentacao} 
-                   onCheckedChange={(c) => set("valeAlimentacao", !!c)} 
-                  /> 
-                  Vale Alimentação
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox checked={form.valeAlimentacao} onCheckedChange={(c) => set("valeAlimentacao", !!c)} /> Vale Alimentação
                 </label>
-                </>
-                )}
                 {form.valeAlimentacao && (
                   <Input type="number" step="0.01" placeholder="Desconto VA" className="w-32" value={form.valorDescontoVA || ""} onChange={(e) => set("valorDescontoVA", parseFloat(e.target.value) || 0)} />
                 )}
