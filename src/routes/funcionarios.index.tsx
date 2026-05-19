@@ -265,18 +265,16 @@ function List() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const filtered = useMemo(() => {
-    return employees
-      .filter((e) => {
-        const matchesQ =
-          !q ||
-          e.name.toLowerCase().includes(q.toLowerCase()) ||
-          e.cpf.includes(q) ||
-          e.id.includes(q);
-        const matchesSite = site === "todos" || e.site === site;
-        const matchesDept = dept === "todos" || e.department === dept;
-        return matchesQ && matchesSite && matchesDept;
-      })
-      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+    return employees.filter((e) => {
+      const matchesQ =
+        !q ||
+        e.name.toLowerCase().includes(q.toLowerCase()) ||
+        e.cpf.includes(q) ||
+        e.id.includes(q);
+      const matchesSite = site === "todos" || e.site === site;
+      const matchesDept = dept === "todos" || e.department === dept;
+      return matchesQ && matchesSite && matchesDept;
+    });
   }, [employees, q, site, dept]);
 
   return (
