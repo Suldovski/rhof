@@ -61,7 +61,7 @@ function Dashboard() {
     },
     {
       label: "Em férias",
-      value: ferias,
+      value: "ferias",
       hint: "ver colaboradores",
       icon: CalendarClock,
       tone: "text-success",
