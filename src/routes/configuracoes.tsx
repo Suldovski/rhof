@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Building2, Bell, Shield, Palette, Save, UserCog, Plus, Trash2, Mail } from "lucide-react";
+import { Building2, Bell, Shield, Palette, Save, UserCog, Plus, Trash2, Mail, Pencil, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +22,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { authStore, useAuth, type AppUser } from "@/lib/auth-store";
+import { horariosStore, useHorarios } from "@/lib/horarios-store";
 
 export const Route = createFileRoute("/configuracoes")({
   head: () => ({ meta: [{ title: "Configurações · Bucagrans RH" }] }),
@@ -54,6 +55,7 @@ function Configuracoes() {
         <TabsList>
           <TabsTrigger value="empresa"><Building2 className="mr-1.5 h-3.5 w-3.5" /> Empresa</TabsTrigger>
           <TabsTrigger value="usuarios"><UserCog className="mr-1.5 h-3.5 w-3.5" /> Usuários</TabsTrigger>
+          <TabsTrigger value="horarios"><Clock className="mr-1.5 h-3.5 w-3.5" /> Horários</TabsTrigger>
           <TabsTrigger value="notificacoes"><Bell className="mr-1.5 h-3.5 w-3.5" /> Notificações</TabsTrigger>
           <TabsTrigger value="seguranca"><Shield className="mr-1.5 h-3.5 w-3.5" /> Segurança</TabsTrigger>
           <TabsTrigger value="aparencia"><Palette className="mr-1.5 h-3.5 w-3.5" /> Aparência</TabsTrigger>
@@ -91,6 +93,10 @@ function Configuracoes() {
 
         <TabsContent value="usuarios" className="mt-4">
           <UsersPanel />
+        </TabsContent>
+
+        <TabsContent value="horarios" className="mt-4">
+          <HorariosPanel />
         </TabsContent>
 
         <TabsContent value="notificacoes" className="mt-4">
@@ -163,7 +169,7 @@ function UsersPanel() {
               <Plus className="mr-1 h-4 w-4" /> Novo usuário
             </Button>
           </DialogTrigger>
-          <UserFormDialog onDone={() => setOpen(false)} />
+          <UserFormDialog editing={editing} onDone={() => { setOpen(false); setEditing(null); }} />
         </Dialog>
       </CardHeader>
       <CardContent className="p-0">
@@ -203,13 +209,14 @@ function UsersPanel() {
                   <Badge variant="outline">Ativo</Badge>
                 )}
               </div>
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-1">
+                <Button size="icon" variant="ghost" onClick={() => { setEditing(u); setOpen(true); }} aria-label="Editar">
+                  <Pencil className="h-4 w-4" />
+                </Button>
                 <Button
-                  size="icon"
-                  variant="ghost"
+                  size="icon" variant="ghost"
                   disabled={u.id === auth.currentUserId}
-                  onClick={() => setRemoveId(u.id)}
-                  aria-label="Remover"
+                  onClick={() => setRemoveId(u.id)} aria-label="Remover"
                 >
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
@@ -243,16 +250,112 @@ function UsersPanel() {
   );
 }
 
-function UserFormDialog({ onDone }: { onDone: () => void }) {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+function HorariosPanel() {
+  const horarios = useHorarios();
+  const [novo, setNovo] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingNome, setEditingNome] = useState("");
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="font-display text-lg">Horários / escalas</CardTitle>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Cadastre os horários disponíveis para seleção no cadastro de funcionários.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <form
+          className="flex gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!novo.trim()) return;
+            horariosStore.add(novo);
+            setNovo("");
+            toast.success("Horário adicionado.");
+          }}
+        >
+          <Input
+            placeholder="EX: 44H 2ª–6ª 07:00–17:00"
+            value={novo}
+            onChange={(e) => setNovo(e.target.value)}
+          />
+          <Button type="submit">
+            <Plus className="mr-1 h-4 w-4" /> Adicionar
+          </Button>
+        </form>
+        <ul className="divide-y divide-border rounded-md border border-border">
+          {horarios.length === 0 && (
+            <li className="px-4 py-6 text-center text-sm text-muted-foreground">
+              Nenhum horário cadastrado.
+            </li>
+          )}
+          {horarios.map((h) => (
+            <li key={h.id} className="flex items-center gap-2 px-4 py-3">
+              {editingId === h.id ? (
+                <>
+                  <Input
+                    value={editingNome}
+                    onChange={(e) => setEditingNome(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      horariosStore.update(h.id, editingNome);
+                      setEditingId(null);
+                      toast.success("Horário atualizado.");
+                    }}
+                  >
+                    Salvar
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>
+                    Cancelar
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <span className="flex-1 text-sm font-medium">{h.nome}</span>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => {
+                      setEditingId(h.id);
+                      setEditingNome(h.nome);
+                    }}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => {
+                      horariosStore.remove(h.id);
+                      toast.success("Horário removido.");
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
+  );
+}
+
+function UserFormDialog({ editing, onDone }: { editing: AppUser | null; onDone: () => void }) {
+  const [name, setName] = useState(editing?.name ?? "");
+  const [email, setEmail] = useState(editing?.email ?? "");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<AppUser["role"]>("RH");
+  const [role, setRole] = useState<AppUser["role"]>(editing?.role ?? "RH");
 
   return (
     <DialogContent>
       <DialogHeader>
-        <DialogTitle className="font-display">Novo usuário</DialogTitle>
+        <DialogTitle className="font-display">{editing ? "Editar usuário" : "Novo usuário"}</DialogTitle>
         <DialogDescription>
           As credenciais serão usadas para login na plataforma.
         </DialogDescription>
@@ -261,13 +364,20 @@ function UserFormDialog({ onDone }: { onDone: () => void }) {
         className="grid gap-4"
         onSubmit={(e) => {
           e.preventDefault();
-          if (password.length < 6) {
+          if (!editing && password.length < 6) {
             toast.error("Senha deve ter ao menos 6 caracteres.");
             return;
           }
           try {
-            authStore.create({ name: name.trim(), email: email.trim(), password, role });
-            toast.success("Usuário criado.");
+            if (editing) {
+              const patch: Partial<AppUser> = { name: name.trim(), email: email.trim(), role };
+              if (password) patch.password = password;
+              authStore.update(editing.id, patch);
+              toast.success("Usuário atualizado.");
+            } else {
+              authStore.create({ name: name.trim(), email: email.trim(), password, role });
+              toast.success("Usuário criado.");
+            }
             onDone();
           } catch (err) {
             toast.error((err as Error).message);
@@ -284,8 +394,16 @@ function UserFormDialog({ onDone }: { onDone: () => void }) {
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="grid gap-1.5">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Senha *</Label>
-            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+              {editing ? "Nova senha (opcional)" : "Senha *"}
+            </Label>
+            <Input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required={!editing}
+              minLength={editing ? undefined : 6}
+            />
           </div>
           <div className="grid gap-1.5">
             <Label className="text-xs uppercase tracking-wider text-muted-foreground">Perfil</Label>
@@ -301,7 +419,7 @@ function UserFormDialog({ onDone }: { onDone: () => void }) {
         </div>
         <DialogFooter>
           <Button type="button" variant="ghost" onClick={onDone}>Cancelar</Button>
-          <Button type="submit">Criar usuário</Button>
+          <Button type="submit">{editing ? "Salvar alterações" : "Criar usuário"}</Button>
         </DialogFooter>
       </form>
     </DialogContent>
