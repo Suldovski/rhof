@@ -12,6 +12,10 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useEmployees, type Employee } from "@/lib/employees";
 import { useSites } from "@/lib/sites-store";
 import { payrollStore, usePayroll, currentMonth } from "@/lib/payroll-store";
@@ -48,16 +52,22 @@ function FolhaSalarial() {
   const overrides = usePayroll();
   const [q, setQ] = useState("");
   const [month, setMonth] = useState<string>(currentMonth());
-  const [exportObra, setExportObra] = useState<string>("__all__");
+  
+  const [filterObra, setFilterObra] = useState<string>("__all__");
 
   const monthMap = overrides[month] ?? {};
-  const getValue = (e: Employee) =>
-    monthMap[e.id] !== undefined ? monthMap[e.id] : e.salary;
+  const getValue = (e: Employee): number | "" =>
+    monthMap[e.id] !== undefined ? monthMap[e.id] : "";
+  const getNum = (e: Employee): number => {
+    const v = getValue(e);
+    return typeof v === "number" ? v : 0;
+  };
 
   const grouped = useMemo(() => {
     const map = new Map<string, Employee[]>();
     sites.forEach((s) => map.set(s.name, []));
     employees.forEach((e) => {
+      if (filterObra !== "__all__" && e.site !== filterObra) return;
       if (!map.has(e.site)) map.set(e.site, []);
       const list = map.get(e.site)!;
       if (
@@ -69,13 +79,16 @@ function FolhaSalarial() {
         list.push(e);
       }
     });
-    return Array.from(map.entries());
-  }, [sites, employees, q]);
+    return Array.from(map.entries()).filter(([n]) => filterObra === "__all__" || n === filterObra);
+  }, [sites, employees, q, filterObra]);
 
   const totalGeral = useMemo(
     () =>
       grouped.reduce(
-        (acc, [, list]) => acc + list.reduce((s, e) => s + getValue(e), 0),
+        (acc, [, list]) => acc + list.reduce((s, e) => {
+          const v = getValue(e);
+          return s + (typeof v === "number" ? v : 0);
+        }, 0),
         0,
       ),
     [grouped, monthMap],
@@ -93,13 +106,13 @@ function FolhaSalarial() {
     doc.setTextColor(100);
     doc.text(`Competência: ${mLabel} · Emitido em ${today}`, 14, 21);
     doc.setTextColor(20);
-    const subtotal = list.reduce((s, e) => s + getValue(e), 0);
+    const subtotal = list.reduce((s, e) => s + getNum(e), 0);
     autoTable(doc, {
       startY: 28,
       head: [["Matrícula", "Nome", "Função", "Banco", "Ag.", "Conta", "PIX", "Salário"]],
       body: list.map((e) => [
         e.id, e.name, e.role, e.bank.bank, e.bank.agency,
-        `${e.bank.account} (${e.bank.type})`, e.bank.pix, fmtBRL(getValue(e)),
+        `${e.bank.account} (${e.bank.type})`, e.bank.pix, fmtBRL(getNum(e)),
       ]),
       foot: [[
         { content: "Total da obra", colSpan: 7, styles: { halign: "right", fontStyle: "bold" } },
@@ -113,14 +126,14 @@ function FolhaSalarial() {
     return doc;
   }
 
-  function doExport() {
+  function exportSite(siteName: string | null) {
     const safeMonth = month;
-    if (exportObra === "__all__") {
+    if (siteName === null) {
       let count = 0;
-      grouped.forEach(([siteName, list]) => {
+      grouped.forEach(([sName, list]) => {
         if (list.length === 0) return;
-        const doc = buildObraPDF(siteName, list);
-        const safe = siteName.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+        const doc = buildObraPDF(sName, list);
+        const safe = sName.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
         doc.save(`folha-${safe}-${safeMonth}.pdf`);
         count++;
       });
@@ -128,7 +141,7 @@ function FolhaSalarial() {
       else toast.success(`${count} PDF(s) gerado(s).`);
       return;
     }
-    const entry = grouped.find(([n]) => n === exportObra);
+    const entry = grouped.find(([n]) => n === siteName);
     if (!entry || entry[1].length === 0) {
       toast.error("Esta obra não tem colaboradores.");
       return;
@@ -145,9 +158,24 @@ function FolhaSalarial() {
       title="Folha Salarial"
       description="Selecione o mês, lance os valores por obra e exporte em PDF."
       actions={
-        <Button onClick={doExport}>
-          <Download className="mr-1 h-4 w-4" /> Exportar PDF
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button>
+              <Download className="mr-1 h-4 w-4" /> Exportar PDF
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="max-h-80 overflow-auto">
+            <DropdownMenuLabel>Escolha a obra</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => exportSite(null)}>Todas as obras</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {sites.map((s) => (
+              <DropdownMenuItem key={s.id} onClick={() => exportSite(s.name)}>
+                {s.name}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       }
     >
       <Card className="mb-4 p-4">
@@ -175,17 +203,16 @@ function FolhaSalarial() {
           </div>
 
           <div className="flex flex-col">
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Exportar</span>
-            <Select value={exportObra} onValueChange={setExportObra}>
-              <SelectTrigger className="w-[240px]"><SelectValue /></SelectTrigger>
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Filtrar obra</span>
+            <Select value={filterObra} onValueChange={setFilterObra}>
+              <SelectTrigger className="w-[220px]"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="__all__">Todas as obras (um PDF por obra)</SelectItem>
-                {sites.map((s) => (
-                  <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
-                ))}
+                <SelectItem value="__all__">Todas as obras</SelectItem>
+                {sites.map((s) => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
+
 
           <Badge variant="secondary" className="text-sm">
             Total {mLabel}: <span className="ml-2 font-display">{fmtBRL(totalGeral)}</span>
@@ -195,7 +222,7 @@ function FolhaSalarial() {
 
       <div className="space-y-6">
         {grouped.map(([siteName, list]) => {
-          const subtotal = list.reduce((s, e) => s + getValue(e), 0);
+          const subtotal = list.reduce((s, e) => s + getNum(e), 0);
           return (
             <Card key={siteName} className="overflow-hidden">
               <CardHeader className="flex flex-row items-center justify-between gap-3 bg-primary text-primary-foreground">
@@ -249,8 +276,21 @@ function FolhaSalarial() {
                                 step="0.01"
                                 min={0}
                                 value={getValue(e)}
+                                placeholder="0,00"
+                                data-payroll-input
+                                onKeyDown={(ev) => {
+                                  if (ev.key === "Enter") {
+                                    ev.preventDefault();
+                                    const inputs = Array.from(document.querySelectorAll<HTMLInputElement>("[data-payroll-input]"));
+                                    const idx = inputs.indexOf(ev.currentTarget);
+                                    const next = inputs[idx + 1];
+                                    if (next) { next.focus(); next.select(); }
+                                  }
+                                }}
                                 onChange={(ev) => {
-                                  const v = parseFloat(ev.target.value);
+                                  const raw = ev.target.value;
+                                  if (raw === "") return;
+                                  const v = parseFloat(raw);
                                   payrollStore.set(month, e.id, isNaN(v) ? 0 : v);
                                 }}
                                 className="ml-auto h-9 w-32 text-right font-semibold"
@@ -284,9 +324,24 @@ function FolhaSalarial() {
             <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Total do mês ({mLabel})</p>
             <p className="font-display text-3xl text-foreground">{fmtBRL(totalGeral)}</p>
           </div>
-          <Button size="lg" onClick={doExport}>
-            <Download className="mr-1 h-4 w-4" /> Exportar PDF
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="lg">
+                <Download className="mr-1 h-4 w-4" /> Exportar PDF
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="max-h-80 overflow-auto">
+              <DropdownMenuLabel>Escolha a obra</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => exportSite(null)}>Todas as obras</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {sites.map((s) => (
+                <DropdownMenuItem key={s.id} onClick={() => exportSite(s.name)}>
+                  {s.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </CardContent>
       </Card>
     </PageShell>
