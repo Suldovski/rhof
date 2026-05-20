@@ -13,8 +13,9 @@ import { PageShell } from "@/components/page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
-import { employees } from "@/lib/employees";
+import { useEmployees } from "@/lib/employees";
 import { useSites } from "@/lib/sites-store";
+import { useAuth } from "@/lib/auth-store";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -26,9 +27,20 @@ export const Route = createFileRoute("/")({
   component: Dashboard,
 });
 
+function greeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "Bom dia";
+  if (h < 18) return "Boa tarde";
+  return "Boa noite";
+}
+
 function Dashboard() {
   const sites = useSites();
-  const ativos = employees.filter((e) => e.status === "ativo").length;
+  const employees = useEmployees();
+  const auth = useAuth();
+  const firstName = auth.users.find((u) => u.id === auth.currentUserId)?.name?.split(" ")[0] ?? "bem-vindo(a)";
+
+  const ativos = employees.filter((e) => e.status === "efetivo" || (e.status as any) === "ativo").length;
   const ferias = employees.filter((e) => e.status === "ferias").length;
   const afastados = employees.filter((e) => e.status === "afastado").length;
 
@@ -42,12 +54,12 @@ function Dashboard() {
     { label: "Em férias", value: ferias, hint: "ver colaboradores", icon: CalendarClock, tone: "text-success", to: "/funcionarios/ferias" },
   ];
 
-  const recentes = [...employees].slice(0, 5);
+  const recentes = [...employees].slice(-5).reverse();
 
   return (
     <PageShell
       eyebrow="Painel geral"
-      title="Bom dia, Carla"
+      title={`${greeting()}, ${firstName}`}
       description="Acompanhe os indicadores de pessoal e movimentações nos canteiros."
       actions={
         <>
