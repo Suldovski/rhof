@@ -113,10 +113,6 @@ function Login() {
               </Button>
             </form>
 
-            <div className="mt-6 rounded-md border border-dashed border-border bg-muted/30 p-3 text-xs text-muted-foreground">
-              <p className="font-semibold text-foreground">Conta padrão de demonstração</p>
-              <p className="mt-0.5">admin@bucagrans.com.br · admin123</p>
-            </div>
           </CardContent>
         </Card>
       </div>
