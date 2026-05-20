@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
-import { Plus, Search, Filter, Download, ChevronRight, Upload } from "lucide-react";
+import { Plus, Search, Download, ChevronRight, Upload, Trash2, FileText } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { PageShell } from "@/components/page-shell";
@@ -8,73 +8,33 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/status-badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { employeesStore, useEmployees, type Employee, type EmployeeStatus } from "@/lib/employees";
 import { sitesStore, useSites, slugify } from "@/lib/sites-store";
+import { downloadEmployeesPDF } from "@/lib/employees-pdf";
 
 export const Route = createFileRoute("/funcionarios/")({
-  head: () => ({
-    meta: [{ title: "Funcionários · Bucagrans RH" }],
-  }),
+  head: () => ({ meta: [{ title: "Funcionários · Bucagrans RH" }] }),
   component: List,
 });
-
-function exportCSV(rows: Employee[]) {
-  const headers = [
-    "matricula", "nome", "cpf", "rg", "ctps", "pis", "nascimento",
-    "cargo", "departamento", "obra", "admissao", "status",
-    "email", "telefone", "endereco", "municipio", "estado", "cep",
-    "salario_mensal", "salario_hora",
-    "banco", "agencia", "conta", "tipo_conta", "pix",
-    "sindicato", "sindicato_uf", "nome_mae",
-  ];
-  const esc = (v: any) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-  const csv = [
-    headers.join(","),
-    ...rows.map((e) => [
-      e.id, e.name, e.cpf, e.rg, e.ctps, e.pis, e.nascimento,
-      e.cargoFuncao || e.role, e.departamento || e.department, e.organograma || e.site, e.admission, e.status,
-      e.email, e.telefone || e.phone, e.endereco, e.municipio, e.estado, e.cep,
-      e.salary, e.salarioHora,
-      e.bank.bank, e.bank.agency, e.bank.account, e.bank.type, e.bank.pix,
-      e.sindicato, e.sindicatoUf, e.nomeMae,
-    ].map(esc).join(",")),
-  ].join("\n");
-  const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = `funcionarios-${new Date().toISOString().slice(0, 10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-  toast.success(`${rows.length} funcionário(s) exportado(s).`);
-}
 
 function normKey(s: any): string {
   return String(s ?? "")
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .toLowerCase().replace(/[^a-z0-9]+/g, "");
 }
-
-const HEADER_ALIASES: Record<string, string> = {
-  re: "id", matricula: "id",
-  nome: "name", funcionario: "name",
-  cpf: "cpf",
-  datanasc: "nascimento", datanascimento: "nascimento", nascimento: "nascimento",
-  idade: "idade",
-  datadeadmissao: "admission", admissao: "admission", dataadmissao: "admission",
-  cbo: "cbo",
-  funcao: "role", cargo: "role", cargofuncao: "role",
-  obra: "site",
-  salariohora: "salarioHora", salhora: "salarioHora", hora: "salarioHora",
-  salariomensal: "salary", salario: "salary", salmensal: "salary", mensal: "salary",
-  situacao: "status", status: "status",
-};
 
 function parseAnyDate(v: any): string {
   if (!v) return "";
@@ -108,10 +68,12 @@ function mapStatus(v: any): EmployeeStatus {
   if (s.includes("ferias")) return "ferias";
   if (s.includes("afast")) return "afastado";
   if (s.includes("deslig") || s.includes("demit") || s.includes("inativ")) return "desligado";
-  return "ativo";
+  if (s.includes("mobiliz")) return "mobilizacao";
+  if (s.includes("admiss")) return "admissao";
+  if (s.includes("efetiv") || s.includes("ativ")) return "efetivo";
+  return "efetivo";
 }
 
-/** Procura o índice de coluna cujo header normalizado contenha qualquer um dos termos */
 function findCol(headers: string[], terms: string[]): number {
   for (let i = 0; i < headers.length; i++) {
     const h = headers[i];
@@ -128,7 +90,6 @@ async function importFromFile(file: File): Promise<void> {
   const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: true });
   if (rows.length < 2) { toast.error("Planilha vazia."); return; }
 
-  // Detecta a linha de cabeçalho: a que tenha mais cabeçalhos reconhecíveis
   let headerIdx = -1;
   let bestScore = 0;
   for (let i = 0; i < Math.min(15, rows.length); i++) {
@@ -141,69 +102,54 @@ async function importFromFile(file: File): Promise<void> {
       (keys.some((k) => k.includes("admiss")) ? 1 : 0);
     if (score > bestScore) { bestScore = score; headerIdx = i; }
   }
-  if (headerIdx < 0 || bestScore < 4) {
-    toast.error("Não encontrei cabeçalho com NOME e CPF na planilha.");
-    console.warn("[import] primeiras linhas:", rows.slice(0, 5));
+  if (headerIdx < 0 || bestScore < 2) {
+    toast.error("Não encontrei cabeçalho com NOME na planilha.");
     return;
   }
 
   const headers = rows[headerIdx].map(normKey);
-  console.info("[import] cabeçalhos detectados:", headers);
-
   const col = {
     id:        findCol(headers, ["re", "matricula"]),
     name:      findCol(headers, ["nome", "funcionario"]),
     cpf:       findCol(headers, ["cpf"]),
     nasc:      findCol(headers, ["datanasc", "nascimento"]),
     admission: findCol(headers, ["dataadmissao", "datadeadmissao", "admissao"]),
-    cbo:       findCol(headers, ["cbo"]),
     role:      findCol(headers, ["funcao", "cargo"]),
     site:      findCol(headers, ["obra"]),
     salHora:   findCol(headers, ["salariohora", "salhora", "hora"]),
     salMensal: findCol(headers, ["salariomensal", "salmensal", "mensal", "salario"]),
     status:    findCol(headers, ["situacao", "status"]),
   };
-  console.info("[import] mapeamento de colunas:", col);
 
-  if (col.name < 0) {
-    toast.error("Coluna NOME não encontrada na planilha.");
-    return;
-  }
+  if (col.name < 0) { toast.error("Coluna NOME não encontrada."); return; }
 
   let created = 0;
   const reasons: Record<string, number> = {};
-  const skipReason = (r: string) => { reasons[r] = (reasons[r] ?? 0) + 1; };
+  const skip = (r: string) => { reasons[r] = (reasons[r] ?? 0) + 1; };
   const existingSites = new Set(sitesStore.list().map((s) => s.name.toLowerCase()));
 
   for (let i = headerIdx + 1; i < rows.length; i++) {
     const row = rows[i];
     if (!row || row.every((c) => c === "" || c == null)) continue;
-
     const name = String(row[col.name] ?? "").trim();
-    const cpfRaw = col.cpf >= 0 ? row[col.cpf] : "";
-    const cpf = String(cpfRaw ?? "").trim();
-    if (!name) { skipReason("nome vazio"); continue; }
-
+    if (!name) { skip("nome vazio"); continue; }
+    const cpf = col.cpf >= 0 ? String(row[col.cpf] ?? "").trim() : "";
     const site = col.site >= 0 ? String(row[col.site] ?? "").trim() : "";
     if (site && !existingSites.has(site.toLowerCase())) {
       try {
         sitesStore.add({
           id: slugify(site) || `obra-${Date.now()}`,
-          name: site,
-          status: "Em execução",
-          start: new Date().toISOString().slice(0, 10),
-          manager: "—",
+          name: site, status: "Em execução",
+          start: new Date().toISOString().slice(0, 10), manager: "—",
         });
         existingSites.add(site.toLowerCase());
       } catch {}
     }
-
     const role = col.role >= 0 ? String(row[col.role] ?? "").trim() : "";
-    const salaryHora = col.salHora >= 0 ? parseNumberBR(row[col.salHora]) : 0;
-    const salaryMensal = col.salMensal >= 0 ? parseNumberBR(row[col.salMensal]) : 0;
+    const salHora = col.salHora >= 0 ? parseNumberBR(row[col.salHora]) : 0;
+    const salMen = col.salMensal >= 0 ? parseNumberBR(row[col.salMensal]) : 0;
     const idRaw = col.id >= 0 ? row[col.id] : undefined;
     const id = idRaw != null && idRaw !== "" ? String(idRaw).trim() : undefined;
-
     try {
       employeesStore.add({
         id, name, cpf,
@@ -211,15 +157,12 @@ async function importFromFile(file: File): Promise<void> {
         admission: col.admission >= 0 ? parseAnyDate(row[col.admission]) : "",
         role, cargoFuncao: role,
         site, organograma: site,
-        status: col.status >= 0 ? mapStatus(row[col.status]) : "ativo",
-        salary: salaryMensal || salaryHora * 220,
-        salarioHora: salaryHora,
-        department: "Obra", departamento: "Obra",
+        status: col.status >= 0 ? mapStatus(row[col.status]) : "efetivo",
+        salary: salMen || salHora * 220, salarioHora: salHora,
       });
       created++;
     } catch (err: any) {
       const msg = err?.message ?? "erro";
-      // Se for conflito de matrícula, tenta de novo sem id (auto-gera)
       if (msg.includes("matrícula") && id) {
         try {
           employeesStore.add({
@@ -228,32 +171,28 @@ async function importFromFile(file: File): Promise<void> {
             admission: col.admission >= 0 ? parseAnyDate(row[col.admission]) : "",
             role, cargoFuncao: role,
             site, organograma: site,
-            status: col.status >= 0 ? mapStatus(row[col.status]) : "ativo",
-            salary: salaryMensal || salaryHora * 220,
-            salarioHora: salaryHora,
-            department: "Obra", departamento: "Obra",
+            status: col.status >= 0 ? mapStatus(row[col.status]) : "efetivo",
+            salary: salMen || salHora * 220, salarioHora: salHora,
           });
           created++;
-          continue;
-        } catch (err2: any) {
-          skipReason(err2?.message ?? "erro ao adicionar");
-        }
-      } else {
-        skipReason(msg);
-      }
+        } catch (e2: any) { skip(e2?.message ?? "erro"); }
+      } else skip(msg);
     }
   }
 
-  const skippedTotal = Object.values(reasons).reduce((a, b) => a + b, 0);
+  const skipped = Object.values(reasons).reduce((a, b) => a + b, 0);
   if (created === 0) {
-    const detail = Object.entries(reasons)
-      .map(([r, n]) => `${n}× ${r}`).join(" · ") || "sem detalhes";
-    console.warn("[import] motivos:", reasons);
-    toast.error(`Nenhum funcionário importado. Motivos: ${detail}`);
+    toast.error(`Nenhum importado. ${Object.entries(reasons).map(([r,n])=>`${n}× ${r}`).join(" · ")}`);
   } else {
-    toast.success(`Importação: ${created} criado(s)${skippedTotal ? `, ${skippedTotal} ignorado(s)` : ""}.`);
-    if (skippedTotal) console.warn("[import] motivos:", reasons);
+    toast.success(`Importação: ${created} criado(s)${skipped ? `, ${skipped} ignorado(s)` : ""}.`);
   }
+}
+
+type TabKey = "todos" | "efetivo" | "pj" | "mobilizacao" | "ferias";
+type DeptKey = "todos" | "Operacional" | "Administrativo";
+
+function isPJ(e: Employee): boolean {
+  return /^pj/i.test(e.id);
 }
 
 function List() {
@@ -261,21 +200,47 @@ function List() {
   const employees = useEmployees();
   const [q, setQ] = useState("");
   const [site, setSite] = useState<string>("todos");
-  const [dept, setDept] = useState<string>("todos");
+  const [tab, setTab] = useState<TabKey>("todos");
+  const [dept, setDept] = useState<DeptKey>("todos");
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const matchTab = (e: Employee): boolean => {
+    if (tab === "todos") return true;
+    if (tab === "pj") return isPJ(e);
+    if (tab === "efetivo") return !isPJ(e) && (e.status === "efetivo" || (e.status as any) === "ativo");
+    if (tab === "mobilizacao") return !isPJ(e) && (e.status === "mobilizacao" || e.status === "admissao");
+    return e.status === tab;
+  };
+
+  const matchDept = (e: Employee): boolean => {
+    if (dept === "todos") return true;
+    return (e.departamento || e.department) === dept;
+  };
+
   const filtered = useMemo(() => {
-    return employees.filter((e) => {
-      const matchesQ =
-        !q ||
-        e.name.toLowerCase().includes(q.toLowerCase()) ||
-        e.cpf.includes(q) ||
-        e.id.includes(q);
+    const list = employees.filter((e) => {
+      const matchesQ = !q || e.name.toLowerCase().includes(q.toLowerCase())
+        || e.cpf.includes(q) || e.id.toLowerCase().includes(q.toLowerCase());
       const matchesSite = site === "todos" || e.site === site;
-      const matchesDept = dept === "todos" || e.department === dept;
-      return matchesQ && matchesSite && matchesDept;
+      return matchesQ && matchesSite && matchTab(e) && matchDept(e);
     });
-  }, [employees, q, site, dept]);
+    return [...list].sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }));
+  }, [employees, q, site, tab, dept]);
+
+  const counts = useMemo(() => ({
+    todos: employees.length,
+    efetivo: employees.filter((e) => !isPJ(e) && (e.status === "efetivo" || (e.status as any) === "ativo")).length,
+    pj: employees.filter(isPJ).length,
+    mobilizacao: employees.filter((e) => !isPJ(e) && (e.status === "mobilizacao" || e.status === "admissao")).length,
+    ferias: employees.filter((e) => e.status === "ferias").length,
+  }), [employees]);
+
+  const exportPDF = (siteName?: string) => {
+    const list = siteName ? employees.filter((e) => e.site === siteName) : employees;
+    if (list.length === 0) { toast.error("Sem funcionários para exportar."); return; }
+    downloadEmployeesPDF(list, siteName ? { siteName } : {});
+    toast.success("PDF gerado.");
+  };
 
   return (
     <PageShell
@@ -285,28 +250,39 @@ function List() {
       actions={
         <>
           <input
-            ref={fileRef}
-            type="file"
-            accept=".xlsx,.xls,.csv"
-            className="hidden"
+            ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden"
             onChange={async (e) => {
-              const f = e.target.files?.[0];
-              if (!f) return;
-              try { await importFromFile(f); }
-              catch (err: any) { toast.error("Falha ao importar: " + (err?.message ?? err)); }
+              const f = e.target.files?.[0]; if (!f) return;
+              try { await importFromFile(f); } catch (err: any) { toast.error("Falha: " + (err?.message ?? err)); }
               if (fileRef.current) fileRef.current.value = "";
             }}
           />
           <Button variant="outline" onClick={() => fileRef.current?.click()}>
             <Upload className="mr-1 h-4 w-4" /> Importar planilha
           </Button>
-          <Button variant="outline" onClick={() => exportCSV(filtered)}>
-            <Download className="mr-1 h-4 w-4" /> Exportar CSV
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" className="text-destructive">
+                <Trash2 className="mr-1 h-4 w-4" /> Apagar todos
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Apagar TODOS os funcionários?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esta ação remove permanentemente todos os {employees.length} cadastros. Não pode ser desfeita.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => { employeesStore.removeAll(); toast.success("Todos os funcionários foram apagados."); }}
+                >Apagar tudo</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           <Button asChild>
-            <Link to="/funcionarios/novo">
-              <Plus className="mr-1 h-4 w-4" /> Novo
-            </Link>
+            <Link to="/funcionarios/novo"><Plus className="mr-1 h-4 w-4" /> Novo</Link>
           </Button>
         </>
       }
@@ -315,42 +291,58 @@ function List() {
         <div className="flex flex-1 min-w-[220px] items-center gap-2 rounded-md border border-input px-3">
           <Search className="h-4 w-4 text-muted-foreground" />
           <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
+            value={q} onChange={(e) => setQ(e.target.value)}
             placeholder="Buscar por nome, CPF ou matrícula"
             className="h-10 border-0 bg-transparent shadow-none focus-visible:ring-0"
           />
         </div>
         <Select value={site} onValueChange={setSite}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Obra" />
-          </SelectTrigger>
+          <SelectTrigger className="w-[200px]"><SelectValue placeholder="Obra" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="todos">Todas as obras</SelectItem>
-            {sites.map((s) => (
-              <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
-            ))}
+            {sites.map((s) => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Select value={dept} onValueChange={setDept}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Departamento" />
-          </SelectTrigger>
+        <Select value={dept} onValueChange={(v) => setDept(v as DeptKey)}>
+          <SelectTrigger className="w-[180px]"><SelectValue placeholder="Departamento" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="todos">Todos depts.</SelectItem>
-            <SelectItem value="Obra">Obra</SelectItem>
-            <SelectItem value="Engenharia">Engenharia</SelectItem>
-            <SelectItem value="Seguranca">Segurança</SelectItem>
+            <SelectItem value="todos">Todos os deptos</SelectItem>
+            <SelectItem value="Operacional">Operacional</SelectItem>
             <SelectItem value="Administrativo">Administrativo</SelectItem>
           </SelectContent>
         </Select>
-        <Button variant="ghost" size="icon" aria-label="Mais filtros">
-          <Filter className="h-4 w-4" />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline">
+              <FileText className="mr-1 h-4 w-4" /> Exportar PDF
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="max-h-80 overflow-auto">
+            <DropdownMenuLabel>Escolha a obra</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => exportPDF()}>Todas as obras</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {sites.map((s) => (
+              <DropdownMenuItem key={s.id} onClick={() => exportPDF(s.name)}>
+                {s.name}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </Card>
 
+      <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)} className="mb-4">
+        <TabsList>
+          <TabsTrigger value="todos">Todos ({counts.todos})</TabsTrigger>
+          <TabsTrigger value="efetivo">Efetivos ({counts.efetivo})</TabsTrigger>
+          <TabsTrigger value="pj">PJ ({counts.pj})</TabsTrigger>
+          <TabsTrigger value="mobilizacao">Mobilização ({counts.mobilizacao})</TabsTrigger>
+          <TabsTrigger value="ferias">Férias ({counts.ferias})</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       <Card className="overflow-hidden p-0">
-        <div className="grid grid-cols-[80px_1.5fr_1fr_1fr_120px_40px] items-center gap-3 border-b border-border bg-muted/40 px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <div className="grid grid-cols-[100px_1.5fr_1fr_1fr_140px_40px] items-center gap-3 border-b border-border bg-muted/40 px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           <div>Matrícula</div>
           <div>Nome / Função</div>
           <div>Obra</div>
@@ -362,9 +354,8 @@ function List() {
           {filtered.map((e) => (
             <li key={e.id}>
               <Link
-                to="/funcionarios/$id"
-                params={{ id: e.id }}
-                className="grid grid-cols-[80px_1.5fr_1fr_1fr_120px_40px] items-center gap-3 px-5 py-4 transition hover:bg-muted/50"
+                to="/funcionarios/$id" params={{ id: e.id }}
+                className="grid grid-cols-[100px_1.5fr_1fr_1fr_140px_40px] items-center gap-3 px-5 py-4 transition hover:bg-muted/50"
               >
                 <div className="font-mono text-xs text-muted-foreground">#{e.id}</div>
                 <div className="flex items-center gap-3 min-w-0">
@@ -377,7 +368,7 @@ function List() {
                   </div>
                 </div>
                 <div className="truncate text-sm">{e.site}</div>
-                <div className="text-sm">{e.department === "Seguranca" ? "Segurança" : e.department}</div>
+                <div className="text-sm">{e.departamento || e.department}</div>
                 <div><StatusBadge status={e.status} /></div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </Link>
