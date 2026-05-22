@@ -27,7 +27,6 @@ import {
 const main = [
   { title: "Painel", url: "/", icon: LayoutDashboard },
   { title: "Funcionários", url: "/funcionarios", icon: Users },
-  { title: "Novo Cadastro", url: "/funcionarios/novo", icon: UserPlus },
 ];
 
 const ops = [
