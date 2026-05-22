@@ -7,6 +7,7 @@ import {
   FileText,
   Settings,
   Wallet,
+  Receipt,
 } from "lucide-react";
 
 import {
@@ -32,6 +33,7 @@ const main = [
 const ops = [
   { title: "Obras", url: "/obras", icon: HardHat },
   { title: "Folha Salarial", url: "/folha-salarial", icon: Wallet },
+  { title: "RDV", url: "/rdv", icon: Receipt },
   { title: "Documentos", url: "/documentos", icon: FileText },
 ];
 
