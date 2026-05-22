@@ -109,16 +109,16 @@ function FolhaSalarial() {
     const subtotal = list.reduce((s, e) => s + getNum(e), 0);
     autoTable(doc, {
       startY: 28,
-      head: [["Matrícula", "Nome", "Função", "Banco", "Ag.", "Conta", "PIX", "Salário"]],
+      head: [["Matrícula", "Nome", "CPF", "Função", "Banco", "Ag.", "Conta", "PIX", "Salário"]],
       body: list.map((e) => [
-        e.id, e.name, e.role, e.bank.bank, e.bank.agency,
+        e.id, e.name, e.cpf, e.role, e.bank.bank, e.bank.agency,
         `${e.bank.account} (${e.bank.type})`, e.bank.pix, fmtBRL(getNum(e)),
       ]),
       foot: [[
-        { content: "Total da obra", colSpan: 7, styles: { halign: "right", fontStyle: "bold" } },
+        { content: "Total da obra", colSpan: 8, styles: { halign: "right", fontStyle: "bold" } },
         { content: fmtBRL(subtotal), styles: { fontStyle: "bold" } },
       ]],
-      styles: { fontSize: 9, cellPadding: 2 },
+      styles: { fontSize: 8, cellPadding: 2 },
       headStyles: { fillColor: [15, 27, 61], textColor: 255 },
       footStyles: { fillColor: [230, 235, 245], textColor: 20 },
       margin: { left: 14, right: 14 },
@@ -190,10 +190,10 @@ function FolhaSalarial() {
             />
           </div>
 
-          <div className="flex flex-col">
+          <div className="flex flex-col w-full sm:w-auto">
             <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Mês</span>
             <Select value={month} onValueChange={setMonth}>
-              <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-full sm:w-[200px]"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {monthOptions.map((m) => (
                   <SelectItem key={m} value={m}>{monthLabel(m)}</SelectItem>
@@ -202,10 +202,10 @@ function FolhaSalarial() {
             </Select>
           </div>
 
-          <div className="flex flex-col">
+          <div className="flex flex-col w-full sm:w-auto">
             <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Filtrar obra</span>
             <Select value={filterObra} onValueChange={setFilterObra}>
-              <SelectTrigger className="w-[220px]"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-full sm:w-[220px]"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="__all__">Todas as obras</SelectItem>
                 {sites.map((s) => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
@@ -251,6 +251,7 @@ function FolhaSalarial() {
                         <tr>
                           <th className="px-4 py-3 text-left">Matrícula</th>
                           <th className="px-4 py-3 text-left">Nome / Função</th>
+                          <th className="px-4 py-3 text-left">CPF</th>
                           <th className="px-4 py-3 text-left">Banco</th>
                           <th className="px-4 py-3 text-left">Ag. / Conta</th>
                           <th className="px-4 py-3 text-left">PIX</th>
@@ -265,6 +266,7 @@ function FolhaSalarial() {
                               <p className="font-semibold">{e.name}</p>
                               <p className="text-xs text-muted-foreground">{e.role}</p>
                             </td>
+                            <td className="px-4 py-3 font-mono text-xs">{e.cpf}</td>
                             <td className="px-4 py-3">{e.bank.bank}</td>
                             <td className="px-4 py-3 font-mono text-xs">
                               {e.bank.agency} / {e.bank.account} <span className="text-muted-foreground">({e.bank.type})</span>
@@ -301,7 +303,7 @@ function FolhaSalarial() {
                       </tbody>
                       <tfoot className="bg-muted/50 font-semibold">
                         <tr>
-                          <td colSpan={5} className="px-4 py-3 text-right uppercase text-xs tracking-wider">
+                          <td colSpan={6} className="px-4 py-3 text-right uppercase text-xs tracking-wider">
                             Subtotal da obra
                           </td>
                           <td className="px-4 py-3 text-right font-display text-base text-accent">
