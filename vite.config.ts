@@ -17,7 +17,7 @@ export default defineConfig({
     },
     spa: {
       enabled: true,
-      maskPath: "/",
+      maskPath: "/rhof/",
       prerender: {
         outputPath: "/index",
       },
