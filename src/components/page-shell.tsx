@@ -1,11 +1,13 @@
 import { ReactNode } from "react";
 import { Bell, Search, LogOut } from "lucide-react";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { authStore, useAuth } from "@/lib/auth-store";
+import { useDismissals } from "@/lib/dismissals-store";
 
 interface PageShellProps {
   title: string;
@@ -18,6 +20,8 @@ interface PageShellProps {
 export function PageShell({ title, eyebrow, description, actions, children }: PageShellProps) {
   const auth = useAuth();
   const navigate = useNavigate();
+  const dismissals = useDismissals();
+  const pendingDem = dismissals.filter((d) => d.status === "pendente").length;
   const user = auth.users.find((u) => u.id === auth.currentUserId);
   const initials = user
     ? user.name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase()
@@ -35,8 +39,15 @@ export function PageShell({ title, eyebrow, description, actions, children }: Pa
           />
         </div>
         <div className="ml-auto flex items-center gap-3">
-          <Button variant="ghost" size="icon" aria-label="Notificações">
-            <Bell className="h-4 w-4" />
+          <Button variant="ghost" size="icon" aria-label="Notificações" asChild className="relative">
+            <Link to="/admin/demissoes">
+              <Bell className="h-4 w-4" />
+              {pendingDem > 0 && (
+                <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 min-w-4 justify-center px-1 text-[9px]">
+                  {pendingDem}
+                </Badge>
+              )}
+            </Link>
           </Button>
           <div className="flex items-center gap-2">
             <Avatar className="h-8 w-8">
@@ -65,20 +76,20 @@ export function PageShell({ title, eyebrow, description, actions, children }: Pa
         </div>
       </header>
 
-      <div className="flex flex-col gap-2 border-b border-border bg-card px-4 py-6 md:px-8 md:py-8">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
+      <div className="flex flex-col gap-2 border-b border-border bg-card px-4 py-5 md:px-8 md:py-8">
+        <div className="flex flex-col gap-4 md:flex-row md:flex-wrap md:items-end md:justify-between">
+          <div className="min-w-0">
             {eyebrow && (
               <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-accent">
                 {eyebrow}
               </p>
             )}
-            <h1 className="font-display text-3xl md:text-4xl">{title}</h1>
+            <h1 className="font-display text-2xl md:text-4xl break-words">{title}</h1>
             {description && (
               <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{description}</p>
             )}
           </div>
-          {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+          {actions && <div className="flex flex-wrap gap-2 [&>*]:flex-1 md:[&>*]:flex-none">{actions}</div>}
         </div>
       </div>
 
