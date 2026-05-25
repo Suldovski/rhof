@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { authStore, useAuth } from "@/lib/auth-store";
 import { isClientAllowedUrl } from "@/lib/client-helpers";
+import { initializeAppData } from "@/lib/app-bootstrap";
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Entrar · Bucagrans RH" }] }),
@@ -26,6 +27,13 @@ function Login() {
   const [password, setPassword] = useState("");
   const [isClient, setIsClient] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Executar seed na primeira vez
+  useEffect(() => {
+    initializeAppData().catch((err) => {
+      console.error("Erro ao inicializar dados:", err);
+    });
+  }, []);
 
   useEffect(() => {
     if (auth.currentUser && !auth.loading) {
