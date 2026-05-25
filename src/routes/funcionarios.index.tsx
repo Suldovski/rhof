@@ -188,11 +188,14 @@ async function importFromFile(file: File): Promise<void> {
   }
 }
 
-type TabKey = "todos" | "efetivo" | "pj" | "mobilizacao" | "ferias";
+type TabKey = "todos" | "efetivo" | "pj" | "terceiro" | "mobilizacao" | "ferias";
 type DeptKey = "todos" | "Operacional" | "Administrativo";
 
 function isPJ(e: Employee): boolean {
-  return /^pj/i.test(e.id);
+  return e.tipo === "pj" || /^pj/i.test(e.id);
+}
+function isTerceiro(e: Employee): boolean {
+  return e.tipo === "terceiro";
 }
 
 function List() {
@@ -207,8 +210,9 @@ function List() {
   const matchTab = (e: Employee): boolean => {
     if (tab === "todos") return true;
     if (tab === "pj") return isPJ(e);
-    if (tab === "efetivo") return !isPJ(e) && (e.status === "efetivo" || (e.status as any) === "ativo");
-    if (tab === "mobilizacao") return !isPJ(e) && (e.status === "mobilizacao" || e.status === "admissao");
+    if (tab === "terceiro") return isTerceiro(e);
+    if (tab === "efetivo") return !isPJ(e) && !isTerceiro(e) && (e.status === "efetivo" || (e.status as any) === "ativo");
+    if (tab === "mobilizacao") return !isPJ(e) && !isTerceiro(e) && (e.status === "mobilizacao" || e.status === "admissao");
     return e.status === tab;
   };
 
@@ -229,9 +233,10 @@ function List() {
 
   const counts = useMemo(() => ({
     todos: employees.length,
-    efetivo: employees.filter((e) => !isPJ(e) && (e.status === "efetivo" || (e.status as any) === "ativo")).length,
+    efetivo: employees.filter((e) => !isPJ(e) && !isTerceiro(e) && (e.status === "efetivo" || (e.status as any) === "ativo")).length,
     pj: employees.filter(isPJ).length,
-    mobilizacao: employees.filter((e) => !isPJ(e) && (e.status === "mobilizacao" || e.status === "admissao")).length,
+    terceiro: employees.filter(isTerceiro).length,
+    mobilizacao: employees.filter((e) => !isPJ(e) && !isTerceiro(e) && (e.status === "mobilizacao" || e.status === "admissao")).length,
     ferias: employees.filter((e) => e.status === "ferias").length,
   }), [employees]);
 
@@ -297,14 +302,14 @@ function List() {
           />
         </div>
         <Select value={site} onValueChange={setSite}>
-          <SelectTrigger className="w-[200px]"><SelectValue placeholder="Obra" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Obra" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="todos">Todas as obras</SelectItem>
             {sites.map((s) => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={dept} onValueChange={(v) => setDept(v as DeptKey)}>
-          <SelectTrigger className="w-[180px]"><SelectValue placeholder="Departamento" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Departamento" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="todos">Todos os deptos</SelectItem>
             <SelectItem value="Operacional">Operacional</SelectItem>
@@ -313,7 +318,7 @@ function List() {
         </Select>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline">
+            <Button variant="outline" className="w-full sm:w-auto">
               <FileText className="mr-1 h-4 w-4" /> Exportar PDF
             </Button>
           </DropdownMenuTrigger>
@@ -331,18 +336,19 @@ function List() {
         </DropdownMenu>
       </Card>
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)} className="mb-4">
-        <TabsList>
+      <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)} className="mb-4 -mx-4 px-4 md:mx-0 md:px-0">
+        <TabsList className="w-max md:w-auto">
           <TabsTrigger value="todos">Todos ({counts.todos})</TabsTrigger>
           <TabsTrigger value="efetivo">Efetivos ({counts.efetivo})</TabsTrigger>
           <TabsTrigger value="pj">PJ ({counts.pj})</TabsTrigger>
+          <TabsTrigger value="terceiro">Terceiros ({counts.terceiro})</TabsTrigger>
           <TabsTrigger value="mobilizacao">Mobilização ({counts.mobilizacao})</TabsTrigger>
           <TabsTrigger value="ferias">Férias ({counts.ferias})</TabsTrigger>
         </TabsList>
       </Tabs>
 
       <Card className="overflow-hidden p-0">
-        <div className="grid grid-cols-[100px_1.5fr_1fr_1fr_140px_40px] items-center gap-3 border-b border-border bg-muted/40 px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <div className="hidden md:grid grid-cols-[100px_1.5fr_1fr_1fr_140px_40px] items-center gap-3 border-b border-border bg-muted/40 px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           <div>Matrícula</div>
           <div>Nome / Função</div>
           <div>Obra</div>
@@ -353,9 +359,10 @@ function List() {
         <ul className="divide-y divide-border">
           {filtered.map((e) => (
             <li key={e.id}>
+              {/* Desktop row */}
               <Link
                 to="/funcionarios/$id" params={{ id: e.id }}
-                className="grid grid-cols-[100px_1.5fr_1fr_1fr_140px_40px] items-center gap-3 px-5 py-4 transition hover:bg-muted/50"
+                className="hidden md:grid grid-cols-[100px_1.5fr_1fr_1fr_140px_40px] items-center gap-3 px-5 py-4 transition hover:bg-muted/50"
               >
                 <div className="font-mono text-xs text-muted-foreground">#{e.id}</div>
                 <div className="flex items-center gap-3 min-w-0">
@@ -371,6 +378,27 @@ function List() {
                 <div className="text-sm">{e.departamento || e.department}</div>
                 <div><StatusBadge status={e.status} /></div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </Link>
+              {/* Mobile card */}
+              <Link
+                to="/funcionarios/$id" params={{ id: e.id }}
+                className="flex md:hidden items-center gap-3 px-4 py-3 transition active:bg-muted/60"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+                  {e.name.split(" ").slice(0, 2).map((n) => n[0]).join("")}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="truncate font-semibold text-sm">{e.name}</p>
+                    <span className="font-mono text-[10px] text-muted-foreground shrink-0">#{e.id}</span>
+                  </div>
+                  <p className="truncate text-xs text-muted-foreground">{e.role}</p>
+                  <div className="mt-1 flex items-center gap-2 flex-wrap">
+                    <StatusBadge status={e.status} />
+                    {e.site && <span className="truncate text-[11px] text-muted-foreground">{e.site}</span>}
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
               </Link>
             </li>
           ))}
