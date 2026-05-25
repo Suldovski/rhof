@@ -38,6 +38,7 @@ const DEMO_USER: AppUser = {
 
 const DEMO_PASSWORD = "demo123";
 const AUTH_STORAGE_KEY = "bucagrans_auth_demo";
+const USERS_STORAGE_KEY = "bucagrans_users_local";
 
 const initialState: AuthState = {
   currentUser: null,
@@ -163,7 +164,7 @@ export const authStore = {
   },
 
   /**
-   * Busca todos os usuários do Firestore
+   * Busca todos os usuários do Firestore com fallback para localStorage
    */
   fetchAllUsers: async (): Promise<AppUser[]> => {
     try {
@@ -181,10 +182,32 @@ export const authStore = {
           createdAt: data.createdAt || new Date().toISOString(),
         });
       });
+      // Salvar no localStorage também
+      try {
+        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+      } catch {}
       commit({ ...state, allUsers: users });
       return users;
-    } catch (error) {
-      console.error("Erro ao buscar usuários:", error);
+    } catch (error: any) {
+      console.error("Erro ao buscar usuários:", error.message);
+      
+      // Fallback: tenta carregar do localStorage
+      try {
+        const stored = localStorage.getItem(USERS_STORAGE_KEY);
+        if (stored) {
+          const users = JSON.parse(stored) as AppUser[];
+          commit({ ...state, allUsers: users });
+          return users;
+        }
+      } catch {}
+      
+      // Último recurso: se estiver usando demo user, retorna demo user
+      if (state.isLocalStorage && state.currentUser) {
+        const demoUsers: AppUser[] = [state.currentUser];
+        commit({ ...state, allUsers: demoUsers });
+        return demoUsers;
+      }
+      
       return [];
     }
   },
