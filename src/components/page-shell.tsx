@@ -22,7 +22,7 @@ export function PageShell({ title, eyebrow, description, actions, children }: Pa
   const navigate = useNavigate();
   const dismissals = useDismissals();
   const pendingDem = dismissals.filter((d) => d.status === "pendente").length;
-  const user = auth.users.find((u) => u.id === auth.currentUserId);
+  const user = auth.currentUser;
   const initials = user
     ? user.name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase()
     : "??";

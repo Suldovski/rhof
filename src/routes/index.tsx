@@ -38,7 +38,7 @@ function Dashboard() {
   const sites = useSites();
   const employees = useEmployees();
   const auth = useAuth();
-  const firstName = auth.users.find((u) => u.id === auth.currentUserId)?.name?.split(" ")[0] ?? "bem-vindo(a)";
+  const firstName = auth.currentUser?.name?.split(" ")[0] ?? "bem-vindo(a)";
 
   const ativos = employees.filter((e) => e.status === "efetivo" || (e.status as any) === "ativo").length;
   const ferias = employees.filter((e) => e.status === "ferias").length;

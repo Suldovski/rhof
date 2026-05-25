@@ -23,8 +23,8 @@ export const Route = createFileRoute("/admin/usuarios")({
 
 function UsersPage() {
   const auth = useAuth();
-  const current = auth.users.find((u) => u.id === auth.currentUserId);
-  const isAdmin = current?.role === "Admin";
+  const current = auth.currentUser;
+  const isAdmin = current?.role === "administrativo_matriz" || current?.role === "rh_matriz";
 
   if (!isAdmin) {
     return (
