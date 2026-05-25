@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
 import { Plus, Search, Download, ChevronRight, Upload, Trash2, FileText } from "lucide-react";
 import { toast } from "sonner";
@@ -24,6 +24,9 @@ import {
 import { employeesStore, useEmployees, type Employee, type EmployeeStatus } from "@/lib/employees";
 import { sitesStore, useSites, slugify } from "@/lib/sites-store";
 import { downloadEmployeesPDF } from "@/lib/employees-pdf";
+import { canAccessFuncionarios, canEditFuncionarios } from "@/lib/permissions";
+import { useAuth } from "@/lib/auth-store";
+import { useRouteProtection, roleChecks } from "@/lib/route-protection";
 
 export const Route = createFileRoute("/funcionarios/")({
   head: () => ({ meta: [{ title: "Funcionários · Bucagrans RH" }] }),
@@ -199,6 +202,8 @@ function isTerceiro(e: Employee): boolean {
 }
 
 function List() {
+  const auth = useAuth();
+  const navigate = useNavigate();
   const sites = useSites();
   const employees = useEmployees();
   const [q, setQ] = useState("");
@@ -206,6 +211,15 @@ function List() {
   const [tab, setTab] = useState<TabKey>("todos");
   const [dept, setDept] = useState<DeptKey>("todos");
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Verificar permissão de acesso
+  if (!auth.loading && auth.currentUser && !canAccessFuncionarios(auth.currentUser.role)) {
+    if (typeof window !== "undefined") {
+      toast.error("Você não tem permissão para acessar esta página.");
+      navigate({ to: "/" });
+    }
+    return null;
+  }
 
   const matchTab = (e: Employee): boolean => {
     if (tab === "todos") return true;

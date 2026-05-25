@@ -478,6 +478,18 @@ function nextMatricula(isPJ = false): string {
 export const employeesStore = {
   list: () => state,
   get: (id: string) => state.find((e) => e.id === id),
+  
+  /**
+   * Verifica se um CPF já existe no sistema (para evitar duplicatas)
+   */
+  cpfExists: (cpf: string, excludeId?: string): boolean => {
+    const normalized = cpf.replace(/[^\d]/g, "");
+    return state.some((e) => {
+      if (excludeId && e.id === excludeId) return false;
+      return e.cpf.replace(/[^\d]/g, "") === normalized;
+    });
+  },
+
   add: (data: Partial<Employee>) => {
     const rawId = data.id?.trim() || "";
     const isPJ = /pj/i.test(rawId);
@@ -487,7 +499,19 @@ export const employeesStore = {
     if (state.some((e) => e.id === id)) {
       throw new Error("Já existe um funcionário com esta matrícula.");
     }
-    const fresh: Employee = { ...makeEmpty(), ...data, id };
+
+    // Verificar CPF duplicado
+    if (data.cpf && employeesStore.cpfExists(data.cpf)) {
+      throw new Error("Este CPF já está registrado no sistema.");
+    }
+
+    const fresh: Employee = { 
+      ...makeEmpty(), 
+      ...data, 
+      id,
+      // Auto-set status to "admissao" on creation
+      status: "admissao"
+    };
     fresh.role = fresh.role || fresh.cargoFuncao;
     fresh.site = fresh.site || fresh.organograma;
     fresh.phone = fresh.phone || fresh.telefone;
@@ -499,7 +523,13 @@ export const employeesStore = {
     commit([...state, fresh]);
     return fresh;
   },
+
   update: (id: string, patch: Partial<Employee>) => {
+    // Verificar se está tentando mudar o CPF para um que já existe
+    if (patch.cpf && employeesStore.cpfExists(patch.cpf, id)) {
+      throw new Error("Este CPF já está registrado no sistema.");
+    }
+
     commit(state.map((e) => {
       if (e.id !== id) return e;
       const merged = { ...e, ...patch };
@@ -511,6 +541,7 @@ export const employeesStore = {
       return merged;
     }));
   },
+
   remove: (id: string) => commit(state.filter((e) => e.id !== id)),
   removeAll: () => commit([]),
   reset: () => commit(seed),

@@ -16,6 +16,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Toaster } from "@/components/ui/sonner";
 import { useAuth } from "@/lib/auth-store";
+import { isClientAllowedUrl } from "@/lib/client-helpers";
 
 function NotFoundComponent() {
   return (
@@ -96,23 +97,43 @@ function RootComponent() {
   const isLogin = pathname === "/login";
 
   useEffect(() => {
-    if (!auth.currentUserId && !isLogin) {
+    if (!auth.loading && !auth.currentUser && !isLogin) {
       navigate({ to: "/login", search: { redirect: pathname } });
     }
-  }, [auth.currentUserId, isLogin, navigate, pathname]);
+  }, [auth.currentUser, auth.loading, navigate, pathname, isLogin]);
 
-  const showShell = !isLogin && !!auth.currentUserId;
+  // Verificar se cliente está tentando acessar URL não permitida
+  useEffect(() => {
+    if (!auth.loading && auth.currentUser && !isClientAllowedUrl(pathname, auth.currentUser)) {
+      console.warn(`Cliente tentou acessar URL não permitida: ${pathname}`);
+      navigate({ to: "/" });
+    }
+  }, [pathname, auth.currentUser, auth.loading, navigate]);
+
+  if (auth.loading && !isLogin) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-sm text-muted-foreground">Carregando...</p>
+      </div>
+    );
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
-      <SidebarProvider>
-        <div className="flex min-h-screen w-full bg-background">
-          {showShell && <AppSidebar />}
-          <div className="flex-1 min-w-0">
+      {auth.currentUser && !isLogin ? (
+        <SidebarProvider>
+          <AppSidebar />
+          <main className="w-full">
             <Outlet />
-          </div>
-        </div>
-        <Toaster />
-      </SidebarProvider>
+            <Toaster />
+          </main>
+        </SidebarProvider>
+      ) : (
+        <>
+          <Outlet />
+          <Toaster />
+        </>
+      )}
     </QueryClientProvider>
   );
 }

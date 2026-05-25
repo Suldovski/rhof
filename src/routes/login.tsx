@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { authStore, useAuth } from "@/lib/auth-store";
+import { isClientAllowedUrl } from "@/lib/client-helpers";
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Entrar · Bucagrans RH" }] }),
@@ -22,20 +24,50 @@ function Login() {
   const { redirect } = useSearch({ from: "/login" });
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isClient, setIsClient] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (auth.currentUserId) navigate({ to: redirect || "/" });
-  }, [auth.currentUserId, navigate, redirect]);
-
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    const user = authStore.login(email.trim(), password);
-    if (!user) {
-      toast.error("E-mail ou senha incorretos.");
-      return;
+    if (auth.currentUser && !auth.loading) {
+      navigate({ to: redirect || "/" });
     }
-    toast.success(`Bem-vindo(a), ${user.name}.`);
-    navigate({ to: redirect || "/" });
+  }, [auth.currentUser, auth.loading, navigate, redirect]);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      if (isClient) {
+        // Cliente login (email only)
+        toast.info("Acesso de cliente: apenas email é necessário.");
+        // For now, just show a message - actual client login would be handled differently
+        toast.error("Acesso de cliente não disponível nesta versão.");
+        setIsLoading(false);
+        return;
+      }
+
+      // Regular user login
+      const user = await authStore.login(email.trim(), password);
+      if (!user) {
+        toast.error("E-mail ou senha incorretos.");
+        setIsLoading(false);
+        return;
+      }
+      toast.success(`Bem-vindo(a), ${user.name}.`);
+      // Navigation happens via useEffect when auth.currentUser updates
+    } catch (error) {
+      console.error("Login error:", error);
+      toast.error("Erro ao fazer login. Tente novamente.");
+      setIsLoading(false);
+    }
+  }
+
+  if (auth.loading) {
+    return (
+      <div className="grid min-h-screen items-center justify-center bg-background">
+        <p className="text-sm text-muted-foreground">Carregando...</p>
+      </div>
+    );
   }
 
   return (
@@ -83,7 +115,9 @@ function Login() {
             </p>
             <h2 className="mt-2 font-display text-3xl">Acesse sua conta</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Use as credenciais cadastradas em Configurações → Usuários.
+              {isClient 
+                ? "Use seu e-mail de acesso como cliente."
+                : "Use as credenciais cadastradas em Configurações → Usuários."}
             </p>
 
             <form onSubmit={submit} className="mt-6 space-y-4">
@@ -96,20 +130,39 @@ function Login() {
                   placeholder="seu@bucagrans.com.br"
                   required
                   autoFocus
+                  disabled={isLoading}
                 />
               </div>
-              <div className="grid gap-1.5">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Senha</Label>
-                <Input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
+
+              {!isClient && (
+                <div className="grid gap-1.5">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Senha</Label>
+                  <Input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required={!isClient}
+                    disabled={isLoading}
+                  />
+                </div>
+              )}
+
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="isClient"
+                  checked={isClient}
+                  onCheckedChange={(checked) => setIsClient(checked as boolean)}
+                  disabled={isLoading}
                 />
+                <Label htmlFor="isClient" className="text-xs font-normal cursor-pointer">
+                  Sou um cliente (acesso apenas para visualizar)
+                </Label>
               </div>
-              <Button type="submit" className="w-full" size="lg">
-                <LogIn className="mr-1 h-4 w-4" /> Entrar
+
+              <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+                <LogIn className="mr-1 h-4 w-4" />
+                {isLoading ? "Entrando..." : "Entrar"}
               </Button>
             </form>
 

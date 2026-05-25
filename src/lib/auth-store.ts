@@ -1,98 +1,171 @@
 import { useSyncExternalStore } from "react";
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  User as FirebaseUser,
+} from "firebase/auth";
+import { doc, getDoc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { auth, db } from "./firebase";
+import type { Role } from "./permissions";
 
 export interface AppUser {
-  id: string;
+  uid: string;
   name: string;
   email: string;
-  password: string;
-  role: "Admin" | "RH" | "Operacional";
+  role: Role;
+  obraId?: string | null;
   createdAt: string;
 }
 
 interface AuthState {
-  users: AppUser[];
-  currentUserId: string | null;
+  currentUser: AppUser | null;
+  loading: boolean;
 }
 
-const KEY = "bucagrans.auth.v1";
-
-const seed: AuthState = {
-  users: [
-    {
-      id: "u-admin",
-      name: "Carla Mendes",
-      email: "admin@bucagrans.com.br",
-      password: "admin123",
-      role: "Admin",
-      createdAt: new Date().toISOString(),
-    },
-  ],
-  currentUserId: null,
+const initialState: AuthState = {
+  currentUser: null,
+  loading: true,
 };
 
-let state: AuthState = (() => {
-  if (typeof window === "undefined") return seed;
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      // ensure at least the seed admin exists
-      if (!parsed.users || parsed.users.length === 0) return seed;
-      return parsed;
-    }
-  } catch {}
-  return seed;
-})();
-
+let state: AuthState = initialState;
 const listeners = new Set<() => void>();
 
 function commit(next: AuthState) {
   state = next;
-  if (typeof window !== "undefined") {
-    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {}
-  }
   listeners.forEach((l) => l());
 }
 
-export const authStore = {
-  list: () => state.users,
-  current: () => state.users.find((u) => u.id === state.currentUserId) ?? null,
-  isAuthenticated: () => !!state.currentUserId,
-
-  login: (email: string, password: string): AppUser | null => {
-    const user = state.users.find(
-      (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password,
-    );
-    if (!user) return null;
-    commit({ ...state, currentUserId: user.id });
-    return user;
-  },
-
-  logout: () => commit({ ...state, currentUserId: null }),
-
-  create: (data: Omit<AppUser, "id" | "createdAt">) => {
-    if (state.users.some((u) => u.email.toLowerCase() === data.email.toLowerCase())) {
-      throw new Error("Já existe um usuário com este e-mail.");
+// Initialize Firebase auth listener
+if (typeof window !== "undefined") {
+  onAuthStateChanged(auth, async (firebaseUser) => {
+    if (firebaseUser) {
+      const userDocRef = doc(db, "users", firebaseUser.uid);
+      const userDocSnap = await getDoc(userDocRef);
+      if (userDocSnap.exists()) {
+        const userData = userDocSnap.data();
+        commit({
+          currentUser: {
+            uid: firebaseUser.uid,
+            name: userData.name || firebaseUser.displayName || "",
+            email: firebaseUser.email || "",
+            role: userData.role,
+            obraId: userData.obraId || null,
+            createdAt: userData.createdAt || new Date().toISOString(),
+          },
+          loading: false,
+        });
+      } else {
+        commit({ currentUser: null, loading: false });
+      }
+    } else {
+      commit({ currentUser: null, loading: false });
     }
-    const user: AppUser = {
-      ...data,
-      id: `u-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-    };
-    commit({ ...state, users: [...state.users, user] });
-    return user;
+  });
+}
+
+export const authStore = {
+  current: () => state.currentUser,
+  isAuthenticated: () => !!state.currentUser,
+  isLoading: () => state.loading,
+
+  login: async (email: string, password: string): Promise<AppUser | null> => {
+    try {
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      const userDocRef = doc(db, "users", result.user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+      
+      if (userDocSnap.exists()) {
+        const userData = userDocSnap.data();
+        const user: AppUser = {
+          uid: result.user.uid,
+          name: userData.name || result.user.displayName || "",
+          email: result.user.email || "",
+          role: userData.role,
+          obraId: userData.obraId || null,
+          createdAt: userData.createdAt || new Date().toISOString(),
+        };
+        commit({ currentUser: user, loading: false });
+        return user;
+      }
+      return null;
+    } catch (error) {
+      console.error("Login error:", error);
+      return null;
+    }
   },
 
-  update: (id: string, patch: Partial<Omit<AppUser, "id" | "createdAt">>) => {
-    commit({
-      ...state,
-      users: state.users.map((u) => (u.id === id ? { ...u, ...patch } : u)),
-    });
+  logout: async () => {
+    try {
+      await signOut(auth);
+      commit({ currentUser: null, loading: false });
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   },
 
-  remove: (id: string) => {
-    if (id === state.currentUserId) return;
-    commit({ ...state, users: state.users.filter((u) => u.id !== id) });
+  /**
+   * Cria um novo usuário no Firebase Authentication e Firestore.
+   * Para cliente de obra, sem senha (apenas email).
+   */
+  createUser: async (data: {
+    email: string;
+    password?: string; // opcional para cliente
+    name: string;
+    role: Role;
+    obraId?: string;
+  }): Promise<AppUser | null> => {
+    try {
+      // Verificar se email já existe
+      const usersRef = collection(db, "users");
+      const emailQuery = query(usersRef, where("email", "==", data.email));
+      const existingUsers = await getDocs(emailQuery);
+      
+      if (!existingUsers.empty) {
+        throw new Error("Um usuário com este e-mail já existe.");
+      }
+
+      // Criar usuário Firebase Auth
+      const password = data.password || Math.random().toString(36).slice(-16);
+      const result = await createUserWithEmailAndPassword(auth, data.email, password);
+
+      // Salvar dados no Firestore
+      const userData: Omit<AppUser, "uid"> = {
+        name: data.name,
+        email: data.email,
+        role: data.role,
+        obraId: data.obraId || null,
+        createdAt: new Date().toISOString(),
+      };
+
+      await setDoc(doc(db, "users", result.user.uid), userData);
+
+      const user: AppUser = {
+        uid: result.user.uid,
+        ...userData,
+      };
+
+      return user;
+    } catch (error) {
+      console.error("Create user error:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Verifica se um email já está registrado (inclusive clientes).
+   */
+  emailExists: async (email: string): Promise<boolean> => {
+    try {
+      const usersRef = collection(db, "users");
+      const emailQuery = query(usersRef, where("email", "==", email));
+      const result = await getDocs(emailQuery);
+      return !result.empty;
+    } catch (error) {
+      console.error("Email check error:", error);
+      return false;
+    }
   },
 };
 
@@ -102,5 +175,22 @@ function subscribe(cb: () => void) {
 }
 
 export function useAuth() {
-  return useSyncExternalStore(subscribe, () => state, () => seed);
+  const currentUser = useSyncExternalStore(
+    subscribe,
+    () => state.currentUser,
+    () => initialState.currentUser
+  );
+
+  const loading = useSyncExternalStore(
+    subscribe,
+    () => state.loading,
+    () => initialState.loading
+  );
+
+  return {
+    currentUser,
+    loading,
+    currentUserId: currentUser?.uid,
+    isAuthenticated: !!currentUser,
+  };
 }
