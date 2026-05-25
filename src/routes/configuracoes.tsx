@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Building2, Bell, Shield, Palette, Save, UserCog, Plus, Trash2, Mail, Pencil, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/page-shell";
@@ -21,7 +21,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { authStore, useAuth, type AppUser } from "@/lib/auth-store";
+import { authStore, useAuth, useAllUsers, type AppUser } from "@/lib/auth-store";
 import { horariosStore, useHorarios } from "@/lib/horarios-store";
 
 export const Route = createFileRoute("/configuracoes")({
@@ -150,9 +150,16 @@ function Configuracoes() {
 
 function UsersPanel() {
   const auth = useAuth();
+  const users = useAllUsers();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<AppUser | null>(null);
   const [removeId, setRemoveId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (users.length === 0) {
+      authStore.fetchAllUsers();
+    }
+  }, []);
 
   return (
     <Card>
@@ -181,48 +188,52 @@ function UsersPanel() {
           <div />
         </div>
         <ul className="divide-y divide-border">
-          {auth.users.map((u) => (
-            <li key={u.id} className="grid grid-cols-[1.5fr_1fr_120px_120px_80px] items-center gap-3 px-5 py-4">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-                  {u.name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase()}
+          {users && users.length > 0 ? (
+            users.map((u) => (
+              <li key={u.uid} className="grid grid-cols-[1.5fr_1fr_120px_120px_80px] items-center gap-3 px-5 py-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+                    {u.name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold">{u.name}</p>
+                    <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
+                      <Mail className="h-3 w-3" /> {u.email}
+                    </p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="truncate font-semibold">{u.name}</p>
-                  <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
-                    <Mail className="h-3 w-3" /> {u.email}
-                  </p>
+                <div className="text-sm text-muted-foreground">
+                  {new Date(u.createdAt).toLocaleDateString("pt-BR")}
                 </div>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {new Date(u.createdAt).toLocaleDateString("pt-BR")}
-              </div>
-              <div>
-                <Badge variant="outline" className="border-accent/40 bg-accent/10 text-accent">
-                  {u.role}
-                </Badge>
-              </div>
-              <div>
-                {u.id === auth.currentUserId ? (
-                  <Badge variant="secondary">Você</Badge>
-                ) : (
-                  <Badge variant="outline">Ativo</Badge>
-                )}
-              </div>
-              <div className="flex justify-end gap-1">
-                <Button size="icon" variant="ghost" onClick={() => { setEditing(u); setOpen(true); }} aria-label="Editar">
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="icon" variant="ghost"
-                  disabled={u.id === auth.currentUserId}
-                  onClick={() => setRemoveId(u.id)} aria-label="Remover"
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-              </div>
-            </li>
-          ))}
+                <div>
+                  <Badge variant="outline" className="border-accent/40 bg-accent/10 text-accent">
+                    {u.role}
+                  </Badge>
+                </div>
+                <div>
+                  {u.uid === auth.currentUserId ? (
+                    <Badge variant="secondary">Você</Badge>
+                  ) : (
+                    <Badge variant="outline">Ativo</Badge>
+                  )}
+                </div>
+                <div className="flex justify-end gap-1">
+                  <Button size="icon" variant="ghost" onClick={() => { setEditing(u); setOpen(true); }} aria-label="Editar">
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="icon" variant="ghost"
+                    disabled={u.uid === auth.currentUserId}
+                    onClick={() => setRemoveId(u.uid)} aria-label="Remover"
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              </li>
+            ))
+          ) : (
+            <li className="px-5 py-6 text-center text-sm text-muted-foreground">Nenhum usuário encontrado.</li>
+          )}
         </ul>
       </CardContent>
 
@@ -285,12 +296,12 @@ function HorariosPanel() {
           </Button>
         </form>
         <ul className="divide-y divide-border rounded-md border border-border">
-          {horarios.length === 0 && (
+          {horarios && horarios.length === 0 && (
             <li className="px-4 py-6 text-center text-sm text-muted-foreground">
               Nenhum horário cadastrado.
             </li>
           )}
-          {horarios.map((h) => (
+          {horarios && horarios.map((h) => (
             <li key={h.id} className="flex items-center gap-2 px-4 py-3">
               {editingId === h.id ? (
                 <>
@@ -350,7 +361,7 @@ function UserFormDialog({ editing, onDone }: { editing: AppUser | null; onDone: 
   const [name, setName] = useState(editing?.name ?? "");
   const [email, setEmail] = useState(editing?.email ?? "");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<AppUser["role"]>(editing?.role ?? "RH");
+  const [role, setRole] = useState<AppUser["role"]>(editing?.role ?? "rh_matriz");
 
   return (
     <DialogContent>
@@ -372,7 +383,7 @@ function UserFormDialog({ editing, onDone }: { editing: AppUser | null; onDone: 
             if (editing) {
               const patch: Partial<AppUser> = { name: name.trim(), email: email.trim(), role };
               if (password) patch.password = password;
-              authStore.update(editing.id, patch);
+              authStore.update(editing.uid, patch);
               toast.success("Usuário atualizado.");
             } else {
               authStore.create({ name: name.trim(), email: email.trim(), password, role });
@@ -410,9 +421,9 @@ function UserFormDialog({ editing, onDone }: { editing: AppUser | null; onDone: 
             <Select value={role} onValueChange={(v) => setRole(v as AppUser["role"])}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="Admin">Admin</SelectItem>
-                <SelectItem value="RH">RH</SelectItem>
-                <SelectItem value="Operacional">Operacional</SelectItem>
+                <SelectItem value="rh_matriz">RH Matriz</SelectItem>
+                <SelectItem value="administrativo_matriz">Admin Matriz</SelectItem>
+                <SelectItem value="financeiro_matriz">Financeiro</SelectItem>
               </SelectContent>
             </Select>
           </div>

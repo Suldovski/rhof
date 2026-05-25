@@ -6,7 +6,7 @@ import {
   onAuthStateChanged,
   User as FirebaseUser,
 } from "firebase/auth";
-import { doc, getDoc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, query, where, getDocs, deleteDoc, updateDoc } from "firebase/firestore";
 import { auth, db } from "./firebase";
 import type { Role } from "./permissions";
 
@@ -23,6 +23,7 @@ interface AuthState {
   currentUser: AppUser | null;
   loading: boolean;
   isLocalStorage: boolean; // Demo user (GitHub Pages)
+  allUsers: AppUser[];
 }
 
 // DEMO USER para GitHub Pages
@@ -42,6 +43,7 @@ const initialState: AuthState = {
   currentUser: null,
   loading: true,
   isLocalStorage: false,
+  allUsers: [],
 };
 
 let state: AuthState = initialState;
@@ -64,7 +66,7 @@ if (typeof window !== "undefined") {
     const stored = localStorage.getItem(AUTH_STORAGE_KEY);
     if (stored) {
       const user = JSON.parse(stored) as AppUser;
-      commit({ currentUser: user, loading: false, isLocalStorage: true });
+      commit({ ...state, currentUser: user, loading: false, isLocalStorage: true });
     }
   } catch (err) {
     console.warn("Erro ao carregar usuário do localStorage:", err);
@@ -79,6 +81,7 @@ if (typeof window !== "undefined") {
         if (userDocSnap.exists()) {
           const userData = userDocSnap.data();
           commit({
+            ...state,
             currentUser: {
               uid: firebaseUser.uid,
               name: userData.name || firebaseUser.displayName || "",
@@ -91,15 +94,15 @@ if (typeof window !== "undefined") {
             isLocalStorage: false,
           });
         } else {
-          commit({ currentUser: null, loading: false, isLocalStorage: false });
+          commit({ ...state, currentUser: null, loading: false, isLocalStorage: false });
         }
       } catch (error) {
         console.error("Erro ao buscar dados do Firestore:", error);
-        commit({ currentUser: null, loading: false, isLocalStorage: false });
+        commit({ ...state, currentUser: null, loading: false, isLocalStorage: false });
       }
     } else {
       if (!state.currentUser || !state.isLocalStorage) {
-        commit({ currentUser: null, loading: false, isLocalStorage: false });
+        commit({ ...state, currentUser: null, loading: false, isLocalStorage: false });
       }
     }
   });
@@ -109,13 +112,14 @@ export const authStore = {
   current: () => state.currentUser,
   isAuthenticated: () => !!state.currentUser,
   isLoading: () => state.loading,
+  allUsers: () => state.allUsers,
 
   login: async (email: string, password: string): Promise<AppUser | null> => {
     try {
       // Check demo user first (GitHub Pages)
       if (email.toLowerCase() === DEMO_USER.email.toLowerCase() && password === DEMO_PASSWORD) {
         console.log("✅ Demo user login (localStorage)");
-        commit({ currentUser: DEMO_USER, loading: false, isLocalStorage: true });
+        commit({ ...state, currentUser: DEMO_USER, loading: false, isLocalStorage: true });
         return DEMO_USER;
       }
 
@@ -135,7 +139,7 @@ export const authStore = {
             obraId: userData.obraId || null,
             createdAt: userData.createdAt || new Date().toISOString(),
           };
-          commit({ currentUser: user, loading: false, isLocalStorage: false });
+          commit({ ...state, currentUser: user, loading: false, isLocalStorage: false });
           return user;
         }
       } catch (firebaseError: any) {
@@ -155,14 +159,41 @@ export const authStore = {
     } catch (error) {
       console.warn("Firebase logout falhou:", error);
     }
-    commit({ currentUser: null, loading: false, isLocalStorage: false });
+    commit({ ...state, currentUser: null, loading: false, isLocalStorage: false });
+  },
+
+  /**
+   * Busca todos os usuários do Firestore
+   */
+  fetchAllUsers: async (): Promise<AppUser[]> => {
+    try {
+      const usersRef = collection(db, "users");
+      const querySnapshot = await getDocs(usersRef);
+      const users: AppUser[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        users.push({
+          uid: doc.id,
+          name: data.name || "",
+          email: data.email || "",
+          role: data.role,
+          obraId: data.obraId || null,
+          createdAt: data.createdAt || new Date().toISOString(),
+        });
+      });
+      commit({ ...state, allUsers: users });
+      return users;
+    } catch (error) {
+      console.error("Erro ao buscar usuários:", error);
+      return [];
+    }
   },
 
   /**
    * Cria um novo usuário no Firebase Authentication e Firestore.
    * Para cliente de obra, sem senha (apenas email).
    */
-  createUser: async (data: {
+  create: async (data: {
     email: string;
     password?: string; // opcional para cliente
     name: string;
@@ -199,9 +230,40 @@ export const authStore = {
         ...userData,
       };
 
+      // Atualizar lista de usuários
+      await authStore.fetchAllUsers();
       return user;
     } catch (error) {
       console.error("Create user error:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Atualiza um usuário existente
+   */
+  update: async (uid: string, patch: Partial<AppUser>): Promise<void> => {
+    try {
+      const userRef = doc(db, "users", uid);
+      await updateDoc(userRef, patch as any);
+      // Atualizar lista de usuários
+      await authStore.fetchAllUsers();
+    } catch (error) {
+      console.error("Update user error:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Remove um usuário
+   */
+  remove: async (uid: string): Promise<void> => {
+    try {
+      await deleteDoc(doc(db, "users", uid));
+      // Atualizar lista de usuários
+      await authStore.fetchAllUsers();
+    } catch (error) {
+      console.error("Remove user error:", error);
       throw error;
     }
   },
@@ -253,4 +315,14 @@ export function useAuth() {
     isAuthenticated: !!currentUser,
     isLocalStorage,
   };
+}
+
+export function useAllUsers() {
+  const allUsers = useSyncExternalStore(
+    subscribe,
+    () => state.allUsers,
+    () => initialState.allUsers
+  );
+
+  return allUsers;
 }
