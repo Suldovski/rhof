@@ -1,6 +1,13 @@
 import { useSyncExternalStore } from "react";
 
-export type EmployeeStatus = "ativo" | "ferias" | "afastado" | "desligado";
+export type EmployeeStatus =
+  | "admissao"
+  | "mobilizacao"
+  | "efetivo"
+  | "ferias"
+  | "afastado"
+  | "desligado"
+  | "ativo"; // legado (migrado para "efetivo")
 
 export interface BankAccount {
   bank: string;
@@ -39,10 +46,28 @@ export interface DocAnexo {
   uploadedAt: string;
 }
 
+export type EmployeeTipo = "efetivo" | "pj" | "terceiro";
+
+export interface RoleChange {
+  from: string;
+  to: string;
+  date: string;
+}
+
 export interface Employee {
   /* Matrícula / status */
   id: string;
   status: EmployeeStatus;
+
+  /* Foto (base64) — não vai para o FRE */
+  photo?: string;
+
+  /* Tipo de contrato + empresa (para PJ/terceiro) */
+  tipo?: EmployeeTipo;
+  empresaTerceiro?: string;
+
+  /* Histórico de trocas de função */
+  roleHistory?: RoleChange[];
 
   /* Dados pessoais (obrigatórios) */
   name: string;
@@ -129,7 +154,11 @@ const KEY = "bucagrans.employees.v2";
 function makeEmpty(): Employee {
   return {
     id: "",
-    status: "ativo",
+    status: "admissao",
+    photo: "",
+    tipo: "efetivo",
+    empresaTerceiro: "",
+    roleHistory: [],
     name: "",
     cpf: "",
     nascimento: "",
@@ -395,16 +424,26 @@ const seed: Employee[] = [
   },
 ];
 
+import { departmentFromRole } from "./role-department";
+
+function migrate(list: Employee[]): Employee[] {
+  return list.map((e) => {
+    const status = (e.status as any) === "ativo" ? "efetivo" : e.status;
+    const dept = departmentFromRole(e.cargoFuncao || e.role || "");
+    return { ...e, status, department: dept as any, departamento: dept };
+  });
+}
+
 let state: Employee[] = (() => {
-  if (typeof window === "undefined") return seed;
+  if (typeof window === "undefined") return migrate(seed);
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as Employee[];
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) return migrate(parsed);
     }
   } catch {}
-  return seed;
+  return migrate(seed);
 })();
 
 const listeners = new Set<() => void>();
@@ -417,7 +456,18 @@ function commit(next: Employee[]) {
   listeners.forEach((l) => l());
 }
 
-function nextMatricula(): string {
+function nextMatricula(isPJ = false): string {
+  if (isPJ) {
+    const max = state.reduce((m, e) => {
+      const match = /^PJ-(\d+)$/i.exec(e.id);
+      if (match) {
+        const n = parseInt(match[1], 10);
+        return n > m ? n : m;
+      }
+      return m;
+    }, 0);
+    return `PJ-${String(max + 1).padStart(3, "0")}`;
+  }
   const max = state.reduce((m, e) => {
     const n = parseInt(e.id, 10);
     return Number.isFinite(n) && n > m ? n : m;
@@ -429,25 +479,40 @@ export const employeesStore = {
   list: () => state,
   get: (id: string) => state.find((e) => e.id === id),
   add: (data: Partial<Employee>) => {
-    const id = data.id?.trim() || nextMatricula();
+    const rawId = data.id?.trim() || "";
+    const isPJ = /pj/i.test(rawId);
+    let id = rawId;
+    if (!id) id = nextMatricula(false);
+    else if (isPJ && !/^PJ-/i.test(id)) id = `PJ-${id.replace(/pj/ig, "").replace(/[^a-z0-9]/gi, "") || String(Date.now()).slice(-4)}`;
     if (state.some((e) => e.id === id)) {
       throw new Error("Já existe um funcionário com esta matrícula.");
     }
     const fresh: Employee = { ...makeEmpty(), ...data, id };
-    // mantém compat dos campos legados
     fresh.role = fresh.role || fresh.cargoFuncao;
     fresh.site = fresh.site || fresh.organograma;
     fresh.phone = fresh.phone || fresh.telefone;
-    fresh.department = (fresh.department || (fresh.departamento as any)) as Employee["department"];
+    const dept = departmentFromRole(fresh.cargoFuncao || fresh.role || "");
+    fresh.department = dept as any;
+    fresh.departamento = dept;
     fresh.salary = fresh.salary || fresh.salarioHora * 220;
     fresh.address = fresh.address || `${fresh.endereco}, ${fresh.enderecoNumero} — ${fresh.bairro}, ${fresh.municipio}/${fresh.estado}`;
     commit([...state, fresh]);
     return fresh;
   },
   update: (id: string, patch: Partial<Employee>) => {
-    commit(state.map((e) => (e.id === id ? { ...e, ...patch } : e)));
+    commit(state.map((e) => {
+      if (e.id !== id) return e;
+      const merged = { ...e, ...patch };
+      if (patch.cargoFuncao || patch.role) {
+        const dept = departmentFromRole(merged.cargoFuncao || merged.role || "");
+        merged.department = dept as any;
+        merged.departamento = dept;
+      }
+      return merged;
+    }));
   },
   remove: (id: string) => commit(state.filter((e) => e.id !== id)),
+  removeAll: () => commit([]),
   reset: () => commit(seed),
 };
 
