@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as RdvRouteImport } from './routes/rdv'
 import { Route as ObrasRouteImport } from './routes/obras'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as HorasExtrasRouteImport } from './routes/horas-extras'
 import { Route as FolhaSalarialRouteImport } from './routes/folha-salarial'
 import { Route as DocumentosRouteImport } from './routes/documentos'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
@@ -23,6 +24,7 @@ import { Route as FuncionariosNovoRouteImport } from './routes/funcionarios.novo
 import { Route as FuncionariosFeriasRouteImport } from './routes/funcionarios.ferias'
 import { Route as FuncionariosIdRouteImport } from './routes/funcionarios.$id'
 import { Route as AdminUsuariosRouteImport } from './routes/admin/usuarios'
+import { Route as AdminDemissoesRouteImport } from './routes/admin/demissoes'
 
 const RdvRoute = RdvRouteImport.update({
   id: '/rdv',
@@ -37,6 +39,11 @@ const ObrasRoute = ObrasRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HorasExtrasRoute = HorasExtrasRouteImport.update({
+  id: '/horas-extras',
+  path: '/horas-extras',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FolhaSalarialRoute = FolhaSalarialRouteImport.update({
@@ -94,15 +101,22 @@ const AdminUsuariosRoute = AdminUsuariosRouteImport.update({
   path: '/admin/usuarios',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminDemissoesRoute = AdminDemissoesRouteImport.update({
+  id: '/admin/demissoes',
+  path: '/admin/demissoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/documentos': typeof DocumentosRoute
   '/folha-salarial': typeof FolhaSalarialRoute
+  '/horas-extras': typeof HorasExtrasRoute
   '/login': typeof LoginRoute
   '/obras': typeof ObrasRoute
   '/rdv': typeof RdvRoute
+  '/admin/demissoes': typeof AdminDemissoesRoute
   '/admin/usuarios': typeof AdminUsuariosRoute
   '/funcionarios/$id': typeof FuncionariosIdRoute
   '/funcionarios/ferias': typeof FuncionariosFeriasRoute
@@ -116,9 +130,11 @@ export interface FileRoutesByTo {
   '/configuracoes': typeof ConfiguracoesRoute
   '/documentos': typeof DocumentosRoute
   '/folha-salarial': typeof FolhaSalarialRoute
+  '/horas-extras': typeof HorasExtrasRoute
   '/login': typeof LoginRoute
   '/obras': typeof ObrasRoute
   '/rdv': typeof RdvRoute
+  '/admin/demissoes': typeof AdminDemissoesRoute
   '/admin/usuarios': typeof AdminUsuariosRoute
   '/funcionarios/$id': typeof FuncionariosIdRoute
   '/funcionarios/ferias': typeof FuncionariosFeriasRoute
@@ -133,9 +149,11 @@ export interface FileRoutesById {
   '/configuracoes': typeof ConfiguracoesRoute
   '/documentos': typeof DocumentosRoute
   '/folha-salarial': typeof FolhaSalarialRoute
+  '/horas-extras': typeof HorasExtrasRoute
   '/login': typeof LoginRoute
   '/obras': typeof ObrasRoute
   '/rdv': typeof RdvRoute
+  '/admin/demissoes': typeof AdminDemissoesRoute
   '/admin/usuarios': typeof AdminUsuariosRoute
   '/funcionarios/$id': typeof FuncionariosIdRoute
   '/funcionarios/ferias': typeof FuncionariosFeriasRoute
@@ -151,9 +169,11 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/documentos'
     | '/folha-salarial'
+    | '/horas-extras'
     | '/login'
     | '/obras'
     | '/rdv'
+    | '/admin/demissoes'
     | '/admin/usuarios'
     | '/funcionarios/$id'
     | '/funcionarios/ferias'
@@ -167,9 +187,11 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/documentos'
     | '/folha-salarial'
+    | '/horas-extras'
     | '/login'
     | '/obras'
     | '/rdv'
+    | '/admin/demissoes'
     | '/admin/usuarios'
     | '/funcionarios/$id'
     | '/funcionarios/ferias'
@@ -183,9 +205,11 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/documentos'
     | '/folha-salarial'
+    | '/horas-extras'
     | '/login'
     | '/obras'
     | '/rdv'
+    | '/admin/demissoes'
     | '/admin/usuarios'
     | '/funcionarios/$id'
     | '/funcionarios/ferias'
@@ -200,9 +224,11 @@ export interface RootRouteChildren {
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   DocumentosRoute: typeof DocumentosRoute
   FolhaSalarialRoute: typeof FolhaSalarialRoute
+  HorasExtrasRoute: typeof HorasExtrasRoute
   LoginRoute: typeof LoginRoute
   ObrasRoute: typeof ObrasRoute
   RdvRoute: typeof RdvRoute
+  AdminDemissoesRoute: typeof AdminDemissoesRoute
   AdminUsuariosRoute: typeof AdminUsuariosRoute
   FuncionariosIdRoute: typeof FuncionariosIdRoute
   FuncionariosFeriasRoute: typeof FuncionariosFeriasRoute
@@ -233,6 +259,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/horas-extras': {
+      id: '/horas-extras'
+      path: '/horas-extras'
+      fullPath: '/horas-extras'
+      preLoaderRoute: typeof HorasExtrasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/folha-salarial': {
@@ -312,6 +345,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminUsuariosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/demissoes': {
+      id: '/admin/demissoes'
+      path: '/admin/demissoes'
+      fullPath: '/admin/demissoes'
+      preLoaderRoute: typeof AdminDemissoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -320,9 +360,11 @@ const rootRouteChildren: RootRouteChildren = {
   ConfiguracoesRoute: ConfiguracoesRoute,
   DocumentosRoute: DocumentosRoute,
   FolhaSalarialRoute: FolhaSalarialRoute,
+  HorasExtrasRoute: HorasExtrasRoute,
   LoginRoute: LoginRoute,
   ObrasRoute: ObrasRoute,
   RdvRoute: RdvRoute,
+  AdminDemissoesRoute: AdminDemissoesRoute,
   AdminUsuariosRoute: AdminUsuariosRoute,
   FuncionariosIdRoute: FuncionariosIdRoute,
   FuncionariosFeriasRoute: FuncionariosFeriasRoute,
