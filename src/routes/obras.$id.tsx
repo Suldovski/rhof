@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, HardHat, Calendar, MapPin, User, Users, Pencil, Trash2, FileText, Search } from "lucide-react";
 import { toast } from "sonner";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { PageShell } from "@/components/page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useEmployees } from "@/lib/employees";
-import { sitesStore, useSite } from "@/lib/sites-store";
+import { sitesStore, useSites, useSite } from "@/lib/sites-store";
 
 export const Route = createFileRoute("/obras/$id")({
   head: () => ({ meta: [{ title: `Obra · Bucagrans RH` }] }),
@@ -25,13 +25,41 @@ export const Route = createFileRoute("/obras/$id")({
 
 function ObraDetail() {
   const { id } = Route.useParams();
-  const obra = useSite(id);
+  const sites = useSites();
   const employees = useEmployees();
   const navigate = useNavigate();
   const [confirmDel, setConfirmDel] = useState(false);
   const [q, setQ] = useState("");
   const [dept, setDept] = useState("todos");
   const [status, setStatus] = useState("todos");
+  const [loading, setLoading] = useState(true);
+
+  // Tenta encontrar a obra pelo ID exato ou por slug
+  const obra = useMemo(() => {
+    if (!sites || sites.length === 0) return null;
+    
+    // Primeiro tenta ID exato
+    let found = sites.find((s) => s.id === id);
+    
+    // Se não encontrar, tenta por slug do nome
+    if (!found && id) {
+      found = sites.find((s) => {
+        const slug = s.name
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)/g, "");
+        return slug === id;
+      });
+    }
+    
+    return found || null;
+  }, [sites, id]);
+
+  useEffect(() => {
+    setLoading(false);
+  }, []);
 
   const team = useMemo(
     () => (obra ? employees.filter((e) => e.site === obra.name) : []),
@@ -52,13 +80,28 @@ function ObraDetail() {
     });
   }, [team, q, dept, status]);
 
+  if (loading) {
+    return (
+      <PageShell title="Carregando..." eyebrow="Canteiro">
+        <Card>
+          <CardContent className="p-8 text-center text-sm text-muted-foreground">
+            Carregando dados da obra...
+          </CardContent>
+        </Card>
+      </PageShell>
+    );
+  }
+
   if (!obra) {
     return (
       <PageShell title="Obra não encontrada" eyebrow="Canteiro">
-        <Card><CardContent className="p-8 text-center text-sm text-muted-foreground">
-          Esta obra não existe ou foi removida.
-          <div className="mt-4"><Button asChild><Link to="/obras">Voltar para Obras</Link></Button></div>
-        </CardContent></Card>
+        <Card>
+          <CardContent className="p-8 text-center text-sm text-muted-foreground">
+            <p>Esta obra não existe ou foi removida.</p>
+            <p className="mt-2 text-xs">ID procurado: <code className="bg-muted px-2 py-1 rounded">{id}</code></p>
+            <div className="mt-4"><Button asChild><Link to="/obras">Voltar para Obras</Link></Button></div>
+          </CardContent>
+        </Card>
       </PageShell>
     );
   }
