@@ -57,9 +57,12 @@ function ObraDetail() {
     return found || null;
   }, [sites, id]);
 
+  // Loading só sai quando sites carregarem (mesmo que vazio)
   useEffect(() => {
-    setLoading(false);
-  }, []);
+    if (sites !== undefined && sites !== null) {
+      setLoading(false);
+    }
+  }, [sites]);
 
   const team = useMemo(
     () => (obra ? employees.filter((e) => e.site === obra.name) : []),
