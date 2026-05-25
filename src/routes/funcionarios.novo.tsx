@@ -12,8 +12,10 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useSites } from "@/lib/sites-store";
+import { useHorarios } from "@/lib/horarios-store";
+import { fetchCep } from "@/lib/cep";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { employeesStore, makeEmpty, type Employee, type Dependente, type DocAnexo } from "@/lib/employees";
+import { employeesStore, makeEmpty, type Employee, type Dependente, type DocAnexo, type EmployeeStatus } from "@/lib/employees";
 import { UFS, SINDICATOS_POR_UF } from "@/lib/sindicatos";
 import { readFileAsDataURL } from "@/lib/doc-templates-store";
 
@@ -25,6 +27,7 @@ export const Route = createFileRoute("/funcionarios/novo")({
 function NewEmployee() {
   const navigate = useNavigate();
   const sites = useSites();
+  const horarios = useHorarios();
   const [form, setForm] = useState<Employee>(() => makeEmpty());
   const [submitting, setSubmitting] = useState(false);
 
@@ -101,6 +104,57 @@ function NewEmployee() {
       }
     >
       <form onSubmit={onSubmit} className="space-y-4">
+        {/* FOTO */}
+        <Card>
+          <CardHeader><CardTitle className="font-display text-lg">Foto do colaborador</CardTitle></CardHeader>
+          <CardContent className="flex items-center gap-4">
+            {form.photo ? (
+              <img src={form.photo} alt="Foto" className="h-20 w-20 rounded-full object-cover" />
+            ) : (
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted text-xs text-muted-foreground">Sem foto</div>
+            )}
+            <label className="cursor-pointer">
+              <input
+                type="file" accept="image/*" className="hidden"
+                onChange={async (ev) => {
+                  const file = ev.target.files?.[0]; if (!file) return;
+                  if (file.size > 3 * 1024 * 1024) { toast.error("Foto deve ter no máximo 3 MB."); return; }
+                  const data = await readFileAsDataURL(file);
+                  set("photo", data);
+                }}
+              />
+              <span className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm hover:bg-muted">
+                <Upload className="h-4 w-4" /> {form.photo ? "Trocar foto" : "Anexar foto"}
+              </span>
+            </label>
+            {form.photo && (
+              <Button type="button" variant="ghost" size="sm" onClick={() => set("photo", "")}>Remover</Button>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* TIPO DE CONTRATO */}
+        <Card>
+          <CardHeader><CardTitle className="font-display text-lg">Tipo de contrato</CardTitle></CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-3">
+            <Field label="Tipo">
+              <Select value={form.tipo ?? "efetivo"} onValueChange={(v) => set("tipo", v as any)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="efetivo">Efetivo (CLT)</SelectItem>
+                  <SelectItem value="pj">PJ</SelectItem>
+                  <SelectItem value="terceiro">Terceiro</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+            {(form.tipo === "pj" || form.tipo === "terceiro") && (
+              <Field label="Empresa" className="md:col-span-2">
+                <Input value={form.empresaTerceiro ?? ""} onChange={(e) => set("empresaTerceiro", e.target.value)} placeholder="Razão social da empresa" />
+              </Field>
+            )}
+          </CardContent>
+        </Card>
+
         {/* DADOS PESSOAIS */}
         <Card>
           <CardHeader><CardTitle className="font-display text-lg">Dados pessoais *</CardTitle></CardHeader>
@@ -196,7 +250,24 @@ function NewEmployee() {
               <Input value={form.endereco} onChange={(e) => set("endereco", e.target.value)} />
             </Field>
             <Field label="Número"><Input value={form.enderecoNumero} onChange={(e) => set("enderecoNumero", e.target.value)} /></Field>
-            <Field label="CEP"><Input value={form.cep} onChange={(e) => set("cep", e.target.value)} /></Field>
+            <Field label="CEP">
+              <Input
+                value={form.cep}
+                onChange={(e) => set("cep", e.target.value)}
+                onBlur={async () => {
+                  const d = await fetchCep(form.cep);
+                  if (!d) return;
+                  setForm((f) => ({
+                    ...f,
+                    endereco: f.endereco || d.logradouro.toUpperCase(),
+                    bairro: f.bairro || d.bairro.toUpperCase(),
+                    municipio: f.municipio || d.localidade.toUpperCase(),
+                    estado: f.estado || d.uf,
+                  }));
+                  toast.success("Endereço preenchido pelo CEP.");
+                }}
+              />
+            </Field>
             <Field label="Complemento"><Input value={form.complemento} onChange={(e) => set("complemento", e.target.value)} /></Field>
             <Field label="Bairro"><Input value={form.bairro} onChange={(e) => set("bairro", e.target.value)} /></Field>
             <Field label="Município"><Input value={form.municipio} onChange={(e) => set("municipio", e.target.value)} /></Field>
@@ -238,14 +309,13 @@ function NewEmployee() {
                 <SelectContent>{sites.map((s) => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
-            <Field label="Departamento" required>
-              <Select value={form.departamento} onValueChange={(v) => { set("departamento", v); set("department", v as Employee["department"]); }}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+            <Field label="Status inicial">
+              <Select value={form.status as string} onValueChange={(v) => set("status", v as EmployeeStatus)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Obra">Obra</SelectItem>
-                  <SelectItem value="Engenharia">Engenharia</SelectItem>
-                  <SelectItem value="Seguranca">Segurança</SelectItem>
-                  <SelectItem value="Administrativo">Administrativo</SelectItem>
+                  <SelectItem value="admissao">Em admissão</SelectItem>
+                  <SelectItem value="mobilizacao">Mobilização</SelectItem>
+                  <SelectItem value="efetivo">Efetivo</SelectItem>
                 </SelectContent>
               </Select>
             </Field>
@@ -274,7 +344,14 @@ function NewEmployee() {
                 <Input value={form.periodoExperienciaOutro} onChange={(e) => set("periodoExperienciaOutro", e.target.value)} />
               </Field>
             )}
-            <Field label="Escala/Horário"><Input value={form.escalaHorario} onChange={(e) => set("escalaHorario", e.target.value)} placeholder="Ex: 44h 2ª–6ª 07–17h" /></Field>
+            <Field label="Escala/Horário">
+              <Select value={form.escalaHorario} onValueChange={(v) => set("escalaHorario", v)}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  {horarios.map((h) => <SelectItem key={h.id} value={h.nome}>{h.nome}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </Field>
             <Field label="CTPS"><Input value={form.ctps} onChange={(e) => set("ctps", e.target.value)} /></Field>
             <Field label="PIS/PASEP"><Input value={form.pis} onChange={(e) => set("pis", e.target.value)} /></Field>
             <Field label="RG"><Input value={form.rg} onChange={(e) => set("rg", e.target.value)} /></Field>
