@@ -22,11 +22,26 @@ export interface AppUser {
 interface AuthState {
   currentUser: AppUser | null;
   loading: boolean;
+  isLocalStorage: boolean; // Demo user (GitHub Pages)
 }
+
+// DEMO USER para GitHub Pages
+const DEMO_USER: AppUser = {
+  uid: "demo-user-001",
+  name: "Demonstração",
+  email: "demo@bucagrans.com.br",
+  role: "rh_matriz",
+  obraId: null,
+  createdAt: new Date().toISOString(),
+};
+
+const DEMO_PASSWORD = "demo123";
+const AUTH_STORAGE_KEY = "bucagrans_auth_demo";
 
 const initialState: AuthState = {
   currentUser: null,
   loading: true,
+  isLocalStorage: false,
 };
 
 let state: AuthState = initialState;
@@ -34,33 +49,58 @@ const listeners = new Set<() => void>();
 
 function commit(next: AuthState) {
   state = next;
+  if (next.isLocalStorage && next.currentUser) {
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(next.currentUser));
+  } else if (!next.currentUser) {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+  }
   listeners.forEach((l) => l());
 }
 
 // Initialize Firebase auth listener
 if (typeof window !== "undefined") {
+  // Tentar localStorage primeiro (GitHub Pages demo)
+  try {
+    const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+    if (stored) {
+      const user = JSON.parse(stored) as AppUser;
+      commit({ currentUser: user, loading: false, isLocalStorage: true });
+    }
+  } catch (err) {
+    console.warn("Erro ao carregar usuário do localStorage:", err);
+  }
+
+  // Depois tentar Firebase
   onAuthStateChanged(auth, async (firebaseUser) => {
     if (firebaseUser) {
-      const userDocRef = doc(db, "users", firebaseUser.uid);
-      const userDocSnap = await getDoc(userDocRef);
-      if (userDocSnap.exists()) {
-        const userData = userDocSnap.data();
-        commit({
-          currentUser: {
-            uid: firebaseUser.uid,
-            name: userData.name || firebaseUser.displayName || "",
-            email: firebaseUser.email || "",
-            role: userData.role,
-            obraId: userData.obraId || null,
-            createdAt: userData.createdAt || new Date().toISOString(),
-          },
-          loading: false,
-        });
-      } else {
-        commit({ currentUser: null, loading: false });
+      try {
+        const userDocRef = doc(db, "users", firebaseUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          const userData = userDocSnap.data();
+          commit({
+            currentUser: {
+              uid: firebaseUser.uid,
+              name: userData.name || firebaseUser.displayName || "",
+              email: firebaseUser.email || "",
+              role: userData.role,
+              obraId: userData.obraId || null,
+              createdAt: userData.createdAt || new Date().toISOString(),
+            },
+            loading: false,
+            isLocalStorage: false,
+          });
+        } else {
+          commit({ currentUser: null, loading: false, isLocalStorage: false });
+        }
+      } catch (error) {
+        console.error("Erro ao buscar dados do Firestore:", error);
+        commit({ currentUser: null, loading: false, isLocalStorage: false });
       }
     } else {
-      commit({ currentUser: null, loading: false });
+      if (!state.currentUser || !state.isLocalStorage) {
+        commit({ currentUser: null, loading: false, isLocalStorage: false });
+      }
     }
   });
 }
@@ -72,23 +112,36 @@ export const authStore = {
 
   login: async (email: string, password: string): Promise<AppUser | null> => {
     try {
-      const result = await signInWithEmailAndPassword(auth, email, password);
-      const userDocRef = doc(db, "users", result.user.uid);
-      const userDocSnap = await getDoc(userDocRef);
-      
-      if (userDocSnap.exists()) {
-        const userData = userDocSnap.data();
-        const user: AppUser = {
-          uid: result.user.uid,
-          name: userData.name || result.user.displayName || "",
-          email: result.user.email || "",
-          role: userData.role,
-          obraId: userData.obraId || null,
-          createdAt: userData.createdAt || new Date().toISOString(),
-        };
-        commit({ currentUser: user, loading: false });
-        return user;
+      // Check demo user first (GitHub Pages)
+      if (email.toLowerCase() === DEMO_USER.email.toLowerCase() && password === DEMO_PASSWORD) {
+        console.log("✅ Demo user login (localStorage)");
+        commit({ currentUser: DEMO_USER, loading: false, isLocalStorage: true });
+        return DEMO_USER;
       }
+
+      // Try Firebase
+      try {
+        const result = await signInWithEmailAndPassword(auth, email, password);
+        const userDocRef = doc(db, "users", result.user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        
+        if (userDocSnap.exists()) {
+          const userData = userDocSnap.data();
+          const user: AppUser = {
+            uid: result.user.uid,
+            name: userData.name || result.user.displayName || "",
+            email: result.user.email || "",
+            role: userData.role,
+            obraId: userData.obraId || null,
+            createdAt: userData.createdAt || new Date().toISOString(),
+          };
+          commit({ currentUser: user, loading: false, isLocalStorage: false });
+          return user;
+        }
+      } catch (firebaseError: any) {
+        console.warn("Firebase login falhou:", firebaseError.message);
+      }
+
       return null;
     } catch (error) {
       console.error("Login error:", error);
@@ -99,10 +152,10 @@ export const authStore = {
   logout: async () => {
     try {
       await signOut(auth);
-      commit({ currentUser: null, loading: false });
     } catch (error) {
-      console.error("Logout error:", error);
+      console.warn("Firebase logout falhou:", error);
     }
+    commit({ currentUser: null, loading: false, isLocalStorage: false });
   },
 
   /**
@@ -187,10 +240,17 @@ export function useAuth() {
     () => initialState.loading
   );
 
+  const isLocalStorage = useSyncExternalStore(
+    subscribe,
+    () => state.isLocalStorage,
+    () => false
+  );
+
   return {
     currentUser,
     loading,
     currentUserId: currentUser?.uid,
     isAuthenticated: !!currentUser,
+    isLocalStorage,
   };
 }
