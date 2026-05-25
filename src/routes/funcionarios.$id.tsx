@@ -3,6 +3,7 @@ import { useState } from "react";
 import {
   ArrowLeft, Mail, Phone, MapPin, Calendar, Briefcase, HardHat,
   ShieldCheck, Pencil, FileText, Download, Trash2, Plane, Save, Plus, Upload,
+  Repeat, UserMinus, Camera,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/page-shell";
@@ -11,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
@@ -32,6 +34,8 @@ import { UFS, SINDICATOS_POR_UF } from "@/lib/sindicatos";
 import { readFileAsDataURL } from "@/lib/doc-templates-store";
 import { fetchCep } from "@/lib/cep";
 import { downloadFRE } from "@/lib/fre-pdf";
+import { dismissalsStore } from "@/lib/dismissals-store";
+import { authStore } from "@/lib/auth-store";
 
 export const Route = createFileRoute("/funcionarios/$id")({
   head: ({ params }) => ({ meta: [{ title: `Funcionário #${params.id} · Bucagrans RH` }] }),
@@ -53,6 +57,8 @@ function Detail() {
   const navigate = useNavigate();
   const [confirmDel, setConfirmDel] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [trocaOpen, setTrocaOpen] = useState(false);
+  const [demOpen, setDemOpen] = useState(false);
 
   if (!e) {
     return (
@@ -93,6 +99,12 @@ function Detail() {
               <ArrowLeft className="mr-1 h-4 w-4" /> Voltar de férias
             </Button>
           )}
+          <Button variant="outline" onClick={() => setTrocaOpen(true)}>
+            <Repeat className="mr-1 h-4 w-4" /> Trocar função
+          </Button>
+          <Button variant="outline" onClick={() => setDemOpen(true)} className="text-destructive">
+            <UserMinus className="mr-1 h-4 w-4" /> Solicitar demissão
+          </Button>
           <Button onClick={() => setEditing(true)}><Pencil className="mr-1 h-4 w-4" /> Editar</Button>
           <Button variant="destructive" onClick={() => setConfirmDel(true)}>
             <Trash2 className="mr-1 h-4 w-4" /> Apagar
@@ -120,11 +132,21 @@ function Detail() {
       <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
         <Card>
           <CardContent className="p-6 text-center">
-            <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-primary text-2xl font-bold text-primary-foreground">
-              {initials}
-            </div>
+            {e.photo ? (
+              <img src={e.photo} alt={e.name} className="mx-auto h-24 w-24 rounded-full object-cover" />
+            ) : (
+              <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-primary text-2xl font-bold text-primary-foreground">
+                {initials}
+              </div>
+            )}
             <h2 className="mt-4 font-display text-xl">{e.name}</h2>
             <p className="text-sm text-muted-foreground">{e.role}</p>
+            {e.tipo === "terceiro" && e.empresaTerceiro && (
+              <Badge variant="outline" className="mt-2 border-accent/40 text-accent">Terceiro · {e.empresaTerceiro}</Badge>
+            )}
+            {e.tipo === "pj" && e.empresaTerceiro && (
+              <Badge variant="outline" className="mt-2 border-accent/40 text-accent">PJ · {e.empresaTerceiro}</Badge>
+            )}
             <div className="mt-3 flex justify-center"><StatusBadge status={e.status} /></div>
             <div className="mt-6 space-y-3 text-left text-sm">
               <Row icon={Mail} label={e.email} />
@@ -216,7 +238,92 @@ function Detail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <TrocaFuncaoDialog open={trocaOpen} onOpenChange={setTrocaOpen} employee={e} />
+      <DemissaoDialog open={demOpen} onOpenChange={setDemOpen} employee={e} />
     </PageShell>
+  );
+}
+
+function TrocaFuncaoDialog({ open, onOpenChange, employee }: {
+  open: boolean; onOpenChange: (o: boolean) => void; employee: Employee;
+}) {
+  const [novaFuncao, setNovaFuncao] = useState("");
+  const confirmar = () => {
+    if (!novaFuncao.trim()) { toast.error("Informe a nova função."); return; }
+    const history = [...(employee.roleHistory ?? []), {
+      from: employee.cargoFuncao || employee.role,
+      to: novaFuncao.trim(),
+      date: new Date().toISOString(),
+    }];
+    employeesStore.update(employee.id, {
+      cargoFuncao: novaFuncao.trim(),
+      role: novaFuncao.trim(),
+      roleHistory: history,
+    });
+    toast.success(`Função alterada para ${novaFuncao.trim()}.`);
+    onOpenChange(false);
+    setNovaFuncao("");
+  };
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="font-display">Trocar função</DialogTitle>
+          <DialogDescription>
+            Função atual: <strong>{employee.cargoFuncao || employee.role}</strong>
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-2">
+          <Label className="text-xs uppercase tracking-wider text-muted-foreground">Nova função</Label>
+          <Input value={novaFuncao} onChange={(ev) => setNovaFuncao(ev.target.value)} placeholder="Ex: Mestre de Obras" autoFocus />
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button onClick={confirmar}><Repeat className="mr-1 h-4 w-4" /> Concluir troca</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DemissaoDialog({ open, onOpenChange, employee }: {
+  open: boolean; onOpenChange: (o: boolean) => void; employee: Employee;
+}) {
+  const [reason, setReason] = useState("");
+  const confirmar = () => {
+    if (!reason.trim()) { toast.error("Informe o motivo."); return; }
+    const me = authStore.current();
+    dismissalsStore.add({
+      employeeId: employee.id,
+      employeeName: employee.name,
+      site: employee.site || employee.organograma,
+      reason: reason.trim(),
+      requestedBy: me?.name ?? "RH Obra",
+    });
+    toast.success("Solicitação enviada ao RH Matriz.");
+    onOpenChange(false);
+    setReason("");
+  };
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="font-display">Solicitar demissão</DialogTitle>
+          <DialogDescription>
+            O RH Matriz será notificado para aprovar e processar o desligamento de <strong>{employee.name}</strong>.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-2">
+          <Label className="text-xs uppercase tracking-wider text-muted-foreground">Motivo</Label>
+          <Textarea value={reason} onChange={(ev) => setReason(ev.target.value)} rows={4} placeholder="Descreva o motivo da solicitação..." autoFocus />
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button variant="destructive" onClick={confirmar}><UserMinus className="mr-1 h-4 w-4" /> Enviar solicitação</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
