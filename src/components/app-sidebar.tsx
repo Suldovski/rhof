@@ -8,7 +8,11 @@ import {
   Settings,
   Wallet,
   Receipt,
+  Clock,
+  UserMinus,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { useDismissals } from "@/lib/dismissals-store";
 
 import {
   Sidebar,
@@ -27,11 +31,13 @@ import {
 const main = [
   { title: "Painel", url: "/", icon: LayoutDashboard },
   { title: "Funcionários", url: "/funcionarios", icon: Users },
+  { title: "Novo Cadastro", url: "/funcionarios/novo", icon: UserPlus },
 ];
 
 const ops = [
   { title: "Obras", url: "/obras", icon: HardHat },
   { title: "Folha Salarial", url: "/folha-salarial", icon: Wallet },
+  { title: "Horas Extras", url: "/horas-extras", icon: Clock },
   { title: "RDV", url: "/rdv", icon: Receipt },
   { title: "Documentos", url: "/documentos", icon: FileText },
 ];
@@ -105,6 +111,7 @@ export function AppSidebar() {
 
       <SidebarFooter className="border-t border-sidebar-border">
         <SidebarMenu>
+          <AdminDemissoesItem />
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
               <Link to="/configuracoes">
@@ -116,5 +123,25 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
+  );
+}
+
+function AdminDemissoesItem() {
+  const items = useDismissals();
+  const pending = items.filter((d) => d.status === "pendente").length;
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton asChild>
+        <Link to="/admin/demissoes">
+          <UserMinus className="h-4 w-4" />
+          <span>Demissões</span>
+          {pending > 0 && (
+            <Badge variant="destructive" className="ml-auto h-5 min-w-5 justify-center px-1.5 text-[10px]">
+              {pending}
+            </Badge>
+          )}
+        </Link>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
   );
 }
