@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
-import { AlertCircle, UserPlus, Trash2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { AlertCircle, UserPlus, Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/page-shell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +14,13 @@ import {
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
-import { authStore, useAuth, type AppUser } from "@/lib/auth-store";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { authStore, useAuth, useAllUsers, type AppUser } from "@/lib/auth-store";
+import { listarObras, type Obra } from "@/lib/obras";
+import { isRhMatriz } from "@/lib/permissions";
 
 export const Route = createFileRoute("/admin/usuarios")({
   head: () => ({ meta: [{ title: "Usuários · Bucagrans RH" }] }),
@@ -24,7 +30,15 @@ export const Route = createFileRoute("/admin/usuarios")({
 function UsersPage() {
   const auth = useAuth();
   const current = auth.currentUser;
-  const isAdmin = current?.role === "administrativo_matriz" || current?.role === "rh_matriz";
+  const [obras, setObras] = useState<Obra[]>([]);
+
+  useEffect(() => {
+    if (isRhMatriz(current?.role)) {
+      listarObras(current).then(setObras);
+    }
+  }, [current]);
+
+  const isAdmin = isRhMatriz(current?.role);
 
   if (!isAdmin) {
     return (
@@ -45,7 +59,7 @@ function UsersPage() {
       eyebrow="Administração"
       title="Usuários"
       description="Gerencie quem tem acesso ao sistema."
-      actions={<CreateUserDialog />}
+      actions={<CreateUserDialog obras={obras} />}
     >
       <Card>
         <CardHeader>
@@ -53,31 +67,53 @@ function UsersPage() {
           <CardDescription>Crie, edite e gerencie usuários do sistema.</CardDescription>
         </CardHeader>
         <CardContent>
-          <UsersTable users={auth.users} currentId={auth.currentUserId} />
+          <UsersTable currentUserId={auth.currentUserId} />
         </CardContent>
       </Card>
     </PageShell>
   );
 }
 
-function CreateUserDialog() {
+function CreateUserDialog({ obras }: { obras: Obra[] }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<AppUser["role"]>("Operacional");
+  const [role, setRole] = useState<string>("rh_matriz");
+  const [obraId, setObraId] = useState<string>("");
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      authStore.create({ name, email, password, role });
+      if (!name || !email || !password) {
+        toast.error("Preencha todos os campos obrigatórios.");
+        return;
+      }
+
+      const roleConfig = role.startsWith("rh_obra_") || role.startsWith("cliente_obra_") 
+        ? role 
+        : role;
+
+      await authStore.create({ 
+        name, 
+        email, 
+        password, 
+        role: roleConfig,
+        obraId: (roleConfig.startsWith("rh_obra_") || roleConfig.startsWith("cliente_obra_")) ? obraId : undefined,
+      });
       toast.success("Usuário criado.");
       setOpen(false);
-      setName(""); setEmail(""); setPassword(""); setRole("Operacional");
+      setName(""); 
+      setEmail(""); 
+      setPassword(""); 
+      setRole("rh_matriz");
+      setObraId("");
     } catch (err: any) {
       toast.error(err.message);
     }
   };
+
+  const needsObra = role.startsWith("rh_obra_") || role.startsWith("cliente_obra_");
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -90,21 +126,46 @@ function CreateUserDialog() {
           <DialogDescription>Crie um acesso ao sistema.</DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-3">
-          <div><Label>Nome</Label><Input required value={name} onChange={(e) => setName(e.target.value)} /></div>
-          <div><Label>E-mail</Label><Input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-          <div><Label>Senha</Label><Input required type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></div>
+          <div>
+            <Label>Nome</Label>
+            <Input required value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div>
+            <Label>E-mail</Label>
+            <Input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          </div>
+          <div>
+            <Label>Senha</Label>
+            <Input required type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          </div>
           <div>
             <Label>Perfil</Label>
-            <Select value={role} onValueChange={(v) => setRole(v as AppUser["role"])}>
+            <Select value={role} onValueChange={setRole}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="Admin">Admin</SelectItem>
-                <SelectItem value="RH">RH</SelectItem>
-                <SelectItem value="Operacional">Operacional</SelectItem>
+                <SelectItem value="rh_matriz">RH da Matriz</SelectItem>
+                <SelectItem value="administrativo_matriz">Administrativo da Matriz</SelectItem>
+                <SelectItem value="financeiro_matriz">Financeiro da Matriz</SelectItem>
+                <SelectItem value="rh_obra">RH de Obra</SelectItem>
+                <SelectItem value="cliente_obra">Cliente de Obra</SelectItem>
               </SelectContent>
             </Select>
           </div>
+          {needsObra && (
+            <div>
+              <Label>Obra</Label>
+              <Select value={obraId} onValueChange={setObraId}>
+                <SelectTrigger><SelectValue placeholder="Selecione uma obra" /></SelectTrigger>
+                <SelectContent>
+                  {obras.map((o) => (
+                    <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
             <Button type="submit">Criar</Button>
           </DialogFooter>
         </form>
@@ -113,24 +174,56 @@ function CreateUserDialog() {
   );
 }
 
-function UsersTable({ users, currentId }: { users: AppUser[]; currentId: string | null }) {
+function UsersTable({ currentUserId }: { currentUserId: string | null }) {
+  const allUsers = useAllUsers();
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const handleDelete = async (uid: string) => {
+    try {
+      await authStore.remove(uid);
+      toast.success("Usuário removido.");
+      setConfirmDeleteId(null);
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
   return (
-    <ul className="divide-y divide-border rounded-md border border-border">
-      {users.map((u) => (
-        <li key={u.id} className="flex items-center gap-3 px-4 py-3">
-          <div className="min-w-0 flex-1">
-            <p className="font-semibold">{u.name}</p>
-            <p className="text-xs text-muted-foreground">{u.email} · {u.role}</p>
-          </div>
-          <Button
-            size="icon" variant="ghost"
-            disabled={u.id === currentId}
-            onClick={() => { authStore.remove(u.id); toast.success("Usuário removido."); }}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul className="divide-y divide-border rounded-md border border-border">
+        {allUsers.map((u) => (
+          <li key={u.uid} className="flex items-center gap-3 px-4 py-3">
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold">{u.name}</p>
+              <p className="text-xs text-muted-foreground">{u.email} · {u.role}</p>
+            </div>
+            <Button
+              size="icon" variant="ghost"
+              disabled={u.uid === currentUserId}
+              onClick={() => setConfirmDeleteId(u.uid)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </li>
+        ))}
+      </ul>
+
+      <AlertDialog open={!!confirmDeleteId} onOpenChange={(open) => !open && setConfirmDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deletar usuário?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => confirmDeleteId && handleDelete(confirmDeleteId)}>
+              Deletar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

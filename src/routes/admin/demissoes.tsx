@@ -1,12 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { UserMinus, Check, X, ArrowLeft } from "lucide-react";
+import { UserMinus, Check, X, ArrowLeft, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/page-shell";
 import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { dismissalsStore, useDismissals } from "@/lib/dismissals-store";
 import { employeesStore } from "@/lib/employees";
+import { useAuth } from "@/lib/auth-store";
+import { isRhMatriz, isRhObra } from "@/lib/permissions";
 
 export const Route = createFileRoute("/admin/demissoes")({
   head: () => ({ meta: [{ title: "Demissões · Bucagrans RH" }] }),
@@ -14,11 +17,28 @@ export const Route = createFileRoute("/admin/demissoes")({
 });
 
 function AdminDemissoes() {
+  const auth = useAuth();
   const items = useDismissals();
-  const pending = items.filter((d) => d.status === "pendente");
-  const resolved = items.filter((d) => d.status !== "pendente");
+  const currentUser = auth.currentUser;
+
+  // Filter dismissals based on user role
+  const filteredItems = items.filter((d) => {
+    if (isRhMatriz(currentUser?.role)) return true; // RH Matriz sees all
+    if (isRhObra(currentUser?.role)) return d.site === currentUser?.name; // RH Obra sees only their obra
+    return false;
+  });
+
+  const pending = filteredItems.filter((d) => d.status === "pendente");
+  const resolved = filteredItems.filter((d) => d.status !== "pendente");
+
+  // Only RH Matriz can approve
+  const canApprove = isRhMatriz(currentUser?.role);
 
   const approve = (id: string, empId: string, name: string) => {
+    if (!canApprove) {
+      toast.error("Apenas RH Matriz pode aprovar demissões.");
+      return;
+    }
     employeesStore.update(empId, { status: "desligado" });
     employeesStore.remove(empId);
     dismissalsStore.resolve(id, "aprovada");
@@ -26,13 +46,31 @@ function AdminDemissoes() {
   };
 
   const refuse = (id: string) => {
+    if (!canApprove) {
+      toast.error("Apenas RH Matriz pode recusar demissões.");
+      return;
+    }
     dismissalsStore.resolve(id, "recusada");
     toast.success("Solicitação recusada.");
   };
 
+  if (!canApprove && !isRhObra(currentUser?.role)) {
+    return (
+      <PageShell eyebrow="RH" title="Demissões" description="Gerenciamento de demissões">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Você não tem permissão para acessar esta página.{" "}
+            <Link to="/" className="underline">Voltar</Link>.
+          </AlertDescription>
+        </Alert>
+      </PageShell>
+    );
+  }
+
   return (
     <PageShell
-      eyebrow="RH Matriz"
+      eyebrow={isRhMatriz(currentUser?.role) ? "RH Matriz" : "RH Obra"}
       title="Solicitações de demissão"
       description={`${pending.length} pendente(s) para análise.`}
       actions={
@@ -58,8 +96,12 @@ function AdminDemissoes() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={() => refuse(d.id)}><X className="mr-1 h-4 w-4" /> Recusar</Button>
-                <Button size="sm" variant="destructive" onClick={() => approve(d.id, d.employeeId, d.employeeName)}><Check className="mr-1 h-4 w-4" /> Aprovar e excluir</Button>
+                {canApprove && (
+                  <>
+                    <Button size="sm" variant="outline" onClick={() => refuse(d.id)}><X className="mr-1 h-4 w-4" /> Recusar</Button>
+                    <Button size="sm" variant="destructive" onClick={() => approve(d.id, d.employeeId, d.employeeName)}><Check className="mr-1 h-4 w-4" /> Aprovar e excluir</Button>
+                  </>
+                )}
               </div>
             </CardContent>
           </Card>

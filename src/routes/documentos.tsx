@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
 import { FileText, Download, Upload, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/page-shell";
@@ -12,6 +12,8 @@ import { useSites } from "@/lib/sites-store";
 import {
   docTemplatesStore, useDocTemplates, readFileAsDataURL, type DocTemplate,
 } from "@/lib/doc-templates-store";
+import { useAuth } from "@/lib/auth-store";
+import { isClienteObra } from "@/lib/permissions";
 
 export const Route = createFileRoute("/documentos")({
   head: () => ({ meta: [{ title: "Documentos · Bucagrans RH" }] }),
@@ -21,8 +23,19 @@ export const Route = createFileRoute("/documentos")({
 function Documentos() {
   const sites = useSites();
   const templates = useDocTemplates();
+  const auth = useAuth();
+  const navigate = useNavigate();
   const [selected, setSelected] = useState<string>(sites[0]?.id ?? "");
   const [category, setCategory] = useState<DocTemplate["category"]>("termo");
+
+  // Redirect cliente_obra - they can't access documents
+  useEffect(() => {
+    if (isClienteObra(auth.currentUser?.role)) {
+      toast.error("Você não tem permissão para acessar documentos.");
+      navigate({ to: "/" });
+    }
+  }, [auth.currentUser?.role, navigate]);
+
   const obra = sites.find((s) => s.id === selected);
 
   const termosObra = templates.filter((t) => t.category === "termo" && t.obraId === selected);

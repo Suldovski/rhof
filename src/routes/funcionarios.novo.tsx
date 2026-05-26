@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { ArrowLeft, Save, Plus, Trash2, Upload, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/page-shell";
@@ -18,6 +18,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { employeesStore, makeEmpty, type Employee, type Dependente, type DocAnexo, type EmployeeStatus } from "@/lib/employees";
 import { UFS, SINDICATOS_POR_UF } from "@/lib/sindicatos";
 import { readFileAsDataURL } from "@/lib/doc-templates-store";
+import { useAuth } from "@/lib/auth-store";
+import { isClienteObra } from "@/lib/permissions";
 
 export const Route = createFileRoute("/funcionarios/novo")({
   head: () => ({ meta: [{ title: "Novo cadastro · Bucagrans RH" }] }),
@@ -28,8 +30,17 @@ function NewEmployee() {
   const navigate = useNavigate();
   const sites = useSites();
   const horarios = useHorarios();
+  const auth = useAuth();
   const [form, setForm] = useState<Employee>(() => makeEmpty());
   const [submitting, setSubmitting] = useState(false);
+
+  // Redirect cliente_obra - they can't create employees
+  useEffect(() => {
+    if (isClienteObra(auth.currentUser?.role)) {
+      toast.error("Você não tem permissão para criar funcionários.");
+      navigate({ to: "/" });
+    }
+  }, [auth.currentUser?.role, navigate]);
 
   const set = <K extends keyof Employee>(k: K, v: Employee[K]) =>
     setForm((f) => ({ ...f, [k]: v }));

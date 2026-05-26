@@ -76,7 +76,7 @@ const SEED_USERS: SeedUser[] = [
  */
 async function userExists(email: string): Promise<boolean> {
   try {
-    const usersRef = collection(db, "users");
+    const usersRef = collection(db, "usuarios");
     const q = query(usersRef, where("email", "==", email));
     const result = await getDocs(q);
     return !result.empty;
@@ -107,7 +107,7 @@ async function createSeedUser(user: SeedUser): Promise<void> {
     );
 
     // Salvar dados no Firestore
-    await setDoc(doc(db, "users", result.user.uid), {
+    await setDoc(doc(db, "usuarios", result.user.uid), {
       name: user.name,
       email: user.email,
       role: user.role,

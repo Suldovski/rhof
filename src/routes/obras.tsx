@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { HardHat, Users, Calendar, Plus, Pencil, Trash2, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/page-shell";
@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/select";
 import { employees } from "@/lib/employees";
 import { sitesStore, useSites, type Site } from "@/lib/sites-store";
+import { useAuth } from "@/lib/auth-store";
+import { isClienteObra, getObraIdFromClienteObra } from "@/lib/permissions";
 
 export const Route = createFileRoute("/obras")({
   head: () => ({ meta: [{ title: "Obras · Bucagrans RH" }] }),
@@ -31,23 +33,38 @@ const statusOptions = ["Planejamento", "Fundação", "Estrutura", "Acabamento", 
 
 function Obras() {
   const sites = useSites();
+  const auth = useAuth();
   const [editing, setEditing] = useState<Site | null>(null);
   const [creating, setCreating] = useState(false);
   const [removeId, setRemoveId] = useState<string | null>(null);
+
+  // Filter sites for cliente_obra - only show their specific obra
+  const displaySites = useMemo(() => {
+    if (isClienteObra(auth.currentUser?.role)) {
+      const clienteObraId = getObraIdFromClienteObra(auth.currentUser!.role);
+      return sites.filter(s => s.id === clienteObraId);
+    }
+    return sites;
+  }, [sites, auth.currentUser?.role]);
+
+  // Check if user can manage works (create, edit, delete)
+  const canManageWorks = auth.currentUser?.role === "RH_MATRIZ" || auth.currentUser?.role === "ADMINISTRATIVO_MATRIZ";
 
   return (
     <PageShell
       eyebrow="Canteiros"
       title="Obras ativas"
-      description="Cadastre, edite e acompanhe as equipes alocadas por canteiro."
+      description={isClienteObra(auth.currentUser?.role) ? "Acompanhe sua obra." : "Cadastre, edite e acompanhe as equipes alocadas por canteiro."}
       actions={
-        <Button onClick={() => setCreating(true)}>
-          <Plus className="mr-1 h-4 w-4" /> Nova obra
-        </Button>
+        canManageWorks ? (
+          <Button onClick={() => setCreating(true)}>
+            <Plus className="mr-1 h-4 w-4" /> Nova obra
+          </Button>
+        ) : null
       }
     >
       <div className="grid gap-4 md:grid-cols-2">
-        {sites.map((s) => {
+        {displaySites.map((s) => {
           const team = employees.filter((e) => e.site === s.name);
           return (
             <Card key={s.id} className="overflow-hidden">
@@ -104,12 +121,16 @@ function Obras() {
                     )}
                   </div>
                   <div className="flex gap-1">
-                    <Button size="sm" variant="ghost" onClick={() => setEditing(s)}>
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setRemoveId(s.id)}>
-                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                    </Button>
+                    {canManageWorks && (
+                      <>
+                        <Button size="sm" variant="ghost" onClick={() => setEditing(s)}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setRemoveId(s.id)}>
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        </Button>
+                      </>
+                    )}
                     <Button size="sm" variant="ghost" asChild>
                       <Link to="/obras/$id" params={{ id: s.id }}>
                         Abrir <ChevronRight className="ml-1 h-3.5 w-3.5" />
@@ -121,61 +142,63 @@ function Obras() {
             </Card>
           );
         })}
-        {sites.length === 0 && (
+        {displaySites.length === 0 && (
           <Card className="md:col-span-2">
             <CardContent className="p-12 text-center text-sm text-muted-foreground">
-              Nenhuma obra cadastrada. Clique em "Nova obra" para começar.
+              {isClienteObra(auth.currentUser?.role) ? "Obra não encontrada." : 'Nenhuma obra cadastrada. Clique em "Nova obra" para começar.'}
             </CardContent>
           </Card>
         )}
       </div>
 
-      <SiteFormDialog
-        open={creating}
-        onOpenChange={setCreating}
-        onSubmit={(data) => {
-          sitesStore.add(data);
-          toast.success("Obra cadastrada.");
-          setCreating(false);
-        }}
-      />
-      <SiteFormDialog
-        open={!!editing}
-        onOpenChange={(o) => !o && setEditing(null)}
-        initial={editing ?? undefined}
-        onSubmit={(data) => {
-          if (editing) {
-            sitesStore.update(editing.id, data);
-            toast.success("Obra atualizada.");
-          }
-          setEditing(null);
-        }}
-      />
+      {canManageWorks && (
+        <SiteFormDialog
+          open={creating}
+          onOpenChange={setCreating}
+          onSubmit={(data) => {
+            sitesStore.add(data);
+            toast.success("Obra cadastrada.");
+            setCreating(false);
+          }}
+        />
+        <SiteFormDialog
+          open={!!editing}
+          onOpenChange={(o) => !o && setEditing(null)}
+          initial={editing ?? undefined}
+          onSubmit={(data) => {
+            if (editing) {
+              sitesStore.update(editing.id, data);
+              toast.success("Obra atualizada.");
+            }
+            setEditing(null);
+          }}
+        />
 
-      <AlertDialog open={!!removeId} onOpenChange={(o) => !o && setRemoveId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir obra?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação não pode ser desfeita. A obra será removida do sistema.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (removeId) {
-                  sitesStore.remove(removeId);
-                  toast.success("Obra excluída.");
-                }
-                setRemoveId(null);
-              }}
-            >
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        <AlertDialog open={!!removeId} onOpenChange={(o) => !o && setRemoveId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir obra?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação não pode ser desfeita. A obra será removida do sistema.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (removeId) {
+                    sitesStore.remove(removeId);
+                    toast.success("Obra excluída.");
+                  }
+                  setRemoveId(null);
+                }}
+              >
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </PageShell>
   );
 }

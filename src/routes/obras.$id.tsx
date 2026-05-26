@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, HardHat, Calendar, MapPin, User, Users, Pencil, Trash2, FileText, Search } from "lucide-react";
+import { ArrowLeft, HardHat, Calendar, MapPin, User, Users, Trash2, FileText, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useMemo, useState, useEffect } from "react";
 import { PageShell } from "@/components/page-shell";
@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useEmployees } from "@/lib/employees";
 import { sitesStore, useSites, useSite } from "@/lib/sites-store";
+import { useAuth } from "@/lib/auth-store";
+import { isClienteObra, getObraIdFromClienteObra } from "@/lib/permissions";
 
 export const Route = createFileRoute("/obras/$id")({
   head: () => ({ meta: [{ title: `Obra · Bucagrans RH` }] }),
@@ -28,11 +30,23 @@ function ObraDetail() {
   const sites = useSites();
   const employees = useEmployees();
   const navigate = useNavigate();
+  const auth = useAuth();
   const [confirmDel, setConfirmDel] = useState(false);
   const [q, setQ] = useState("");
   const [dept, setDept] = useState("todos");
   const [status, setStatus] = useState("todos");
   const [loading, setLoading] = useState(true);
+
+  // Check permission for cliente_obra
+  useEffect(() => {
+    if (isClienteObra(auth.currentUser?.role)) {
+      const clienteObraId = getObraIdFromClienteObra(auth.currentUser!.role);
+      if (id !== clienteObraId) {
+        toast.error("Você não tem permissão para acessar esta obra.");
+        navigate({ to: "/" });
+      }
+    }
+  }, [auth.currentUser?.role, id, navigate]);
 
   // Tenta encontrar a obra pelo ID exato ou por slug
   const obra = useMemo(() => {
@@ -109,6 +123,8 @@ function ObraDetail() {
     );
   }
 
+  const canManageWorks = auth.currentUser?.role === "RH_MATRIZ" || auth.currentUser?.role === "ADMINISTRATIVO_MATRIZ";
+
   return (
     <PageShell
       eyebrow="Canteiro de obras"
@@ -119,12 +135,11 @@ function ObraDetail() {
           <Button variant="outline" asChild>
             <Link to="/obras"><ArrowLeft className="mr-1 h-4 w-4" /> Voltar</Link>
           </Button>
-          <Button variant="outline" asChild>
-            <Link to="/obras"><Pencil className="mr-1 h-4 w-4" /> Editar</Link>
-          </Button>
-          <Button variant="destructive" onClick={() => setConfirmDel(true)}>
-            <Trash2 className="mr-1 h-4 w-4" /> Excluir
-          </Button>
+          {canManageWorks && (
+            <Button variant="destructive" onClick={() => setConfirmDel(true)}>
+              <Trash2 className="mr-1 h-4 w-4" /> Excluir
+            </Button>
+          )}
         </>
       }
     >

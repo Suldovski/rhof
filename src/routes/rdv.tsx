@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Plus, Download, Trash2, Calendar, Receipt, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
@@ -9,15 +9,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { rdvStore, useRdvPayments } from "@/lib/rdv-store";
+import { listarObras, type Obra } from "@/lib/obras";
+import { useAuth } from "@/lib/auth-store";
+import { isRhObra, getObraIdFromRhObra } from "@/lib/permissions";
 
 export const Route = createFileRoute("/rdv")({
   head: () => ({ meta: [{ title: "RDV · Bucagrans RH" }] }),
@@ -35,13 +42,39 @@ function fmtDate(iso: string) {
 
 function RdvIndex() {
   const payments = useRdvPayments();
+  const auth = useAuth();
   const [open, setOpen] = useState(false);
   const [data, setData] = useState(new Date().toISOString().slice(0, 10));
-  const [descricao, setDescricao] = useState("");
+  const [obraId, setObraId] = useState("");
+  const [obras, setObras] = useState<Obra[]>([]);
+
+  useEffect(() => {
+    listarObras(auth.currentUser).then(setObras);
+  }, [auth.currentUser]);
+
+  // Auto-select obra for RH_Obra
+  useEffect(() => {
+    if (isRhObra(auth.currentUser?.role) && obras.length > 0) {
+      const obraId = getObraIdFromRhObra(auth.currentUser!.role);
+      if (obraId && !setObraId) {
+        setObraId(obraId);
+      }
+    }
+  }, [auth.currentUser?.role, obras]);
+
+  const filtered = useMemo(() => {
+    if (isRhObra(auth.currentUser?.role)) {
+      // Filter to only show payments from their obra
+      const obraId = getObraIdFromRhObra(auth.currentUser!.role);
+      const obra = obras.find(o => o.id === obraId);
+      return payments.filter(p => p.descricao === obra?.nome);
+    }
+    return payments;
+  }, [payments, auth.currentUser?.role, obras]);
 
   const sorted = useMemo(
-    () => [...payments].sort((a, b) => b.data.localeCompare(a.data)),
-    [payments],
+    () => [...filtered].sort((a, b) => b.data.localeCompare(a.data)),
+    [filtered],
   );
 
   function createPayment() {
@@ -49,10 +82,11 @@ function RdvIndex() {
       toast.error("Informe a data do pagamento.");
       return;
     }
-    const p = rdvStore.create(data, descricao);
+    const obraNome = obras.find(o => o.id === obraId)?.nome || "";
+    const p = rdvStore.create(data, obraNome);
     toast.success("Dia de pagamento criado.");
     setOpen(false);
-    setDescricao("");
+    setObraId("");
     // navega via Link manual
     window.location.href = `/rdv/${p.id}`;
   }
@@ -75,12 +109,19 @@ function RdvIndex() {
             </DialogHeader>
             <div className="grid gap-3 py-2">
               <div>
-                <label className="text-xs uppercase tracking-wider text-muted-foreground">Data</label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Data</Label>
                 <Input type="date" value={data} onChange={(e) => setData(e.target.value)} />
               </div>
               <div>
-                <label className="text-xs uppercase tracking-wider text-muted-foreground">Descrição (opcional)</label>
-                <Input value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Ex.: Reembolso obra X" />
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Obra</Label>
+                <Select value={obraId} onValueChange={setObraId}>
+                  <SelectTrigger><SelectValue placeholder="Selecione uma obra" /></SelectTrigger>
+                  <SelectContent>
+                    {obras.map((o) => (
+                      <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <DialogFooter>

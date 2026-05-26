@@ -55,11 +55,11 @@ export const isFinanceiro = (role?: Role) => isFinanceiroMatriz(role);
 export const canAccessPainel = (role?: Role) => 
   !isClienteObra(role);
 
-/** Pode acessar página Funcionários? Apenas rh_matriz, administrativo_matriz e financeiro_matriz. */
+/** Pode acessar página Funcionários? Apenas RH matriz, administrativo_matriz e financeiro_matriz. RH_obra NÃO acessa. */
 export const canAccessFuncionarios = (role?: Role) => 
   isRhMatriz(role) || isAdministrativoMatriz(role) || isFinanceiroMatriz(role);
 
-/** Pode EDITAR funcionários? Não se for financeiro. */
+/** Pode EDITAR funcionários? Não se for financeiro. Apenas RH matriz e administrativo podem. RH obra NÃO edita. */
 export const canEditFuncionarios = (role?: Role) => 
   isRhMatriz(role) || isAdministrativoMatriz(role);
 
@@ -67,25 +67,25 @@ export const canEditFuncionarios = (role?: Role) =>
 export const canAccessObras = (role?: Role) => 
   !isClienteObra(role) || isClienteObra(role); // true para todos
 
-/** Pode acessar página Folha Salarial? Apenas rh_matriz, administrativo_matriz e financeiro_matriz. */
+/** Pode acessar página Folha Salarial? RH_matriz, administrativo_matriz, financeiro_matriz e rh_obra. */
 export const canAccessFolhaSalarial = (role?: Role) =>
-  isRhMatriz(role) || isAdministrativoMatriz(role) || isFinanceiroMatriz(role);
+  isRhMatriz(role) || isAdministrativoMatriz(role) || isFinanceiroMatriz(role) || isRhObra(role);
 
 /** Pode EDITAR Folha Salarial? Não se for financeiro. */
 export const canEditFolhaSalarial = (role?: Role) =>
   isRhMatriz(role) || isAdministrativoMatriz(role);
 
-/** Pode acessar página Horas Extras? Apenas perfis de matriz. Financeiro não edita. */
+/** Pode acessar página Horas Extras? Apenas perfis de matriz e rh_obra. Financeiro não edita. */
 export const canAccessHorasExtras = (role?: Role) =>
-  isMatrizProfile(role);
+  isMatrizProfile(role) || isRhObra(role);
 
 /** Pode EDITAR Horas Extras? Não se for financeiro. */
 export const canEditHorasExtras = (role?: Role) =>
   isRhMatriz(role) || isAdministrativoMatriz(role);
 
-/** Pode acessar página RDV? Apenas rh_matriz, administrativo_matriz e financeiro_matriz. */
+/** Pode acessar página RDV? Apenas rh_matriz, administrativo_matriz, financeiro_matriz e rh_obra. */
 export const canAccessRDV = (role?: Role) =>
-  isRhMatriz(role) || isAdministrativoMatriz(role) || isFinanceiroMatriz(role);
+  isRhMatriz(role) || isAdministrativoMatriz(role) || isFinanceiroMatriz(role) || isRhObra(role);
 
 /** Pode EDITAR RDV? Não se for financeiro. */
 export const canEditRDV = (role?: Role) =>
@@ -137,3 +137,15 @@ export const roleForRhObra = (obraId: string) => `rh_obra_${obraId}`;
 
 /** Gera o cargo dinâmico para o Cliente de uma obra. */
 export const roleForClienteObra = (obraId: string) => `cliente_obra_${obraId}`;
+
+/** Extrai o obraId de um role rh_obra_<obraId> */
+export const getObraIdFromRhObra = (role: string): string | null => {
+  if (!role.startsWith("rh_obra_")) return null;
+  return role.substring(8);
+};
+
+/** Extrai o obraId de um role cliente_obra_<obraId> */
+export const getObraIdFromClienteObra = (role: string): string | null => {
+  if (!role.startsWith("cliente_obra_")) return null;
+  return role.substring(12);
+};

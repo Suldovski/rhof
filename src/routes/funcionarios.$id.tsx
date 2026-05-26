@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ArrowLeft, Mail, Phone, MapPin, Calendar, Briefcase, HardHat,
   ShieldCheck, Pencil, FileText, Download, Trash2, Plane, Save, Plus, Upload,
@@ -35,7 +35,8 @@ import { readFileAsDataURL } from "@/lib/doc-templates-store";
 import { fetchCep } from "@/lib/cep";
 import { downloadFRE } from "@/lib/fre-pdf";
 import { dismissalsStore } from "@/lib/dismissals-store";
-import { authStore } from "@/lib/auth-store";
+import { authStore, useAuth } from "@/lib/auth-store";
+import { isClienteObra } from "@/lib/permissions";
 
 export const Route = createFileRoute("/funcionarios/$id")({
   head: ({ params }) => ({ meta: [{ title: `Funcionário #${params.id} · Bucagrans RH` }] }),
@@ -55,10 +56,19 @@ function Detail() {
   const { id } = Route.useParams();
   const e = useEmployee(id);
   const navigate = useNavigate();
+  const auth = useAuth();
   const [confirmDel, setConfirmDel] = useState(false);
   const [editing, setEditing] = useState(false);
   const [trocaOpen, setTrocaOpen] = useState(false);
   const [demOpen, setDemOpen] = useState(false);
+
+  // Redirect cliente_obra - they can't access employee details
+  useEffect(() => {
+    if (isClienteObra(auth.currentUser?.role)) {
+      toast.error("Você não tem permissão para acessar funcionários.");
+      navigate({ to: "/" });
+    }
+  }, [auth.currentUser?.role, navigate]);
 
   if (!e) {
     return (
@@ -433,6 +443,52 @@ function EditEmployeeDialog({
           <DialogDescription>Edite todos os campos do cadastro.</DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-4">
+          <Card>
+            <CardHeader><CardTitle className="font-display text-base">Foto</CardTitle></CardHeader>
+            <CardContent className="flex flex-col items-center gap-4 py-4">
+              <div className="relative">
+                {form.photo ? (
+                  <img src={form.photo} alt={form.name} className="h-32 w-32 rounded-lg object-cover" />
+                ) : (
+                  <div className="flex h-32 w-32 items-center justify-center rounded-lg bg-muted">
+                    <Camera className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                )}
+              </div>
+              <label className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-border px-4 py-2 hover:bg-muted/40 text-sm">
+                <Camera className="h-4 w-4 text-accent" />
+                <span>Escolher foto</span>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  className="hidden" 
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      if (file.size > 5 * 1024 * 1024) {
+                        toast.error("Foto excede 5 MB.");
+                        return;
+                      }
+                      const data = await readFileAsDataURL(file);
+                      set("photo", data);
+                    }
+                  }} 
+                />
+              </label>
+              {form.photo && (
+                <Button 
+                  type="button" 
+                  size="sm" 
+                  variant="outline"
+                  className="text-destructive"
+                  onClick={() => set("photo", "")}
+                >
+                  Remover foto
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader><CardTitle className="font-display text-base">Dados pessoais</CardTitle></CardHeader>
             <CardContent className="grid gap-3 md:grid-cols-3">

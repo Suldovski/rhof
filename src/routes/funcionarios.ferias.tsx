@@ -1,10 +1,14 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, ChevronRight, CalendarClock } from "lucide-react";
+import { useEffect } from "react";
+import { toast } from "sonner";
 import { PageShell } from "@/components/page-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
 import { employees } from "@/lib/employees";
+import { useAuth } from "@/lib/auth-store";
+import { isClienteObra } from "@/lib/permissions";
 
 export const Route = createFileRoute("/funcionarios/ferias")({
   head: () => ({ meta: [{ title: "Funcionários em férias · Bucagrans RH" }] }),
@@ -13,6 +17,16 @@ export const Route = createFileRoute("/funcionarios/ferias")({
 
 function Ferias() {
   const list = employees.filter((e) => e.status === "ferias");
+  const auth = useAuth();
+  const navigate = useNavigate();
+
+  // Redirect cliente_obra - they can't access employee lists
+  useEffect(() => {
+    if (isClienteObra(auth.currentUser?.role)) {
+      toast.error("Você não tem permissão para acessar funcionários.");
+      navigate({ to: "/" });
+    }
+  }, [auth.currentUser?.role, navigate]);
 
   return (
     <PageShell

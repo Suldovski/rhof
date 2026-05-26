@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Wallet, Download, Search } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
@@ -19,6 +19,8 @@ import {
 import { useEmployees, type Employee } from "@/lib/employees";
 import { useSites } from "@/lib/sites-store";
 import { payrollStore, usePayroll, currentMonth } from "@/lib/payroll-store";
+import { useAuth } from "@/lib/auth-store";
+import { isRhObra, getObraIdFromRhObra } from "@/lib/permissions";
 
 export const Route = createFileRoute("/folha-salarial")({
   head: () => ({ meta: [{ title: "Folha Salarial · Bucagrans RH" }] }),
@@ -50,10 +52,22 @@ function FolhaSalarial() {
   const sites = useSites();
   const employees = useEmployees();
   const overrides = usePayroll();
+  const auth = useAuth();
   const [q, setQ] = useState("");
   const [month, setMonth] = useState<string>(currentMonth());
   
   const [filterObra, setFilterObra] = useState<string>("__all__");
+
+  // Auto-filter para RH_Obra
+  useEffect(() => {
+    if (isRhObra(auth.currentUser?.role)) {
+      const obraId = getObraIdFromRhObra(auth.currentUser!.role);
+      const obra = sites.find(s => s.id === obraId);
+      if (obra) {
+        setFilterObra(obra.name);
+      }
+    }
+  }, [auth.currentUser?.role, sites]);
 
   const monthMap = overrides[month] ?? {};
   const getValue = (e: Employee): number | "" =>

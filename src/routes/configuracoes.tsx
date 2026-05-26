@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { Mail, Plus, Pencil, Trash2 } from "lucide-react";
+import { Mail, Plus, Pencil, Trash2, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Tabs, TabsContent, TabsList, TabsTrigger,
 } from "@/components/ui/tabs";
@@ -19,7 +21,9 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useAuth, authStore, type AppUser, useAllUsers } from "@/lib/auth-store";
+import { useHorarios, horariosStore, type Horario } from "@/lib/horarios-store";
 import type { Role } from "@/lib/permissions";
+import { isClienteObra } from "@/lib/permissions";
 
 export const Route = createFileRoute("/configuracoes")({
   head: () => ({ meta: [{ title: "Configurações · Bucagrans RH" }] }),
@@ -28,12 +32,15 @@ export const Route = createFileRoute("/configuracoes")({
 
 function Configuracoes() {
   const auth = useAuth();
-  const [notif, setNotif] = useState({
-    admissions: true,
-    vacations: true,
-    docExpiry: true,
-    weeklyDigest: false,
-  });
+  const navigate = useNavigate();
+
+  // Redirect cliente_obra - they can't access settings
+  useEffect(() => {
+    if (isClienteObra(auth.currentUser?.role)) {
+      toast.error("Você não tem permissão para acessar as configurações.");
+      navigate({ to: "/" });
+    }
+  }, [auth.currentUser?.role, navigate]);
 
   return (
     <PageShell
@@ -42,13 +49,10 @@ function Configuracoes() {
       description="Preferências da conta, da empresa, dos usuários e do RH."
     >
       <Tabs defaultValue="empresa" className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="empresa">Empresa</TabsTrigger>
           <TabsTrigger value="usuarios">Usuários</TabsTrigger>
           <TabsTrigger value="horarios">Horários</TabsTrigger>
-          <TabsTrigger value="notificacoes">Notificações</TabsTrigger>
-          <TabsTrigger value="seguranca">Segurança</TabsTrigger>
-          <TabsTrigger value="aparencia">Aparência</TabsTrigger>
         </TabsList>
 
         <TabsContent value="empresa" className="mt-4">
@@ -78,66 +82,7 @@ function Configuracoes() {
         </TabsContent>
 
         <TabsContent value="horarios" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-display text-lg">Horários padrão</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div>
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Entrada</Label>
-                <Input type="time" value="08:00" className="mt-1" />
-              </div>
-              <div>
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Saída</Label>
-                <Input type="time" value="17:00" className="mt-1" />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="notificacoes" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-display text-lg">Alertas do RH</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-1">
-              <NotifRow label="Novas admissões" desc="Avisar quando um funcionário for cadastrado." checked={notif.admissions} onChange={(v) => setNotif({ ...notif, admissions: v })} />
-              <Separator />
-              <NotifRow label="Início de férias" desc="Lembretes 7 dias antes do início das férias." checked={notif.vacations} onChange={(v) => setNotif({ ...notif, vacations: v })} />
-              <Separator />
-              <NotifRow label="Documentos vencendo" desc="ASOs, exames periódicos e certificados próximos do vencimento." checked={notif.docExpiry} onChange={(v) => setNotif({ ...notif, docExpiry: v })} />
-              <Separator />
-              <NotifRow label="Resumo semanal" desc="Receber por e-mail um resumo das atividades de RH." checked={notif.weeklyDigest} onChange={(v) => setNotif({ ...notif, weeklyDigest: v })} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="seguranca" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-display text-lg">Segurança da conta</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-2">
-              <Field label="Senha atual"><Input type="password" placeholder="••••••••" /></Field>
-              <div />
-              <Field label="Nova senha"><Input type="password" placeholder="Mínimo 8 caracteres" /></Field>
-              <Field label="Confirmar nova senha"><Input type="password" /></Field>
-              <div className="md:col-span-2 flex justify-end">
-                <Button onClick={() => toast.success("Senha atualizada.")}>Atualizar senha</Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="aparencia" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-display text-lg">Tema</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-1">
-              <NotifRow label="Modo compacto" desc="Reduz o espaçamento das listagens e tabelas." checked={false} onChange={() => toast.message("Em breve.")} />
-            </CardContent>
-          </Card>
+          <HorariosPanel />
         </TabsContent>
       </Tabs>
     </PageShell>
@@ -169,107 +114,159 @@ function UsersPanel() {
 
   const users = allUsers.length > 0 ? allUsers : (auth.currentUser ? [auth.currentUser] : []);
 
+  const handleDeleteConfirm = async () => {
+    if (!removeId) return;
+    try {
+      await authStore.remove(removeId);
+      toast.success("Usuário removido.");
+      setRemoveId(null);
+      await authStore.fetchAllUsers();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao remover usuário.");
+    }
+  };
+
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between gap-3">
-        <div>
-          <CardTitle className="font-display text-lg">Usuários do sistema</CardTitle>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Usuários cadastrados aqui podem acessar a tela de login.
-          </p>
-        </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => setEditing(null)}>
-              <Plus className="mr-1 h-4 w-4" /> Novo usuário
-            </Button>
-          </DialogTrigger>
-          <UserFormDialog editing={editing} onDone={() => { setOpen(false); setEditing(null); }} />
-        </Dialog>
-      </CardHeader>
-      <CardContent className="p-0">
-        <div className="grid grid-cols-[1.5fr_1fr_120px_120px_80px] items-center gap-3 border-b border-border bg-muted/40 px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-          <div>Nome / E-mail</div>
-          <div>Criado em</div>
-          <div>Perfil</div>
-          <div>Status</div>
-          <div />
-        </div>
-        <ul className="divide-y divide-border">
-          {loading ? (
-            <li className="px-5 py-4 text-center text-sm text-muted-foreground">
-              Carregando usuários...
-            </li>
-          ) : users.length === 0 ? (
-            <li className="px-5 py-4 text-center text-sm text-muted-foreground">
-              Nenhum usuário cadastrado.
-            </li>
-          ) : (
-            users.map((u) => (
-              <li key={u.uid} className="grid grid-cols-[1.5fr_1fr_120px_120px_80px] items-center gap-3 px-5 py-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-                    {u.name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase()}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate font-semibold">{u.name}</p>
-                    <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
-                      <Mail className="h-3 w-3" /> {u.email}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  {new Date(u.createdAt).toLocaleDateString("pt-BR")}
-                </div>
-                <div>
-                  <Badge variant="outline" className="border-accent/40 bg-accent/10 text-accent">
-                    {u.role}
-                  </Badge>
-                </div>
-                <div>
-                  {u.uid === auth.currentUserId ? (
-                    <Badge variant="secondary">Você</Badge>
-                  ) : (
-                    <Badge variant="outline">Ativo</Badge>
-                  )}
-                </div>
-                <div className="flex justify-end gap-1">
-                  <Button size="icon" variant="ghost" onClick={() => { setEditing(u); setOpen(true); }} aria-label="Editar">
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => setRemoveId(u.uid)}
-                    disabled={u.uid === auth.currentUserId}
-                    aria-label="Remover"
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
+    <>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <div>
+            <CardTitle className="font-display text-lg">Usuários do sistema</CardTitle>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Usuários cadastrados aqui podem acessar a tela de login.
+            </p>
+          </div>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={() => setEditing(null)}>
+                <Plus className="mr-1 h-4 w-4" /> Novo usuário
+              </Button>
+            </DialogTrigger>
+            <UserFormDialog editing={editing} onDone={() => { setOpen(false); setEditing(null); }} />
+          </Dialog>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="grid grid-cols-[1.5fr_1fr_120px_120px_80px] items-center gap-3 border-b border-border bg-muted/40 px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <div>Nome / E-mail</div>
+            <div>Criado em</div>
+            <div>Perfil</div>
+            <div>Status</div>
+            <div />
+          </div>
+          <ul className="divide-y divide-border">
+            {loading ? (
+              <li className="px-5 py-4 text-center text-sm text-muted-foreground">
+                Carregando usuários...
               </li>
-            ))
-          )}
-        </ul>
-      </CardContent>
-    </Card>
+            ) : users.length === 0 ? (
+              <li className="px-5 py-4 text-center text-sm text-muted-foreground">
+                Nenhum usuário cadastrado.
+              </li>
+            ) : (
+              users.map((u) => (
+                <li key={u.uid} className="grid grid-cols-[1.5fr_1fr_120px_120px_80px] items-center gap-3 px-5 py-4">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+                      {u.name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold">{u.name}</p>
+                      <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
+                        <Mail className="h-3 w-3" /> {u.email}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {new Date(u.createdAt).toLocaleDateString("pt-BR")}
+                  </div>
+                  <div>
+                    <Badge variant="outline" className="border-accent/40 bg-accent/10 text-accent">
+                      {u.role}
+                    </Badge>
+                  </div>
+                  <div>
+                    {u.uid === auth.currentUserId ? (
+                      <Badge variant="secondary">Você</Badge>
+                    ) : (
+                      <Badge variant="outline">Ativo</Badge>
+                    )}
+                  </div>
+                  <div className="flex justify-end gap-1">
+                    <Button size="icon" variant="ghost" onClick={() => { setEditing(u); setOpen(true); }} aria-label="Editar">
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => setRemoveId(u.uid)}
+                      disabled={u.uid === auth.currentUserId}
+                      aria-label="Remover"
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                </li>
+              ))
+            )}
+          </ul>
+        </CardContent>
+      </Card>
+
+      <AlertDialog open={!!removeId} onOpenChange={() => setRemoveId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você tem certeza que deseja remover este usuário? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            Remover
+          </AlertDialogAction>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
 function UserFormDialog({ editing, onDone }: { editing: AppUser | null; onDone: () => void }) {
+  const auth = useAuth();
   const [name, setName] = useState(editing?.name ?? "");
   const [email, setEmail] = useState(editing?.email ?? "");
   const [password, setPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [role, setRole] = useState<Role>(editing?.role ?? "rh_matriz");
   const [loading, setLoading] = useState(false);
+
+  const isCurrentUser = editing && editing.uid === auth.currentUserId;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
       if (editing) {
+        // Update user info
         await authStore.update(editing.uid, { name, email, role });
-        toast.success("Usuário atualizado.");
+
+        // Update password if current user and new password is provided
+        if (isCurrentUser && newPassword) {
+          if (newPassword !== confirmPassword) {
+            toast.error("As senhas não correspondem.");
+            setLoading(false);
+            return;
+          }
+          if (newPassword.length < 8) {
+            toast.error("A senha deve ter no mínimo 8 caracteres.");
+            setLoading(false);
+            return;
+          }
+          await authStore.updatePassword(editing.uid, newPassword);
+          toast.success("Usuário atualizado e senha alterada.");
+        } else {
+          toast.success("Usuário atualizado.");
+        }
       } else {
         await authStore.create({ name, email, password, role });
         toast.success("Usuário criado.");
@@ -322,6 +319,35 @@ function UserFormDialog({ editing, onDone }: { editing: AppUser | null; onDone: 
             />
           </div>
         )}
+        {isCurrentUser && (
+          <>
+            <div className="pt-4 border-t">
+              <p className="text-sm font-semibold mb-3">Alterar senha (opcional)</p>
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="newPassword">Nova senha</Label>
+                  <Input
+                    id="newPassword"
+                    type="password"
+                    placeholder="Deixe em branco para manter a senha atual"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="confirmPassword">Confirmar nova senha</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder="Confirme a nova senha"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+          </>
+        )}
         <div>
           <Label htmlFor="role">Perfil</Label>
           <Select value={role} onValueChange={(value) => setRole(value as Role)}>
@@ -349,28 +375,158 @@ function UserFormDialog({ editing, onDone }: { editing: AppUser | null; onDone: 
   );
 }
 
-function NotifRow({ label, desc, checked, onChange }: { label: string; desc: string; checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <div className="flex items-center justify-between py-2">
-      <div>
-        <p className="font-medium text-sm">{label}</p>
-        <p className="text-xs text-muted-foreground">{desc}</p>
-      </div>
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="h-4 w-4"
-      />
-    </div>
-  );
-}
+function HorariosPanel() {
+  const horarios = useHorarios();
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Horario | null>(null);
+  const [removeId, setRemoveId] = useState<string | null>(null);
+  const [nome, setNome] = useState("");
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  const handleAdd = () => {
+    if (!nome.trim()) {
+      toast.error("Digite um horário.");
+      return;
+    }
+    horariosStore.add(nome);
+    toast.success("Horário adicionado.");
+    setNome("");
+    setOpen(false);
+  };
+
+  const handleEdit = () => {
+    if (!editing || !nome.trim()) {
+      toast.error("Digite um horário.");
+      return;
+    }
+    horariosStore.update(editing.id, nome);
+    toast.success("Horário atualizado.");
+    setNome("");
+    setEditing(null);
+    setOpen(false);
+  };
+
+  const handleRemoveConfirm = () => {
+    if (!removeId) return;
+    horariosStore.remove(removeId);
+    toast.success("Horário removido.");
+    setRemoveId(null);
+  };
+
+  const openDialog = (h?: Horario) => {
+    if (h) {
+      setEditing(h);
+      setNome(h.nome);
+    } else {
+      setEditing(null);
+      setNome("");
+    }
+    setOpen(true);
+  };
+
   return (
-    <div>
-      <Label className="text-xs uppercase tracking-wider text-muted-foreground">{label}</Label>
-      <div className="mt-1">{children}</div>
-    </div>
+    <>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <div>
+            <CardTitle className="font-display text-lg flex items-center gap-2">
+              <Clock className="h-5 w-5" /> Horários de trabalho
+            </CardTitle>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Horários que podem ser selecionados ao criar ou editar um funcionário.
+            </p>
+          </div>
+          <Button onClick={() => openDialog()}>
+            <Plus className="mr-1 h-4 w-4" /> Novo horário
+          </Button>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="grid grid-cols-[1fr_100px_100px] items-center gap-3 border-b border-border bg-muted/40 px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <div>Descrição</div>
+            <div className="text-center">Editar</div>
+            <div className="text-center">Remover</div>
+          </div>
+          <ul className="divide-y divide-border">
+            {horarios.length === 0 ? (
+              <li className="px-5 py-4 text-center text-sm text-muted-foreground">
+                Nenhum horário cadastrado.
+              </li>
+            ) : (
+              horarios.map((h) => (
+                <li key={h.id} className="grid grid-cols-[1fr_100px_100px] items-center gap-3 px-5 py-4">
+                  <div>
+                    <p className="font-medium text-sm">{h.nome}</p>
+                  </div>
+                  <div className="flex justify-center">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => openDialog(h)}
+                      aria-label="Editar"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex justify-center">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => setRemoveId(h.id)}
+                      aria-label="Remover"
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                </li>
+              ))
+            )}
+          </ul>
+        </CardContent>
+      </Card>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editing ? "Editar horário" : "Novo horário"}</DialogTitle>
+            <DialogDescription>
+              {editing ? "Atualize a descrição do horário." : "Crie um novo horário de trabalho."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="horario-nome">Descrição</Label>
+              <Input
+                id="horario-nome"
+                placeholder="Ex: 44H 2ª–6ª 07:00–17:00"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
+            <Button type="button" onClick={editing ? handleEdit : handleAdd}>
+              {editing ? "Atualizar" : "Criar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!removeId} onOpenChange={() => setRemoveId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você tem certeza que deseja remover este horário? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={handleRemoveConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            Remover
+          </AlertDialogAction>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

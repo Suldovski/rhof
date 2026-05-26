@@ -1,13 +1,12 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
 import {
   Users,
   HardHat,
   TrendingUp,
   ArrowUpRight,
   CalendarClock,
-  AlertTriangle,
   Plus,
-  ShieldCheck,
 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +15,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { useEmployees } from "@/lib/employees";
 import { useSites } from "@/lib/sites-store";
 import { useAuth } from "@/lib/auth-store";
+import { isClienteObra, getObraIdFromClienteObra } from "@/lib/permissions";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -38,11 +38,21 @@ function Dashboard() {
   const sites = useSites();
   const employees = useEmployees();
   const auth = useAuth();
+  const navigate = useNavigate();
   const firstName = auth.currentUser?.name?.split(" ")[0] ?? "bem-vindo(a)";
+
+  // Redirect cliente_obra to their specific obra
+  useEffect(() => {
+    if (isClienteObra(auth.currentUser?.role)) {
+      const obraId = getObraIdFromClienteObra(auth.currentUser!.role);
+      if (obraId) {
+        navigate({ to: `/obras/$id`, params: { id: obraId } });
+      }
+    }
+  }, [auth.currentUser?.role, navigate]);
 
   const ativos = employees.filter((e) => e.status === "efetivo" || (e.status as any) === "ativo").length;
   const ferias = employees.filter((e) => e.status === "ferias").length;
-  const afastados = employees.filter((e) => e.status === "afastado").length;
 
   type Kpi = {
     label: string; value: number; hint: string;
@@ -171,30 +181,7 @@ function Dashboard() {
         </Card>
       </div>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardContent className="flex items-start gap-3 p-5">
-            <div className="rounded-md bg-warning/20 p-2">
-              <ShieldCheck className="h-5 w-5 text-warning-foreground" />
-            </div>
-            <div>
-              <p className="font-semibold">Entrega de EPIs pendente</p>
-              <p className="text-xs text-muted-foreground">5 colaboradores no Edifício Atlântico.</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-start gap-3 p-5">
-            <div className="rounded-md bg-accent/15 p-2">
-              <AlertTriangle className="h-5 w-5 text-accent" />
-            </div>
-            <div>
-              <p className="font-semibold">{afastados} afastamento(s) ativo(s)</p>
-              <p className="text-xs text-muted-foreground">Acompanhar perícias e retornos.</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+
     </PageShell>
   );
 }

@@ -5,6 +5,7 @@ import {
   signOut,
   onAuthStateChanged,
   User as FirebaseUser,
+  updatePassword,
 } from "firebase/auth";
 import { doc, getDoc, setDoc, collection, query, where, getDocs, deleteDoc, updateDoc } from "firebase/firestore";
 import { auth, db } from "./firebase";
@@ -77,7 +78,7 @@ if (typeof window !== "undefined") {
   onAuthStateChanged(auth, async (firebaseUser) => {
     if (firebaseUser) {
       try {
-        const userDocRef = doc(db, "users", firebaseUser.uid);
+        const userDocRef = doc(db, "usuarios", firebaseUser.uid);
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
           const userData = userDocSnap.data();
@@ -127,7 +128,7 @@ export const authStore = {
       // Try Firebase
       try {
         const result = await signInWithEmailAndPassword(auth, email, password);
-        const userDocRef = doc(db, "users", result.user.uid);
+        const userDocRef = doc(db, "usuarios", result.user.uid);
         const userDocSnap = await getDoc(userDocRef);
         
         if (userDocSnap.exists()) {
@@ -168,7 +169,7 @@ export const authStore = {
    */
   fetchAllUsers: async (): Promise<AppUser[]> => {
     try {
-      const usersRef = collection(db, "users");
+      const usersRef = collection(db, "usuarios");
       const querySnapshot = await getDocs(usersRef);
       const users: AppUser[] = [];
       querySnapshot.forEach((doc) => {
@@ -225,7 +226,7 @@ export const authStore = {
   }): Promise<AppUser | null> => {
     try {
       // Verificar se email já existe
-      const usersRef = collection(db, "users");
+      const usersRef = collection(db, "usuarios");
       const emailQuery = query(usersRef, where("email", "==", data.email));
       const existingUsers = await getDocs(emailQuery);
       
@@ -246,7 +247,7 @@ export const authStore = {
         createdAt: new Date().toISOString(),
       };
 
-      await setDoc(doc(db, "users", result.user.uid), userData);
+      await setDoc(doc(db, "usuarios", result.user.uid), userData);
 
       const user: AppUser = {
         uid: result.user.uid,
@@ -267,7 +268,7 @@ export const authStore = {
    */
   update: async (uid: string, patch: Partial<AppUser>): Promise<void> => {
     try {
-      const userRef = doc(db, "users", uid);
+      const userRef = doc(db, "usuarios", uid);
       await updateDoc(userRef, patch as any);
       // Atualizar lista de usuários
       await authStore.fetchAllUsers();
@@ -282,7 +283,7 @@ export const authStore = {
    */
   remove: async (uid: string): Promise<void> => {
     try {
-      await deleteDoc(doc(db, "users", uid));
+      await deleteDoc(doc(db, "usuarios", uid));
       // Atualizar lista de usuários
       await authStore.fetchAllUsers();
     } catch (error) {
@@ -296,13 +297,29 @@ export const authStore = {
    */
   emailExists: async (email: string): Promise<boolean> => {
     try {
-      const usersRef = collection(db, "users");
+      const usersRef = collection(db, "usuarios");
       const emailQuery = query(usersRef, where("email", "==", email));
       const result = await getDocs(emailQuery);
       return !result.empty;
     } catch (error) {
       console.error("Email check error:", error);
       return false;
+    }
+  },
+
+  /**
+   * Atualiza a senha do usuário autenticado
+   */
+  updatePassword: async (uid: string, newPassword: string): Promise<void> => {
+    try {
+      const firebaseUser = auth.currentUser;
+      if (!firebaseUser || firebaseUser.uid !== uid) {
+        throw new Error("Você só pode alterar sua própria senha.");
+      }
+      await updatePassword(firebaseUser, newPassword);
+    } catch (error) {
+      console.error("Update password error:", error);
+      throw error;
     }
   },
 };
