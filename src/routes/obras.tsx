@@ -48,7 +48,8 @@ function Obras() {
   }, [sites, auth.currentUser?.role]);
 
   // Check if user can manage works (create, edit, delete)
-  const canManageWorks = auth.currentUser?.role === "RH_MATRIZ" || auth.currentUser?.role === "ADMINISTRATIVO_MATRIZ";
+  // Allow all users EXCEPT cliente_obra
+  const canManageWorks = !isClienteObra(auth.currentUser?.role);
 
   return (
     <PageShell

@@ -123,7 +123,7 @@ function ObraDetail() {
     );
   }
 
-  const canManageWorks = auth.currentUser?.role === "RH_MATRIZ" || auth.currentUser?.role === "ADMINISTRATIVO_MATRIZ";
+  const canManageWorks = !isClienteObra(auth.currentUser?.role);
 
   return (
     <PageShell

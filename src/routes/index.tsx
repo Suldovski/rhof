@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Users,
   HardHat,
@@ -40,16 +40,23 @@ function Dashboard() {
   const auth = useAuth();
   const navigate = useNavigate();
   const firstName = auth.currentUser?.name?.split(" ")[0] ?? "bem-vindo(a)";
+  const [redirecting, setRedirecting] = useState(false);
 
   // Redirect cliente_obra to their specific obra
   useEffect(() => {
     if (isClienteObra(auth.currentUser?.role)) {
       const obraId = getObraIdFromClienteObra(auth.currentUser!.role);
       if (obraId) {
-        navigate({ to: `/obras/$id`, params: { id: obraId } });
+        setRedirecting(true);
+        navigate({ to: "/obras/$id", params: { id: obraId } });
       }
     }
   }, [auth.currentUser?.role, navigate]);
+
+  // Don't render dashboard while redirecting
+  if (redirecting || isClienteObra(auth.currentUser?.role)) {
+    return null;
+  }
 
   const ativos = employees.filter((e) => e.status === "efetivo" || (e.status as any) === "ativo").length;
   const ferias = employees.filter((e) => e.status === "ferias").length;
