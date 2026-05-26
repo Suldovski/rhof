@@ -152,29 +152,30 @@ function Obras() {
       </div>
 
       {canManageWorks && (
-        <SiteFormDialog
-          open={creating}
-          onOpenChange={setCreating}
-          onSubmit={(data) => {
-            sitesStore.add(data);
-            toast.success("Obra cadastrada.");
-            setCreating(false);
-          }}
-        />
-        <SiteFormDialog
-          open={!!editing}
-          onOpenChange={(o) => !o && setEditing(null)}
-          initial={editing ?? undefined}
-          onSubmit={(data) => {
-            if (editing) {
-              sitesStore.update(editing.id, data);
-              toast.success("Obra atualizada.");
-            }
-            setEditing(null);
-          }}
-        />
+        <>
+          <SiteFormDialog
+            open={creating}
+            onOpenChange={setCreating}
+            onSubmit={(data) => {
+              sitesStore.add(data);
+              toast.success("Obra cadastrada.");
+              setCreating(false);
+            }}
+          />
+          <SiteFormDialog
+            open={!!editing}
+            onOpenChange={(o) => !o && setEditing(null)}
+            initial={editing ?? undefined}
+            onSubmit={(data) => {
+              if (editing) {
+                sitesStore.update(editing.id, data);
+                toast.success("Obra atualizada.");
+              }
+              setEditing(null);
+            }}
+          />
 
-        <AlertDialog open={!!removeId} onOpenChange={(o) => !o && setRemoveId(null)}>
+          <AlertDialog open={!!removeId} onOpenChange={(o) => !o && setRemoveId(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Excluir obra?</AlertDialogTitle>
@@ -198,6 +199,7 @@ function Obras() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        </>
       )}
     </PageShell>
   );
