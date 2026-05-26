@@ -13,11 +13,10 @@ export default defineConfig({
   tanstackStart: {
     client: {
       // Ajustado para o subdiretório do GitHub Pages
-      base: "/rhof/assets", 
+      base: "/rhof/", 
     },
     spa: {
       enabled: true,
-      maskPath: "/rhof/",
       prerender: {
         outputPath: "/index",
       },
