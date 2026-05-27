@@ -12,8 +12,8 @@ export default defineConfig({
   cloudflare: false,
   tanstackStart: {
     client: {
-      // Ajustado para o subdiretório do GitHub Pages — assets públicos
-      base: "/rhof/assets",
+      // Ajustado para o subdiretório do GitHub Pages — usar mesma base que Vite
+      base: "/rhof/",
     },
     ssr: false,
     spa: {
