@@ -39,6 +39,7 @@ let state: Site[] = (() => {
   } catch {}
   return seed;
 })();
+const listeners = new Set<() => void>();
 
 // Try to sync with Firestore on clients. If Firestore is reachable, prefer its data as
 // source of truth and subscribe to real-time updates. Do not throw if network/rules
@@ -64,12 +65,10 @@ if (typeof window !== "undefined") {
       });
     } catch (err) {
       // fail silently and keep local seed/state
-      // console.warn('sites-store: Firestore sync failed', err);
     }
   })();
 }
 
-const listeners = new Set<() => void>();
 
 function commit(next: Site[]) {
   state = next;

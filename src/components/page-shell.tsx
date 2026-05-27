@@ -68,7 +68,7 @@ export function PageShell({ title, eyebrow, description, actions, children }: Pa
             aria-label="Sair"
             onClick={() => {
               authStore.logout();
-              navigate({ to: "/login" });
+              navigate({ to: "/login", search: { redirect: "/" } });
             }}
           >
             <LogOut className="h-4 w-4" />

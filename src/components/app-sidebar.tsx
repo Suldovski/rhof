@@ -94,7 +94,7 @@ export function AppSidebar() {
 
   const handleLogout = async () => {
     await authStore.logout();
-    navigate({ to: "/login" });
+    navigate({ to: "/login", search: { redirect: "/" } });
   };
 
   const mainItems = getMainMenuItems(role);

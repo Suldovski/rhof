@@ -9,7 +9,7 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import { isMatriz, type AppUser } from "./permissions";
+import { isMatrizProfile, type AppUser } from "./permissions";
 
 export type TipoContrato = "CLT" | "PJ";
 export type StatusFuncionario =
@@ -63,7 +63,7 @@ export async function listarFuncionarios(
 ): Promise<Funcionario[]> {
   if (!user) return [];
   const col = collection(db, "funcionarios");
-  const q = isMatriz(user.role)
+  const q = isMatrizProfile(user.role)
     ? col
     : query(col, where("obraId", "==", user.obraId ?? "__none__"));
   const snap = await getDocs(q);
@@ -78,7 +78,7 @@ export async function listarFuncionarios(
 export async function listarFuncionariosFolha(
   user: AppUser | null,
 ): Promise<Funcionario[]> {
-  if (!user || !isMatriz(user.role)) return [];
+  if (!user || !isMatrizProfile(user.role)) return [];
   const snap = await getDocs(
     query(collection(db, "funcionarios"), where("tipo", "==", "CLT")),
   );

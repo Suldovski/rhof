@@ -42,6 +42,17 @@ function NewEmployee() {
     }
   }, [auth.currentUser?.role, navigate]);
 
+  // Pre-fill obra/site when coming from obra detail (?site=...)
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const s = params.get("site");
+      if (s) {
+        setForm((f) => ({ ...f, organograma: s, site: s }));
+      }
+    } catch {}
+  }, []);
+
   const set = <K extends keyof Employee>(k: K, v: Employee[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 

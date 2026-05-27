@@ -19,7 +19,7 @@ import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as FuncionariosIndexRouteImport } from './routes/funcionarios.index'
 import { Route as RdvIdRouteImport } from './routes/rdv_.$id'
-import { Route as ObrasIdRouteImport } from './routes/obras.$id'
+import { Route as ObrasIdRouteImport } from './routes/obras_.$id'
 import { Route as FuncionariosNovoRouteImport } from './routes/funcionarios.novo'
 import { Route as FuncionariosFeriasRouteImport } from './routes/funcionarios.ferias'
 import { Route as FuncionariosIdRouteImport } from './routes/funcionarios.$id'
@@ -77,9 +77,9 @@ const RdvIdRoute = RdvIdRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const ObrasIdRoute = ObrasIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => ObrasRoute,
+  id: '/obras_/$id',
+  path: '/obras/$id',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const FuncionariosNovoRoute = FuncionariosNovoRouteImport.update({
   id: '/funcionarios/novo',
@@ -114,7 +114,7 @@ export interface FileRoutesByFullPath {
   '/folha-salarial': typeof FolhaSalarialRoute
   '/horas-extras': typeof HorasExtrasRoute
   '/login': typeof LoginRoute
-  '/obras': typeof ObrasRouteWithChildren
+  '/obras': typeof ObrasRoute
   '/rdv': typeof RdvRoute
   '/admin/demissoes': typeof AdminDemissoesRoute
   '/admin/usuarios': typeof AdminUsuariosRoute
@@ -132,7 +132,7 @@ export interface FileRoutesByTo {
   '/folha-salarial': typeof FolhaSalarialRoute
   '/horas-extras': typeof HorasExtrasRoute
   '/login': typeof LoginRoute
-  '/obras': typeof ObrasRouteWithChildren
+  '/obras': typeof ObrasRoute
   '/rdv': typeof RdvRoute
   '/admin/demissoes': typeof AdminDemissoesRoute
   '/admin/usuarios': typeof AdminUsuariosRoute
@@ -151,14 +151,14 @@ export interface FileRoutesById {
   '/folha-salarial': typeof FolhaSalarialRoute
   '/horas-extras': typeof HorasExtrasRoute
   '/login': typeof LoginRoute
-  '/obras': typeof ObrasRouteWithChildren
+  '/obras': typeof ObrasRoute
   '/rdv': typeof RdvRoute
   '/admin/demissoes': typeof AdminDemissoesRoute
   '/admin/usuarios': typeof AdminUsuariosRoute
   '/funcionarios/$id': typeof FuncionariosIdRoute
   '/funcionarios/ferias': typeof FuncionariosFeriasRoute
   '/funcionarios/novo': typeof FuncionariosNovoRoute
-  '/obras/$id': typeof ObrasIdRoute
+  '/obras_/$id': typeof ObrasIdRoute
   '/rdv_/$id': typeof RdvIdRoute
   '/funcionarios/': typeof FuncionariosIndexRoute
 }
@@ -214,7 +214,7 @@ export interface FileRouteTypes {
     | '/funcionarios/$id'
     | '/funcionarios/ferias'
     | '/funcionarios/novo'
-    | '/obras/$id'
+    | '/obras_/$id'
     | '/rdv_/$id'
     | '/funcionarios/'
   fileRoutesById: FileRoutesById
@@ -226,13 +226,14 @@ export interface RootRouteChildren {
   FolhaSalarialRoute: typeof FolhaSalarialRoute
   HorasExtrasRoute: typeof HorasExtrasRoute
   LoginRoute: typeof LoginRoute
-  ObrasRoute: typeof ObrasRouteWithChildren
+  ObrasRoute: typeof ObrasRoute
   RdvRoute: typeof RdvRoute
   AdminDemissoesRoute: typeof AdminDemissoesRoute
   AdminUsuariosRoute: typeof AdminUsuariosRoute
   FuncionariosIdRoute: typeof FuncionariosIdRoute
   FuncionariosFeriasRoute: typeof FuncionariosFeriasRoute
   FuncionariosNovoRoute: typeof FuncionariosNovoRoute
+  ObrasIdRoute: typeof ObrasIdRoute
   RdvIdRoute: typeof RdvIdRoute
   FuncionariosIndexRoute: typeof FuncionariosIndexRoute
 }
@@ -309,12 +310,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RdvIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/obras/$id': {
-      id: '/obras/$id'
-      path: '/$id'
+    '/obras_/$id': {
+      id: '/obras_/$id'
+      path: '/obras/$id'
       fullPath: '/obras/$id'
       preLoaderRoute: typeof ObrasIdRouteImport
-      parentRoute: typeof ObrasRoute
+      parentRoute: typeof rootRouteImport
     }
     '/funcionarios/novo': {
       id: '/funcionarios/novo'
@@ -354,16 +355,6 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface ObrasRouteChildren {
-  ObrasIdRoute: typeof ObrasIdRoute
-}
-
-const ObrasRouteChildren: ObrasRouteChildren = {
-  ObrasIdRoute: ObrasIdRoute,
-}
-
-const ObrasRouteWithChildren = ObrasRoute._addFileChildren(ObrasRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
@@ -371,13 +362,14 @@ const rootRouteChildren: RootRouteChildren = {
   FolhaSalarialRoute: FolhaSalarialRoute,
   HorasExtrasRoute: HorasExtrasRoute,
   LoginRoute: LoginRoute,
-  ObrasRoute: ObrasRouteWithChildren,
+  ObrasRoute: ObrasRoute,
   RdvRoute: RdvRoute,
   AdminDemissoesRoute: AdminDemissoesRoute,
   AdminUsuariosRoute: AdminUsuariosRoute,
   FuncionariosIdRoute: FuncionariosIdRoute,
   FuncionariosFeriasRoute: FuncionariosFeriasRoute,
   FuncionariosNovoRoute: FuncionariosNovoRoute,
+  ObrasIdRoute: ObrasIdRoute,
   RdvIdRoute: RdvIdRoute,
   FuncionariosIndexRoute: FuncionariosIndexRoute,
 }

@@ -544,6 +544,7 @@ export const employeesStore = {
 
   remove: (id: string) => commit(state.filter((e) => e.id !== id)),
   removeAll: () => commit([]),
+  removeAllFromSite: (siteName: string) => commit(state.filter((e) => (e.site || e.organograma || "") !== siteName)),
   reset: () => commit(seed),
 };
 

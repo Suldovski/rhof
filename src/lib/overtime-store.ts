@@ -14,6 +14,8 @@ export interface OvertimePeriod {
   periodo: string;
   createdAt: string;
   entries: OvertimeEntry[];
+  obraId?: string;
+  obraNome?: string;
 }
 
 const KEY = "bucagrans.overtime.v1";
@@ -39,12 +41,14 @@ function commit(next: OvertimePeriod[]) {
 export const overtimeStore = {
   list: () => state,
   get: (id: string) => state.find((p) => p.id === id),
-  add: (periodo: string) => {
+  add: (periodo: string, obra?: { id: string; nome: string }) => {
     const p: OvertimePeriod = {
       id: `oh-${Date.now()}`,
       periodo,
       createdAt: new Date().toISOString(),
       entries: [],
+      obraId: obra?.id,
+      obraNome: obra?.nome,
     };
     commit([p, ...state]);
     return p;
@@ -53,6 +57,26 @@ export const overtimeStore = {
     commit(state.map((p) => p.id === id ? { ...p, ...patch } : p));
   },
   remove: (id: string) => commit(state.filter((p) => p.id !== id)),
+  addEmployees: (
+    id: string,
+    employees: Array<{ id: string; name: string; salarioHora?: number; salary?: number }>,
+  ) => {
+    commit(state.map((p) => {
+      if (p.id !== id) return p;
+      const existing = new Set(p.entries.map((e) => e.employeeId));
+      const toAdd = employees
+        .filter((e) => !existing.has(e.id))
+        .map((e) => ({
+          employeeId: e.id,
+          employeeName: e.name,
+          horas50: 0,
+          horas100: 0,
+          noturnas: 0,
+          salarioHora: e.salarioHora || (e.salary ? e.salary / 220 : 0),
+        }));
+      return { ...p, entries: [...p.entries, ...toAdd] };
+    }));
+  },
 };
 
 function subscribe(cb: () => void) { listeners.add(cb); return () => listeners.delete(cb); }

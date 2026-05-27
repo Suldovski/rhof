@@ -7,6 +7,9 @@ const labels: Record<EmployeeStatus, string> = {
   ferias: "Em férias",
   afastado: "Afastado",
   desligado: "Desligado",
+  admissao: "Admissão",
+  efetivo: "Efetivo",
+  mobilizacao: "Mobilização",
 };
 
 const tone: Record<EmployeeStatus, string> = {
@@ -14,6 +17,9 @@ const tone: Record<EmployeeStatus, string> = {
   ferias: "bg-accent/15 text-accent border-accent/30",
   afastado: "bg-warning/20 text-warning-foreground border-warning/40",
   desligado: "bg-destructive/15 text-destructive border-destructive/30",
+  admissao: "bg-primary/15 text-primary border-primary/30",
+  efetivo: "bg-success/15 text-success border-success/30",
+  mobilizacao: "bg-accent/15 text-accent border-accent/30",
 };
 
 export function StatusBadge({ status }: { status: EmployeeStatus }) {

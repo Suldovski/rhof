@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
 import { Plus, Download, Trash2, Calendar, Receipt, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
@@ -47,49 +47,62 @@ function RdvIndex() {
   const [data, setData] = useState(new Date().toISOString().slice(0, 10));
   const [obraId, setObraId] = useState("");
   const [obras, setObras] = useState<Obra[]>([]);
+  const [filterObra, setFilterObra] = useState<string>("todas");
 
   useEffect(() => {
-    listarObras(auth.currentUser).then(setObras);
+    listarObras(auth.currentUser as any).then(setObras);
   }, [auth.currentUser]);
 
-  // Auto-select obra for RH_Obra
+  // Auto-seleciona obra do RH_Obra
   useEffect(() => {
-    if (isRhObra(auth.currentUser?.role) && obras.length > 0) {
-      const obraId = getObraIdFromRhObra(auth.currentUser!.role);
-      if (obraId && !setObraId) {
-        setObraId(obraId);
+    if (isRhObra(auth.currentUser?.role)) {
+      const oid = getObraIdFromRhObra(auth.currentUser!.role);
+      if (oid) {
+        setObraId(oid);
+        setFilterObra(oid);
       }
     }
-  }, [auth.currentUser?.role, obras]);
+  }, [auth.currentUser?.role]);
+
+  const isMatriz = !isRhObra(auth.currentUser?.role);
 
   const filtered = useMemo(() => {
     if (isRhObra(auth.currentUser?.role)) {
-      // Filter to only show payments from their obra
-      const obraId = getObraIdFromRhObra(auth.currentUser!.role);
-      const obra = obras.find(o => o.id === obraId);
-      return payments.filter(p => p.descricao === obra?.nome);
+      const oid = getObraIdFromRhObra(auth.currentUser!.role);
+      const obra = obras.find((o) => o.id === oid);
+      return payments.filter((p) => p.descricao === obra?.nome);
+    }
+    if (filterObra !== "todas") {
+      const obra = obras.find((o) => o.id === filterObra);
+      return payments.filter((p) => p.descricao === obra?.nome);
     }
     return payments;
-  }, [payments, auth.currentUser?.role, obras]);
+  }, [payments, auth.currentUser?.role, obras, filterObra]);
 
   const sorted = useMemo(
     () => [...filtered].sort((a, b) => b.data.localeCompare(a.data)),
     [filtered],
   );
+  const navigate = useNavigate();
 
   function createPayment() {
     if (!data) {
       toast.error("Informe a data do pagamento.");
       return;
     }
-    const obraNome = obras.find(o => o.id === obraId)?.nome || "";
+    if (!obraId) {
+      toast.error("Selecione a obra.");
+      return;
+    }
+    const obraNome = obras.find((o) => o.id === obraId)?.nome || "";
     const p = rdvStore.create(data, obraNome);
     toast.success("Dia de pagamento criado.");
     setOpen(false);
-    setObraId("");
-    // navega via Link manual
-    window.location.href = `/rdv/${p.id}`;
+    if (!isRhObra(auth.currentUser?.role)) setObraId("");
+    // Use router navigation to avoid 404 on SPA base path
+    navigate({ to: "/rdv/$id", params: { id: p.id } });
   }
+
 
   return (
     <PageShell
@@ -132,6 +145,21 @@ function RdvIndex() {
         </Dialog>
       }
     >
+      {isMatriz && obras.length > 0 && (
+        <div className="mb-4 flex items-center gap-3">
+          <Label className="text-xs uppercase tracking-wider text-muted-foreground">Filtrar por obra</Label>
+          <Select value={filterObra} onValueChange={setFilterObra}>
+            <SelectTrigger className="w-[260px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todas">Todas as obras</SelectItem>
+              {obras.map((o) => (
+                <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       {sorted.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
