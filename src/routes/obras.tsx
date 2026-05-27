@@ -97,7 +97,14 @@ function Obras() {
                     <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Início</p>
                     <p className="mt-1 flex items-center gap-1 text-sm font-medium">
                       <Calendar className="h-4 w-4 text-accent" />
-                      {new Date(s.start).toLocaleDateString("pt-BR")}
+                      {(() => {
+                        try {
+                          const d = new Date(s.start);
+                          return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('pt-BR');
+                        } catch (e) {
+                          return '—';
+                        }
+                      })()}
                     </p>
                   </div>
                   <div>
