@@ -155,7 +155,16 @@ function ObraDetail() {
             <h2 className="mt-3 font-display text-xl">{obra.name}</h2>
 
             <div className="mt-6 space-y-3 text-sm">
-              <Row icon={Calendar} label={`Início: ${new Date(obra.start).toLocaleDateString("pt-BR")}`} />
+              {(() => {
+                let startLabel = "—";
+                try {
+                  const d = new Date(obra.start);
+                  if (!isNaN(d.getTime())) startLabel = d.toLocaleDateString("pt-BR");
+                } catch (e) {
+                  startLabel = "—";
+                }
+                return <Row icon={Calendar} label={`Início: ${startLabel}`} />;
+              })()}
               <Row icon={User} label={`Responsável: ${obra.manager}`} />
               {obra.address && <Row icon={MapPin} label={obra.address} />}
               <Row icon={Users} label={`${team.length} colaborador(es) alocado(s)`} />
