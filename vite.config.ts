@@ -12,8 +12,8 @@ export default defineConfig({
   cloudflare: false,
   tanstackStart: {
     client: {
-      // Ajustado para o subdiretório do GitHub Pages
-      base: "/rhof/", 
+      // Ajustado para o subdiretório do GitHub Pages — assets públicos
+      base: "/rhof/assets",
     },
     ssr: false,
     spa: {
