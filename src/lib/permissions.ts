@@ -17,7 +17,8 @@ export type Role =
 
 export interface AppUser {
   uid: string;
-  nome: string;
+  nome?: string;
+  name?: string;
   email: string;
   role: Role;
   obraId?: string | null;

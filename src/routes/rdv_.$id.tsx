@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { ArrowLeft, Download, Plus, Trash2, Search, Receipt } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/page-shell";
@@ -7,10 +7,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -33,11 +37,13 @@ function RdvDetail() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [q, setQ] = useState("");
+  const [pickerSite, setPickerSite] = useState<string>("todas");
 
   const availableEmployees = useMemo(() => {
     const used = new Set(payment?.entries.map((e) => e.employeeId) ?? []);
     return employees
       .filter((e) => !used.has(e.id))
+      .filter((e) => pickerSite === "todas" || e.site === pickerSite || e.organograma === pickerSite)
       .filter((e) =>
         !q ||
         e.name.toLowerCase().includes(q.toLowerCase()) ||
@@ -46,6 +52,10 @@ function RdvDetail() {
       )
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [employees, payment, q]);
+
+  useEffect(() => {
+    if (payment) setPickerSite(payment.descricao || "todas");
+  }, [payment]);
 
   if (!payment) {
     return (
@@ -136,14 +146,28 @@ function RdvDetail() {
               <DialogHeader>
                 <DialogTitle>Selecionar funcionários</DialogTitle>
               </DialogHeader>
-              <div className="flex items-center gap-2 rounded-md border border-input px-3">
-                <Search className="h-4 w-4 text-muted-foreground" />
-                <Input
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  placeholder="Buscar por nome, CPF ou matrícula"
-                  className="h-10 border-0 bg-transparent shadow-none focus-visible:ring-0"
-                />
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-3">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Filtrar por obra</Label>
+                  <Select value={pickerSite} onValueChange={setPickerSite}>
+                    <SelectTrigger className="w-[220px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todas">Todas as obras</SelectItem>
+                      {Array.from(new Set(employees.map((e) => e.site).filter(Boolean))).map((s) => (
+                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2 rounded-md border border-input px-3">
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                  <Input
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                    placeholder="Buscar por nome, CPF ou matrícula"
+                    className="h-10 border-0 bg-transparent shadow-none focus-visible:ring-0"
+                  />
+                </div>
               </div>
               <div className="flex items-center justify-between border-b pb-2">
                 <label className="flex items-center gap-2 text-sm">
