@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { HardHat, Users, Calendar, Plus, Pencil, Trash2, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
@@ -72,7 +72,7 @@ function Obras() {
           return (
             <Card key={s.id} className="overflow-hidden">
               <div className="flex items-center justify-between bg-primary px-5 py-4 text-primary-foreground">
-                <Link to="/obras/$id" params={{ id: s.id }} className="flex flex-1 items-center gap-3 min-w-0">
+                <button type="button" onClick={() => navigate({ to: "/obras/$id", params: { id: s.id } })} className="flex flex-1 items-center gap-3 min-w-0 text-left">
                   <div className="rounded-md bg-accent/20 p-2">
                     <HardHat className="h-5 w-5 text-accent" />
                   </div>
@@ -80,7 +80,7 @@ function Obras() {
                     <p className="text-[10px] uppercase tracking-widest text-primary-foreground/60">Obra</p>
                     <h3 className="truncate font-display text-lg">{s.name}</h3>
                   </div>
-                </Link>
+                </button>
                 <Badge variant="outline" className="ml-2 border-accent/40 bg-accent/10 text-accent">
                   {s.status}
                 </Badge>
@@ -134,10 +134,8 @@ function Obras() {
                         </Button>
                       </>
                     )}
-                    <Button size="sm" variant="ghost" asChild>
-                      <Link to="/obras/$id" params={{ id: s.id }}>
-                        Abrir <ChevronRight className="ml-1 h-3.5 w-3.5" />
-                      </Link>
+                    <Button size="sm" variant="ghost" onClick={() => navigate({ to: "/obras/$id", params: { id: s.id } })}>
+                      Abrir <ChevronRight className="ml-1 h-3.5 w-3.5" />
                     </Button>
                   </div>
                 </div>

@@ -91,11 +91,12 @@ function CreateUserDialog({ obras }: { obras: Obra[] }) {
         return;
       }
 
-      // Determine final role string: for obra-scoped roles build dynamic role
+      // Determine final role string: role may already be a obra-scoped value
       let roleConfig = role;
-      if ((role === "rh_obra" || role === "cliente_obra") && obraId) {
-        // build dynamic role string expected by permissions helpers
-        roleConfig = role === "rh_obra" ? `rh_obra_${obraId}` : `cliente_obra_${obraId}`;
+      let finalObraId: string | undefined = undefined;
+      if (role.startsWith('rh_obra_') || role.startsWith('cliente_obra_')) {
+        roleConfig = role;
+        finalObraId = role.split('_').slice(2).join('_');
       }
 
       await authStore.create({
@@ -103,7 +104,7 @@ function CreateUserDialog({ obras }: { obras: Obra[] }) {
         email,
         password,
         role: roleConfig,
-        obraId: roleConfig.startsWith("rh_obra_") || roleConfig.startsWith("cliente_obra_") ? obraId : undefined,
+        obraId: finalObraId,
       });
       toast.success("Usuário criado.");
       setOpen(false);
@@ -117,13 +118,19 @@ function CreateUserDialog({ obras }: { obras: Obra[] }) {
     }
   };
 
-  const needsObra = role === "rh_obra" || role === "cliente_obra";
   const sites = useSites();
 
-  // Build options: prefer `obras` from backend, fallback to local `sites`
-  const obraOptions = (obras && obras.length > 0)
-    ? obras.map((o) => ({ id: o.id, label: (o as any).nome || (o as any).name || o.id }))
-    : (sites || []).map((s) => ({ id: s.id, label: s.name }));
+  const roleOptions = [
+    { value: 'rh_matriz', label: 'RH da Matriz' },
+    { value: 'administrativo_matriz', label: 'Administrativo da Matriz' },
+    { value: 'financeiro_matriz', label: 'Financeiro da Matriz' },
+    // dynamic obra roles appended from sites / obras
+  ];
+  const siteList = (obras && obras.length > 0) ? obras.map((o) => ({ id: o.id, label: (o as any).nome || (o as any).name || o.id })) : (sites || []).map((s) => ({ id: s.id, label: s.name }));
+  siteList.forEach((s) => {
+    roleOptions.push({ value: `rh_obra_${s.id}`, label: `RH · ${s.label}` });
+    roleOptions.push({ value: `cliente_obra_${s.id}`, label: `Cliente · ${s.label}` });
+  });
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -153,27 +160,12 @@ function CreateUserDialog({ obras }: { obras: Obra[] }) {
             <Select value={role} onValueChange={setRole}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="rh_matriz">RH da Matriz</SelectItem>
-                <SelectItem value="administrativo_matriz">Administrativo da Matriz</SelectItem>
-                <SelectItem value="financeiro_matriz">Financeiro da Matriz</SelectItem>
-                <SelectItem value="rh_obra">RH de Obra</SelectItem>
-                <SelectItem value="cliente_obra">Cliente de Obra</SelectItem>
+                {roleOptions.map((r) => (
+                  <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
-          {needsObra && (
-            <div>
-              <Label>Obra</Label>
-              <Select value={obraId} onValueChange={setObraId}>
-                <SelectTrigger><SelectValue placeholder="Selecione uma obra" /></SelectTrigger>
-                <SelectContent>
-                    {obraOptions.map((o) => (
-                      <SelectItem key={o.id} value={o.id}>{o.label}</SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
             <Button type="submit">Criar</Button>
