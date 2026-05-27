@@ -21,6 +21,7 @@ import {
 import { authStore, useAuth, useAllUsers, type AppUser } from "@/lib/auth-store";
 import { listarObras, type Obra } from "@/lib/obras";
 import { isRhMatriz } from "@/lib/permissions";
+import { useSites } from "@/lib/sites-store";
 
 export const Route = createFileRoute("/admin/usuarios")({
   head: () => ({ meta: [{ title: "Usuários · Bucagrans RH" }] }),
@@ -117,6 +118,12 @@ function CreateUserDialog({ obras }: { obras: Obra[] }) {
   };
 
   const needsObra = role === "rh_obra" || role === "cliente_obra";
+  const sites = useSites();
+
+  // Build options: prefer `obras` from backend, fallback to local `sites`
+  const obraOptions = (obras && obras.length > 0)
+    ? obras.map((o) => ({ id: o.id, label: (o as any).nome || (o as any).name || o.id }))
+    : (sites || []).map((s) => ({ id: s.id, label: s.name }));
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -160,8 +167,8 @@ function CreateUserDialog({ obras }: { obras: Obra[] }) {
               <Select value={obraId} onValueChange={setObraId}>
                 <SelectTrigger><SelectValue placeholder="Selecione uma obra" /></SelectTrigger>
                 <SelectContent>
-                    {obras.map((o) => (
-                      <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>
+                    {obraOptions.map((o) => (
+                      <SelectItem key={o.id} value={o.id}>{o.label}</SelectItem>
                     ))}
                 </SelectContent>
               </Select>
