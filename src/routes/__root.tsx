@@ -120,20 +120,14 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {auth.currentUser && !isLogin ? (
-        <SidebarProvider>
-          <AppSidebar />
-          <main className="w-full">
-            <Outlet />
-            <Toaster />
-          </main>
-        </SidebarProvider>
-      ) : (
-        <>
+      <SidebarProvider>
+        {auth.currentUser && !isLogin && <AppSidebar />}
+
+        <main className="w-full">
           <Outlet />
           <Toaster />
-        </>
-      )}
+        </main>
+      </SidebarProvider>
     </QueryClientProvider>
   );
 }
