@@ -25,7 +25,17 @@ let state: Site[] = (() => {
   if (typeof window === "undefined") return seed;
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          return parsed.map((p) => normalizeSite(p));
+        }
+        return seed;
+      } catch (e) {
+        return seed;
+      }
+    }
   } catch {}
   return seed;
 })();
@@ -41,14 +51,14 @@ if (typeof window !== "undefined") {
       const snap = await getDocs(col);
       if (!snap.empty) {
         const remote = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
-        state = remote as Site[];
+        state = remote.map((r) => normalizeSite(r)) as Site[];
         try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {}
         listeners.forEach((l) => l());
       }
       // subscribe to changes
       onSnapshot(col, (snapshot) => {
         const remote = snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
-        state = remote as Site[];
+        state = remote.map((r) => normalizeSite(r)) as Site[];
         try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {}
         listeners.forEach((l) => l());
       });
@@ -76,6 +86,19 @@ export function slugify(name: string): string {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
+}
+
+function normalizeSite(raw: any): Site {
+  if (!raw) return { id: raw?.id || `obra-${Date.now()}`, name: "", status: "Planejamento", start: "", manager: "", address: "", description: "" };
+  return {
+    id: raw.id || raw._id || slugify(raw.name ?? raw.nome ?? (raw.title || "obra")),
+    name: raw.name ?? raw.nome ?? raw.title ?? "",
+    status: raw.status ?? raw.estado ?? "Planejamento",
+    start: raw.start ?? raw.inicio ?? raw.data ?? "",
+    manager: raw.manager ?? raw.responsavel ?? raw.coordinator ?? "",
+    address: raw.address ?? raw.endereco ?? raw.location ?? "",
+    description: raw.description ?? raw.descricao ?? raw.note ?? "",
+  };
 }
 
 export const sitesStore = {
