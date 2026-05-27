@@ -30,6 +30,35 @@ export default defineConfig({
       client: {
         build: {
           outDir: "dist",
+          rollupOptions: {
+            output: {
+              manualChunks(id) {
+                if (!id.includes("node_modules")) {
+                  return;
+                }
+
+                if (id.includes("xlsx")) return "xlsx";
+                if (id.includes("jspdf")) return "jspdf";
+                if (id.includes("firebase")) return "firebase";
+                if (id.includes("recharts")) return "recharts";
+                if (id.includes("@floating-ui")) return "floating-ui";
+
+                if (id.includes("@tanstack")) return "tanstack";
+                if (id.includes("@radix-ui")) return "radix";
+                if (id.includes("react-dom")) return "react-dom";
+                if (id.includes("react-router") || id.includes("react/jsx-runtime") || id.endsWith("/react")) return "react";
+                if (id.includes("lucide-react")) return "icons";
+                if (id.includes("react-hook-form") || id.includes("cmdk") || id.includes("sonner") || id.includes("vaul") || id.includes("react-day-picker") || id.includes("react-resizable-panels") || id.includes("embla-carousel-react") || id.includes("input-otp")) {
+                  return "ui-kit";
+                }
+                if (id.includes("date-fns") || id.includes("zod") || id.includes("clsx") || id.includes("class-variance-authority") || id.includes("tailwind-merge")) {
+                  return "utils";
+                }
+
+                return "vendor";
+              },
+            },
+          },
         },
       },
     },
