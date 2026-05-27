@@ -19,7 +19,7 @@ import { employeesStore, makeEmpty, type Employee, type Dependente, type DocAnex
 import { UFS, SINDICATOS_POR_UF } from "@/lib/sindicatos";
 import { readFileAsDataURL } from "@/lib/doc-templates-store";
 import { useAuth } from "@/lib/auth-store";
-import { isClienteObra } from "@/lib/permissions";
+import { useRouteProtection, roleChecks } from "@/lib/route-protection";
 
 export const Route = createFileRoute("/funcionarios/novo")({
   head: () => ({ meta: [{ title: "Novo cadastro · Bucagrans RH" }] }),
@@ -31,16 +31,9 @@ function NewEmployee() {
   const sites = useSites();
   const horarios = useHorarios();
   const auth = useAuth();
+  useRouteProtection(roleChecks.funcionarios, "Funcionários");
   const [form, setForm] = useState<Employee>(() => makeEmpty());
   const [submitting, setSubmitting] = useState(false);
-
-  // Redirect cliente_obra - they can't create employees
-  useEffect(() => {
-    if (isClienteObra(auth.currentUser?.role)) {
-      toast.error("Você não tem permissão para criar funcionários.");
-      navigate({ to: "/" });
-    }
-  }, [auth.currentUser?.role, navigate]);
 
   // Pre-fill obra/site when coming from obra detail (?site=...)
   useEffect(() => {

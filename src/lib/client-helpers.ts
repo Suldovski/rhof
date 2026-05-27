@@ -13,7 +13,7 @@ export const isClientUser = (user: AppUser | null | undefined): boolean => {
  */
 export const getClientObraId = (user: AppUser | null | undefined): string | null => {
   if (!isClientUser(user)) return null;
-  return user?.obraId || null;
+  return user?.workId || user?.obraId || null;
 };
 
 /**
@@ -21,7 +21,7 @@ export const getClientObraId = (user: AppUser | null | undefined): string | null
  */
 export const canClientViewObra = (user: AppUser | null | undefined, obraId: string): boolean => {
   if (!isClientUser(user)) return false;
-  return user?.obraId === obraId;
+  return (user?.workId || user?.obraId) === obraId;
 };
 
 /**
@@ -78,7 +78,7 @@ export const isClientAllowedUrl = (pathname: string, user: AppUser | null | unde
  */
 export const getClientRedirectUrl = (user: AppUser | null | undefined): string => {
   if (!isClientUser(user)) return "/";
-  const obraId = user?.obraId;
+  const obraId = user?.workId || user?.obraId;
   if (!obraId) return "/";
   return `/obras/${obraId}`;
 };

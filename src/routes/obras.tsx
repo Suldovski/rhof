@@ -24,6 +24,8 @@ import { sitesStore, useSites, type Site } from "@/lib/sites-store";
 import { criarObra } from "@/lib/obras";
 import { useAuth } from "@/lib/auth-store";
 import { isClienteObra, getObraIdFromClienteObra } from "@/lib/permissions";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export const Route = createFileRoute("/obras")({
   head: () => ({ meta: [{ title: "Obras · Bucagrans RH" }] }),
@@ -32,6 +34,71 @@ export const Route = createFileRoute("/obras")({
 
 const statusOptions = ["Planejamento", "Fundação", "Estrutura", "Acabamento", "Em execução", "Operação", "Concluída"];
 
+type CardDetails = {
+  startDate: string | null;
+  responsibleName: string | null;
+};
+
+function trimText(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function isLikelyId(value: string): boolean {
+  return /^[A-Za-z0-9_-]{6,}$/.test(value) && !value.includes(" ");
+}
+
+function toDateValue(value: unknown): Date | null {
+  if (!value) return null;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+  if (typeof value === "string" || typeof value === "number") {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+  if (typeof value === "object" && value && "toDate" in value && typeof (value as { toDate?: () => Date }).toDate === "function") {
+    const parsed = (value as { toDate: () => Date }).toDate();
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+  return null;
+}
+
+function formatDate(value: unknown): string | null {
+  const date = toDateValue(value);
+  return date ? date.toLocaleDateString("pt-BR") : null;
+}
+
+function pickName(data: Record<string, unknown>): string {
+  return trimText(data.name ?? data.nome ?? data.fullName ?? data.displayName ?? data.responsibleName ?? data.responsavel ?? data.manager);
+}
+
+function buildNameLookup(docs: Array<{ id: string; data: () => Record<string, unknown> }>) {
+  const lookup = new Map<string, string>();
+
+  docs.forEach((doc) => {
+    const data = doc.data();
+    const name = pickName(data);
+    if (!name) return;
+
+    [doc.id, data.id, data.uid, data.re].forEach((key) => {
+      const normalized = trimText(key);
+      if (normalized) lookup.set(normalized, name);
+    });
+  });
+
+  return lookup;
+}
+
+function resolveResponsibleName(rawValue: unknown, lookup: Map<string, string>): string | null {
+  const value = trimText(rawValue);
+  if (!value) return null;
+
+  const resolved = lookup.get(value);
+  if (resolved) return resolved;
+
+  if (isLikelyId(value)) return null;
+
+  return value;
+}
+
 function Obras() {
   const sites = useSites();
   const auth = useAuth();
@@ -39,6 +106,7 @@ function Obras() {
   const [editing, setEditing] = useState<Site | null>(null);
   const [creating, setCreating] = useState(false);
   const [removeId, setRemoveId] = useState<string | null>(null);
+  const [cardDetails, setCardDetails] = useState<Record<string, CardDetails>>({});
 
   // Filter sites for cliente_obra - only show their specific obra
   const displaySites = useMemo(() => {
@@ -52,6 +120,62 @@ function Obras() {
   // Check if user can manage works (create, edit, delete)
   // Allow all users EXCEPT cliente_obra
   const canManageWorks = !isClienteObra(auth.currentUser?.role);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCardDetails() {
+      try {
+        const [obrasSnap, worksSnap, usersSnap, funcionariosSnap] = await Promise.allSettled([
+          getDocs(collection(db, "obras")),
+          getDocs(collection(db, "works")),
+          getDocs(collection(db, "usuarios")),
+          getDocs(collection(db, "funcionarios")),
+        ]);
+
+        const obraDocs = [obrasSnap, worksSnap].flatMap((result) => (result.status === "fulfilled" ? result.value.docs : []));
+        const userDocs = usersSnap.status === "fulfilled" ? usersSnap.value.docs : [];
+        const funcionarioDocs = funcionariosSnap.status === "fulfilled" ? funcionariosSnap.value.docs : [];
+
+        const responsibleLookup = new Map([
+          ...buildNameLookup(userDocs).entries(),
+          ...buildNameLookup(funcionarioDocs).entries(),
+        ]);
+
+        const nextDetails: Record<string, CardDetails> = {};
+
+        obraDocs.forEach((doc) => {
+          const data = doc.data() as Record<string, unknown>;
+          const startDate = formatDate(
+            data.startDate ?? data.dataInicio ?? data.start ?? data.inicio ?? data.data,
+          );
+          const responsibleName = resolveResponsibleName(
+            data.responsibleName ?? data.responsavel ?? data.manager ?? data.responsibleId ?? data.managerId ?? data.responsavelId,
+            responsibleLookup,
+          );
+
+          nextDetails[doc.id] = {
+            startDate,
+            responsibleName,
+          };
+        });
+
+        if (!cancelled) {
+          setCardDetails(nextDetails);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setCardDetails({});
+        }
+      }
+    }
+
+    void loadCardDetails();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sites]);
 
   return (
     <PageShell
@@ -97,19 +221,14 @@ function Obras() {
                     <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Início</p>
                     <p className="mt-1 flex items-center gap-1 text-sm font-medium">
                       <Calendar className="h-4 w-4 text-accent" />
-                      {(() => {
-                        try {
-                          const d = new Date(s.start);
-                          return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('pt-BR');
-                        } catch (e) {
-                          return '—';
-                        }
-                      })()}
+                      {cardDetails[s.id]?.startDate ?? formatDate(s.start) ?? "Não informado"}
                     </p>
                   </div>
                   <div>
                     <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Responsável</p>
-                    <p className="mt-1 truncate text-sm font-medium">{s.manager}</p>
+                    <p className="mt-1 truncate text-sm font-medium">
+                      {cardDetails[s.id]?.responsibleName ?? (trimText(s.manager) || "Não informado")}
+                    </p>
                   </div>
                 </div>
 

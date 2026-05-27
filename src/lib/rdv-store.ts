@@ -12,6 +12,8 @@ export interface RdvPayment {
   descricao: string;
   entries: RdvEntry[];
   createdAt: string;
+  obraId?: string;
+  obraNome?: string;
 }
 
 const KEY = "bucagrans.rdv.v1";
@@ -39,13 +41,15 @@ function commit(next: RdvPayment[]) {
 export const rdvStore = {
   list: () => state,
   get: (id: string) => state.find((p) => p.id === id),
-  create: (data: string, descricao = "") => {
+  create: (data: string, descricao = "", obra?: { id: string; nome: string }) => {
     const p: RdvPayment = {
       id: `rdv-${Date.now()}`,
       data,
       descricao,
       entries: [],
       createdAt: new Date().toISOString(),
+      obraId: obra?.id,
+      obraNome: obra?.nome,
     };
     commit([p, ...state]);
     return p;

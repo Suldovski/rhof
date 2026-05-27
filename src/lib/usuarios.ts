@@ -1,14 +1,16 @@
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { auth, db } from "./firebase";
-import type { Role } from "./permissions";
+import { legacyRoleForUser, resolveUserType, type Role, type UserType } from "./permissions";
 
 export interface NovoUsuarioInput {
   nome: string;
   email: string;
   senha: string;
-  role: Role;
-  obraId?: string | null;
+  type: UserType;
+  workId?: string | null;
+  workName?: string | null;
+  role?: Role;
 }
 
 /**
@@ -19,17 +21,28 @@ export async function criarUsuario({
   nome,
   email,
   senha,
+  type,
+  workId = null,
+  workName = null,
   role,
-  obraId = null,
 }: NovoUsuarioInput) {
   const cred = await createUserWithEmailAndPassword(auth, email, senha);
   const uid = cred.user.uid;
+  const resolvedType = resolveUserType(type);
+  const resolvedWorkId = resolvedType === "work" ? workId : null;
+  const resolvedWorkName = resolvedType === "work" ? workName : null;
   await setDoc(doc(db, "usuarios", uid), {
     uid,
     nome,
     email,
-    role,
-    obraId,
+    type: resolvedType,
+    workId: resolvedWorkId,
+    workName: resolvedWorkName,
+    role: role ?? legacyRoleForUser(resolvedType, resolvedWorkId),
+    obraId: resolvedWorkId,
+    obraNome: resolvedWorkName,
+    sector: null,
+    headquarter: null,
   });
   return uid;
 }

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
 import { employees } from "@/lib/employees";
 import { useAuth } from "@/lib/auth-store";
-import { isClienteObra } from "@/lib/permissions";
+import { useRouteProtection, roleChecks } from "@/lib/route-protection";
 
 export const Route = createFileRoute("/funcionarios/ferias")({
   head: () => ({ meta: [{ title: "Funcionários em férias · Bucagrans RH" }] }),
@@ -19,14 +19,7 @@ function Ferias() {
   const list = employees.filter((e) => e.status === "ferias");
   const auth = useAuth();
   const navigate = useNavigate();
-
-  // Redirect cliente_obra - they can't access employee lists
-  useEffect(() => {
-    if (isClienteObra(auth.currentUser?.role)) {
-      toast.error("Você não tem permissão para acessar funcionários.");
-      navigate({ to: "/" });
-    }
-  }, [auth.currentUser?.role, navigate]);
+  useRouteProtection(roleChecks.funcionarios, "Funcionários");
 
   return (
     <PageShell

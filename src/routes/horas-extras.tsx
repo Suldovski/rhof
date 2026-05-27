@@ -22,6 +22,9 @@ import { useEmployees } from "@/lib/employees";
 import { useAuth } from "@/lib/auth-store";
 import { useSites } from "@/lib/sites-store";
 import { isRhObra, getObraIdFromRhObra, isMatrizProfile } from "@/lib/permissions";
+import { useRouteProtection, roleChecks } from "@/lib/route-protection";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export const Route = createFileRoute("/horas-extras")({
   head: () => ({ meta: [{ title: "Horas Extras · Bucagrans RH" }] }),
@@ -30,6 +33,43 @@ export const Route = createFileRoute("/horas-extras")({
 
 const fmtBRL = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+type WorkerOption = {
+  id: string;
+  name: string;
+  cpf?: string;
+  role?: string;
+  salary?: number;
+  salarioHora?: number;
+  obraId?: string;
+  workId?: string;
+  site?: string;
+  organograma?: string;
+};
+
+function normalizeText(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeWorker(doc: { id: string; data: () => Record<string, unknown> }): WorkerOption {
+  const data = doc.data();
+  return {
+    id: doc.id,
+    name: normalizeText(data.name ?? data.nome ?? data.fullName ?? data.displayName),
+    cpf: normalizeText(data.cpf),
+    role: normalizeText(data.role ?? data.cargoFuncao ?? data.cargo),
+    salary: typeof data.salary === "number" ? data.salary : undefined,
+    salarioHora: typeof data.salarioHora === "number" ? data.salarioHora : undefined,
+    obraId: normalizeText(data.obraId),
+    workId: normalizeText(data.workId),
+    site: normalizeText(data.site),
+    organograma: normalizeText(data.organograma),
+  };
+}
+
+function pickWorkerObraId(worker: WorkerOption): string {
+  return worker.workId || worker.obraId || "";
+}
 
 function calcTotal(e: OvertimeEntry): number {
   return (
@@ -44,6 +84,7 @@ function HorasExtras() {
   const employees = useEmployees();
   const sites = useSites();
   const auth = useAuth();
+  useRouteProtection(roleChecks.horasExtras, "Horas Extras");
   const [creating, setCreating] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [selectedYear, setSelectedYear] = useState<string>("");
@@ -54,6 +95,7 @@ function HorasExtras() {
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [pickerQ, setPickerQ] = useState("");
   const [pickerSite, setPickerSite] = useState<string>("todas");
+  const [firestoreWorkers, setFirestoreWorkers] = useState<WorkerOption[]>([]);
 
   const userObraId = useMemo(() => {
     if (isRhObra(auth.currentUser?.role)) {
@@ -61,6 +103,41 @@ function HorasExtras() {
     }
     return null;
   }, [auth.currentUser?.role]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadWorkers() {
+      try {
+        const [workersSnap, funcionariosSnap] = await Promise.allSettled([
+          getDocs(collection(db, "workers")),
+          getDocs(collection(db, "funcionarios")),
+        ]);
+
+        const docs = [workersSnap, funcionariosSnap].flatMap((result) =>
+          result.status === "fulfilled" ? result.value.docs : [],
+        );
+
+        const nextWorkers = docs
+          .map((doc) => normalizeWorker(doc))
+          .filter((worker) => worker.id && worker.name);
+
+        if (!cancelled) {
+          setFirestoreWorkers(nextWorkers);
+        }
+      } catch {
+        if (!cancelled) {
+          setFirestoreWorkers([]);
+        }
+      }
+    }
+
+    void loadWorkers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Restringe filtro / criação automaticamente para RH de obra
   useEffect(() => {
@@ -79,6 +156,15 @@ function HorasExtras() {
 
   const active = periods.find((p) => p.id === activeId) ?? null;
 
+  const activeObraId = useMemo(() => {
+    if (!active) return null;
+    if (active.obraId) return active.obraId;
+    if (active.obraNome) {
+      return sites.find((site) => site.name === active.obraNome)?.id ?? null;
+    }
+    return null;
+  }, [active, sites]);
+
   useEffect(() => {
     if (active) {
       setPickerSite(active.obraNome || "todas");
@@ -93,10 +179,13 @@ function HorasExtras() {
   const availableEmployees = useMemo(() => {
     if (!active) return [];
     const used = new Set(active.entries.map((e) => e.employeeId));
-    const obraNome = active.obraNome || obraName(active.obraId);
-    return employees
+    const matchedWorkers = firestoreWorkers.filter((worker) => {
+      const workerObraId = pickWorkerObraId(worker);
+      return !activeObraId || workerObraId === activeObraId;
+    });
+
+    return matchedWorkers
       .filter((e) => !used.has(e.id))
-      .filter((e) => !obraNome || e.site === obraNome || e.organograma === obraNome)
       .filter((e) => pickerSite === "todas" || e.site === pickerSite || e.organograma === pickerSite)
       .filter((e) =>
         !pickerQ ||
@@ -105,7 +194,7 @@ function HorasExtras() {
         e.id.includes(pickerQ),
       )
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [employees, active, pickerQ, sites]);
+  }, [active, activeObraId, firestoreWorkers, pickerQ, pickerSite]);
 
   function togglePick(eid: string) {
     setPicked((prev) => {
@@ -132,7 +221,7 @@ function HorasExtras() {
       toast.error("Selecione ao menos um funcionário.");
       return;
     }
-    const list = employees.filter((e) => picked.has(e.id));
+    const list = availableEmployees.filter((e) => picked.has(e.id));
     overtimeStore.addEmployees(active.id, list);
     toast.success(`${list.length} funcionário(s) adicionado(s).`);
     setPicked(new Set());
@@ -250,9 +339,13 @@ function HorasExtras() {
                   <Badge variant="secondary">{picked.size} selecionado(s)</Badge>
                 </div>
                 <div className="max-h-[50vh] overflow-y-auto">
-                  {availableEmployees.length === 0 ? (
+                  {firestoreWorkers.filter((worker) => !activeObraId || pickWorkerObraId(worker) === activeObraId).length === 0 ? (
                     <p className="py-8 text-center text-sm text-muted-foreground">
-                      Nenhum funcionário disponível{active.obraNome ? ` para ${active.obraNome}` : ""}.
+                      Nenhum colaborador encontrado para esta obra
+                    </p>
+                  ) : availableEmployees.length === 0 ? (
+                    <p className="py-8 text-center text-sm text-muted-foreground">
+                      Nenhum colaborador disponível para a busca atual.
                     </p>
                   ) : (
                     <ul className="divide-y">
@@ -265,7 +358,7 @@ function HorasExtras() {
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold truncate">{e.name}</p>
                             <p className="text-xs text-muted-foreground truncate">
-                              #{e.id} · {e.cpf} · {e.role}
+                              #{e.id}{e.cpf ? ` · ${e.cpf}` : ""}{e.role ? ` · ${e.role}` : ""}
                             </p>
                           </div>
                         </li>

@@ -20,27 +20,21 @@ import {
 } from "@/components/ui/alert-dialog";
 import { authStore, useAuth, useAllUsers, type AppUser } from "@/lib/auth-store";
 import { isRhMatriz } from "@/lib/permissions";
-import { useSites } from "@/lib/sites-store";
+import { useWorks } from "@/lib/works";
 
 export const Route = createFileRoute("/admin/usuarios")({
   head: () => ({ meta: [{ title: "Usuários · Bucagrans RH" }] }),
   component: UsersPage,
 });
 
-type RoleOpt = { value: string; label: string };
+type SeatOpt = { value: string; label: string };
 
-function useRoleOptions(): RoleOpt[] {
-  const sites = useSites();
-  const base: RoleOpt[] = [
-    { value: "rh_matriz", label: "RH da Matriz" },
-    { value: "administrativo_matriz", label: "Administrativo da Matriz" },
-    { value: "financeiro_matriz", label: "Financeiro da Matriz" },
+function useSeatOptions(): SeatOpt[] {
+  const works = useWorks();
+  return [
+    { value: "main", label: "Matriz" },
+    ...works.map((work) => ({ value: work.id, label: work.name })),
   ];
-  sites.forEach((s) => {
-    base.push({ value: `rh_obra_${s.id}`, label: `RH · ${s.name}` });
-    base.push({ value: `cliente_obra_${s.id}`, label: `Cliente · ${s.name}` });
-  });
-  return base;
 }
 
 function UsersPage() {
@@ -87,8 +81,8 @@ function CreateUserDialog() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<string>("rh_matriz");
-  const roleOptions = useRoleOptions();
+  const [seat, setSeat] = useState<string>("main");
+  const seatOptions = useSeatOptions();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,20 +91,19 @@ function CreateUserDialog() {
         toast.error("Preencha todos os campos obrigatórios.");
         return;
       }
-      let finalObraId: string | undefined;
-      if (role.startsWith("rh_obra_")) finalObraId = role.substring(8);
-      else if (role.startsWith("cliente_obra_")) finalObraId = role.substring(13);
+      const work = seat === "main" ? null : seatOptions.find((option) => option.value === seat) ?? null;
 
       await authStore.create({
         name,
         email,
         password,
-        role,
-        obraId: finalObraId,
+        type: seat === "main" ? "main" : "work",
+        workId: work?.value ?? null,
+        workName: work?.label ?? null,
       });
       toast.success("Usuário criado.");
       setOpen(false);
-      setName(""); setEmail(""); setPassword(""); setRole("rh_matriz");
+      setName(""); setEmail(""); setPassword(""); setSeat("main");
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -140,12 +133,12 @@ function CreateUserDialog() {
             <Input required type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
           <div>
-            <Label>Tipo de usuário</Label>
-            <Select value={role} onValueChange={setRole}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Label>Sede</Label>
+            <Select value={seat} onValueChange={setSeat}>
+              <SelectTrigger><SelectValue placeholder="Selecione a sede" /></SelectTrigger>
               <SelectContent>
-                {roleOptions.map((r) => (
-                  <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                {seatOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -168,25 +161,27 @@ function EditUserDialog({
   onOpenChange: (v: boolean) => void;
 }) {
   const [name, setName] = useState(user.name);
-  const [role, setRole] = useState<string>(user.role);
-  const roleOptions = useRoleOptions();
+  const [email, setEmail] = useState(user.email);
+  const [seat, setSeat] = useState<string>(user.type === "work" ? (user.workId ?? user.obraId ?? "") : "main");
+  const seatOptions = useSeatOptions();
 
   useEffect(() => {
     setName(user.name);
-    setRole(user.role);
+    setEmail(user.email);
+    setSeat(user.type === "work" ? (user.workId ?? user.obraId ?? "") : "main");
   }, [user]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      let finalObraId: string | null = null;
-      if (role.startsWith("rh_obra_")) finalObraId = role.substring(8);
-      else if (role.startsWith("cliente_obra_")) finalObraId = role.substring(13);
+      const work = seat === "main" ? null : seatOptions.find((option) => option.value === seat) ?? null;
 
       await authStore.update(user.uid, {
         name,
-        role,
-        obraId: finalObraId,
+        email,
+        type: seat === "main" ? "main" : "work",
+        workId: work?.value ?? null,
+        workName: work?.label ?? null,
       } as any);
       toast.success("Usuário atualizado.");
       onOpenChange(false);
@@ -209,15 +204,15 @@ function EditUserDialog({
           </div>
           <div>
             <Label>E-mail</Label>
-            <Input disabled value={user.email} />
+            <Input value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
           <div>
-            <Label>Tipo de usuário</Label>
-            <Select value={role} onValueChange={setRole}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Label>Sede</Label>
+            <Select value={seat} onValueChange={setSeat}>
+              <SelectTrigger><SelectValue placeholder="Selecione a sede" /></SelectTrigger>
               <SelectContent>
-                {roleOptions.map((r) => (
-                  <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                {seatOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -234,7 +229,6 @@ function EditUserDialog({
 
 function UsersTable({ currentUserId }: { currentUserId: string | null }) {
   const allUsers = useAllUsers();
-  const roleOptions = useRoleOptions();
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [editing, setEditing] = useState<AppUser | null>(null);
 
@@ -248,8 +242,8 @@ function UsersTable({ currentUserId }: { currentUserId: string | null }) {
     }
   };
 
-  const roleLabel = (value: string) =>
-    roleOptions.find((r) => r.value === value)?.label || value;
+  const seatLabel = (user: AppUser) =>
+    user.type === "main" ? "Matriz" : (user.workName || user.workId || "Obra");
 
   return (
     <>
@@ -258,7 +252,7 @@ function UsersTable({ currentUserId }: { currentUserId: string | null }) {
           <li key={u.uid} className="flex items-center gap-3 px-4 py-3">
             <div className="min-w-0 flex-1">
               <p className="font-semibold">{u.name}</p>
-              <p className="text-xs text-muted-foreground">{u.email} · {roleLabel(u.role)}</p>
+              <p className="text-xs text-muted-foreground">{u.email} · {seatLabel(u)}</p>
             </div>
             <Button size="icon" variant="ghost" onClick={() => setEditing(u)}>
               <Pencil className="h-4 w-4" />

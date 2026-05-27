@@ -1,8 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useRef, useState } from "react";
-import { Plus, Search, Download, ChevronRight, Upload, Trash2, FileText } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Plus, Search, Download, ChevronRight, Trash2, FileText } from "lucide-react";
 import { toast } from "sonner";
-import { importFromFile } from "@/lib/employees-import-fixed";
 import { PageShell } from "@/components/page-shell";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,7 +25,7 @@ import { sitesStore, useSites, slugify } from "@/lib/sites-store";
 import { downloadEmployeesPDF } from "@/lib/employees-pdf";
 import { canAccessFuncionarios, canEditFuncionarios } from "@/lib/permissions";
 import { useAuth } from "@/lib/auth-store";
-import { useRouteProtection, roleChecks } from "@/lib/route-protection";
+import { EmployeesImportDialog } from "@/components/employees-import-dialog";
 
 export const Route = createFileRoute("/funcionarios/")({
   head: () => ({ meta: [{ title: "Funcionários · Bucagrans RH" }] }),
@@ -52,7 +51,7 @@ function List() {
   const [site, setSite] = useState<string>("todos");
   const [tab, setTab] = useState<TabKey>("todos");
   const [dept, setDept] = useState<DeptKey>("todos");
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   // Verificar permissão de acesso
   if (!auth.loading && auth.currentUser && !canAccessFuncionarios(auth.currentUser.role)) {
@@ -103,6 +102,22 @@ function List() {
     toast.success("PDF gerado.");
   };
 
+  const formatDate = (value?: string) => {
+    if (!value) return "-";
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString("pt-BR");
+  };
+
+  const formatMoney = (value?: number) => {
+    if (typeof value !== "number" || Number.isNaN(value)) return "-";
+    return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  };
+
+  const displayValue = (value?: string | number | null) => {
+    if (value === null || value === undefined || value === "") return "-";
+    return String(value);
+  };
+
   return (
     <PageShell
       eyebrow="Quadro de pessoal"
@@ -110,16 +125,8 @@ function List() {
       description={`${employees.length} colaboradores cadastrados em ${sites.length} canteiros.`}
       actions={
         <>
-          <input
-            ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden"
-            onChange={async (e) => {
-              const f = e.target.files?.[0]; if (!f) return;
-              try { await importFromFile(f); } catch (err: any) { toast.error("Falha: " + (err?.message ?? err)); }
-              if (fileRef.current) fileRef.current.value = "";
-            }}
-          />
-          <Button variant="outline" onClick={() => fileRef.current?.click()}>
-            <Upload className="mr-1 h-4 w-4" /> Importar planilha
+          <Button variant="outline" onClick={() => setImportOpen(true)}>
+            <Plus className="mr-1 h-4 w-4" /> Importar planilha
           </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>
@@ -204,67 +211,64 @@ function List() {
       </Tabs>
 
       <Card className="overflow-hidden p-0">
-        <div className="hidden md:grid grid-cols-[100px_1.5fr_1fr_1fr_140px_40px] items-center gap-3 border-b border-border bg-muted/40 px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-          <div>Matrícula</div>
-          <div>Nome / Função</div>
-          <div>Obra</div>
-          <div>Departamento</div>
-          <div>Status</div>
-          <div />
+        <div className="overflow-x-auto">
+          <table className="min-w-[1500px] w-full border-separate border-spacing-0 text-sm">
+            <thead className="sticky top-0 z-10 bg-muted/40 text-[11px] uppercase tracking-wider text-muted-foreground">
+              <tr>
+                <th className="border-b border-border px-4 py-3 text-left">RE</th>
+                <th className="border-b border-border px-4 py-3 text-left">Nome</th>
+                <th className="border-b border-border px-4 py-3 text-left">CPF</th>
+                <th className="border-b border-border px-4 py-3 text-left">Data Nasc.</th>
+                <th className="border-b border-border px-4 py-3 text-left">Data Admissão</th>
+                <th className="border-b border-border px-4 py-3 text-left">CBO</th>
+                <th className="border-b border-border px-4 py-3 text-left">Função</th>
+                <th className="border-b border-border px-4 py-3 text-left">Obra</th>
+                <th className="border-b border-border px-4 py-3 text-left">Salário Hora</th>
+                <th className="border-b border-border px-4 py-3 text-left">Salário Mensal</th>
+                <th className="border-b border-border px-4 py-3 text-left">Término 30 dias</th>
+                <th className="border-b border-border px-4 py-3 text-left">Término 60 dias</th>
+                <th className="border-b border-border px-4 py-3 text-left">Status</th>
+                <th className="border-b border-border px-4 py-3 text-right">Abrir</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {filtered.map((e) => (
+                <tr key={e.id} className="transition hover:bg-muted/40">
+                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{displayValue(e.reImport ?? e.id)}</td>
+                  <td className="px-4 py-3 font-semibold">{displayValue(e.nomeImport ?? e.name)}</td>
+                  <td className="px-4 py-3 font-mono text-xs">{displayValue(e.cpfDigits ?? e.cpf)}</td>
+                  <td className="px-4 py-3">{formatDate(e.dataNascimentoImport ?? e.nascimento)}</td>
+                  <td className="px-4 py-3">{formatDate(e.dataAdmissaoImport ?? e.admission)}</td>
+                  <td className="px-4 py-3">{displayValue(e.cbo)}</td>
+                  <td className="px-4 py-3">{displayValue(e.funcaoImport ?? e.role)}</td>
+                  <td className="px-4 py-3">{displayValue(e.obraImport ?? e.site)}</td>
+                  <td className="px-4 py-3">{formatMoney(e.salarioHoraImport ?? e.salarioHora)}</td>
+                  <td className="px-4 py-3">{formatMoney(e.salarioMensalImport ?? e.salary)}</td>
+                  <td className="px-4 py-3">{formatDate(e.termino30Dias)}</td>
+                  <td className="px-4 py-3">{formatDate(e.termino60Dias)}</td>
+                  <td className="px-4 py-3"><StatusBadge status={e.status} /></td>
+                  <td className="px-4 py-3 text-right">
+                    <Button asChild size="sm" variant="ghost">
+                      <Link to="/funcionarios/$id" params={{ id: e.id }}>
+                        <ChevronRight className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={14} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                    Nenhum funcionário encontrado.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
-        <ul className="divide-y divide-border">
-          {filtered.map((e) => (
-            <li key={e.id}>
-              {/* Desktop row */}
-              <Link
-                to="/funcionarios/$id" params={{ id: e.id }}
-                className="hidden md:grid grid-cols-[100px_1.5fr_1fr_1fr_140px_40px] items-center gap-3 px-5 py-4 transition hover:bg-muted/50"
-              >
-                <div className="font-mono text-xs text-muted-foreground">#{e.id}</div>
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-                    {e.name.split(" ").slice(0, 2).map((n) => n[0]).join("")}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate font-semibold">{e.name}</p>
-                    <p className="truncate text-xs text-muted-foreground">{e.role}</p>
-                  </div>
-                </div>
-                <div className="truncate text-sm">{e.site}</div>
-                <div className="text-sm">{e.departamento || e.department}</div>
-                <div><StatusBadge status={e.status} /></div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </Link>
-              {/* Mobile card */}
-              <Link
-                to="/funcionarios/$id" params={{ id: e.id }}
-                className="flex md:hidden items-center gap-3 px-4 py-3 transition active:bg-muted/60"
-              >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-                  {e.name.split(" ").slice(0, 2).map((n) => n[0]).join("")}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="truncate font-semibold text-sm">{e.name}</p>
-                    <span className="font-mono text-[10px] text-muted-foreground shrink-0">#{e.id}</span>
-                  </div>
-                  <p className="truncate text-xs text-muted-foreground">{e.role}</p>
-                  <div className="mt-1 flex items-center gap-2 flex-wrap">
-                    <StatusBadge status={e.status} />
-                    {e.site && <span className="truncate text-[11px] text-muted-foreground">{e.site}</span>}
-                  </div>
-                </div>
-                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-              </Link>
-            </li>
-          ))}
-          {filtered.length === 0 && (
-            <li className="px-5 py-12 text-center text-sm text-muted-foreground">
-              Nenhum funcionário encontrado.
-            </li>
-          )}
-        </ul>
       </Card>
+
+      <EmployeesImportDialog open={importOpen} onOpenChange={setImportOpen} />
     </PageShell>
   );
 }

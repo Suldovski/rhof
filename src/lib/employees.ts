@@ -147,6 +147,20 @@ export interface Employee {
   pis: string;
   address: string;
   certifications: string[];
+
+  /* Importação de planilhas */
+  reImport?: string;
+  nomeImport?: string;
+  cpfDigits?: string;
+  dataNascimentoImport?: string;
+  dataAdmissaoImport?: string;
+  cbo?: string;
+  funcaoImport?: string;
+  obraImport?: string;
+  salarioHoraImport?: number;
+  salarioMensalImport?: number;
+  termino30Dias?: string;
+  termino60Dias?: string;
 }
 
 const KEY = "bucagrans.employees.v2";
@@ -217,6 +231,18 @@ function makeEmpty(): Employee {
     pis: "",
     address: "",
     certifications: [],
+    reImport: "",
+    nomeImport: "",
+    cpfDigits: "",
+    dataNascimentoImport: "",
+    dataAdmissaoImport: "",
+    cbo: "",
+    funcaoImport: "",
+    obraImport: "",
+    salarioHoraImport: 0,
+    salarioMensalImport: 0,
+    termino30Dias: "",
+    termino60Dias: "",
   };
 }
 

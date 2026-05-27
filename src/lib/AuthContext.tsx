@@ -8,7 +8,7 @@ import {
 import { onAuthStateChanged, signOut as fbSignOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
-import type { AppUser, Role } from "@/lib/permissions";
+import { normalizeUserRecord, type AppUser, type Role } from "@/lib/permissions";
 
 interface AuthContextValue {
   user: AppUser | null;
@@ -34,15 +34,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const snap = await getDoc(doc(db, "usuarios", fbUser.uid));
       if (snap.exists()) {
         const data = snap.data() as Omit<AppUser, "uid">;
-        setUser({ uid: fbUser.uid, ...data });
+        setUser(normalizeUserRecord(fbUser.uid, data as Record<string, any>, {
+          email: fbUser.email ?? "",
+        }));
       } else {
         // Usuário autenticado mas sem perfil no Firestore
         setUser({
           uid: fbUser.uid,
-          nome: fbUser.displayName ?? "",
+          name: fbUser.displayName ?? "",
           email: fbUser.email ?? "",
-          role: "",
+          type: "main",
+          role: "rh_matriz",
+          workId: null,
+          workName: null,
           obraId: null,
+          obraNome: null,
         });
       }
       setLoading(false);

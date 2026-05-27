@@ -20,9 +20,13 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { collection, getDocs } from "firebase/firestore";
 import { useEmployees } from "@/lib/employees";
+import { db } from "@/lib/firebase";
 import { rdvStore, useRdvPayment } from "@/lib/rdv-store";
+import { useSites } from "@/lib/sites-store";
 import { buildRdvPDF, fmtDate, fmtBRL } from "./rdv";
+import { useRouteProtection, roleChecks } from "@/lib/route-protection";
 
 export const Route = createFileRoute("/rdv_/$id")({
   head: () => ({ meta: [{ title: "RDV · Bucagrans RH" }] }),
@@ -33,15 +37,80 @@ function RdvDetail() {
   const { id } = Route.useParams();
   const payment = useRdvPayment(id);
   const employees = useEmployees();
+  const sites = useSites();
   const navigate = useNavigate();
+  useRouteProtection(roleChecks.rdv, "RDV");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [q, setQ] = useState("");
   const [pickerSite, setPickerSite] = useState<string>("todas");
+  const [workers, setWorkers] = useState<Array<{ id: string; name: string; cpf?: string; role?: string; obraId?: string; workId?: string; site?: string; organograma?: string }>>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadWorkers() {
+      try {
+        const [workersSnap, funcionariosSnap] = await Promise.allSettled([
+          getDocs(collection(db, "workers")),
+          getDocs(collection(db, "funcionarios")),
+        ]);
+
+        const docs = [workersSnap, funcionariosSnap].flatMap((result) =>
+          result.status === "fulfilled" ? result.value.docs : [],
+        );
+
+        const nextWorkers = docs
+          .map((doc) => {
+            const data = doc.data() as Record<string, unknown>;
+            return {
+              id: doc.id,
+              name: String(data.name ?? data.nome ?? data.fullName ?? data.displayName ?? "").trim(),
+              cpf: typeof data.cpf === "string" ? data.cpf.trim() : "",
+              role: typeof data.role === "string" ? data.role.trim() : "",
+              obraId: typeof data.obraId === "string" ? data.obraId.trim() : "",
+              workId: typeof data.workId === "string" ? data.workId.trim() : "",
+              site: typeof data.site === "string" ? data.site.trim() : "",
+              organograma: typeof data.organograma === "string" ? data.organograma.trim() : "",
+            };
+          })
+          .filter((worker) => worker.id && worker.name);
+
+        if (!cancelled) setWorkers(nextWorkers);
+      } catch {
+        if (!cancelled) setWorkers([]);
+      }
+    }
+
+    void loadWorkers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const activeObraId = useMemo(() => {
+    if (payment?.obraId) return payment.obraId;
+    if (!payment) return null;
+    const byName = sites.find((site) => site.name === payment.descricao);
+    return byName?.id ?? null;
+  }, [payment, sites]);
+
+  const activeObraName = useMemo(() => {
+    if (payment?.obraNome) return payment.obraNome;
+    if (activeObraId) return sites.find((site) => site.id === activeObraId)?.name ?? payment?.descricao ?? "";
+    return payment?.descricao ?? "";
+  }, [payment, activeObraId, sites]);
 
   const availableEmployees = useMemo(() => {
     const used = new Set(payment?.entries.map((e) => e.employeeId) ?? []);
-    return employees
+    const filteredByObra = workers.filter((worker) => {
+      if (!activeObraId) return false;
+      const workerObraId = worker.workId || worker.obraId || "";
+      return workerObraId === activeObraId;
+    });
+
+    return filteredByObra
       .filter((e) => !used.has(e.id))
       .filter((e) => pickerSite === "todas" || e.site === pickerSite || e.organograma === pickerSite)
       .filter((e) =>
@@ -51,11 +120,11 @@ function RdvDetail() {
         e.id.includes(q),
       )
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [employees, payment, q]);
+  }, [payment, q, pickerSite, workers, activeObraId]);
 
   useEffect(() => {
-    if (payment) setPickerSite(payment.descricao || "todas");
-  }, [payment]);
+    if (payment) setPickerSite(activeObraName || "todas");
+  }, [payment, activeObraName]);
 
   if (!payment) {
     return (
@@ -99,6 +168,10 @@ function RdvDetail() {
   }
 
   function confirmAdd() {
+    if (!activeObraId) {
+      toast.error("Selecione uma obra primeiro");
+      return;
+    }
     if (picked.size === 0) {
       toast.error("Selecione ao menos um funcionário.");
       return;
@@ -140,21 +213,28 @@ function RdvDetail() {
           </Button>
           <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
             <DialogTrigger asChild>
-              <Button variant="secondary"><Plus className="mr-1 h-4 w-4" /> Adicionar funcionários</Button>
+              <Button variant="secondary" disabled={!activeObraId} title={!activeObraId ? "Selecione uma obra primeiro" : undefined}>
+                <Plus className="mr-1 h-4 w-4" /> Adicionar funcionários
+              </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
-                <DialogTitle>Selecionar funcionários</DialogTitle>
+                <DialogTitle>Selecionar funcionários{activeObraName ? ` — ${activeObraName}` : ""}</DialogTitle>
               </DialogHeader>
+              {!activeObraId && (
+                <p className="rounded-md border border-dashed border-muted-foreground/30 bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                  Selecione uma obra primeiro
+                </p>
+              )}
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-3">
                   <Label className="text-xs uppercase tracking-wider text-muted-foreground">Filtrar por obra</Label>
-                  <Select value={pickerSite} onValueChange={setPickerSite}>
+                  <Select value={pickerSite} onValueChange={setPickerSite} disabled={!activeObraId}>
                     <SelectTrigger className="w-[220px]"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="todas">Todas as obras</SelectItem>
-                      {Array.from(new Set(employees.map((e) => e.site).filter(Boolean))).map((s) => (
-                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                      {sites.map((s) => (
+                        <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -174,15 +254,20 @@ function RdvDetail() {
                   <Checkbox
                     checked={availableEmployees.length > 0 && availableEmployees.every((e) => picked.has(e.id))}
                     onCheckedChange={toggleAllVisible}
+                    disabled={!activeObraId}
                   />
                   Selecionar todos visíveis
                 </label>
                 <Badge variant="secondary">{picked.size} selecionado(s)</Badge>
               </div>
               <div className="max-h-[50vh] overflow-y-auto">
-                {availableEmployees.length === 0 ? (
+                {!activeObraId ? (
                   <p className="py-8 text-center text-sm text-muted-foreground">
-                    Nenhum funcionário disponível.
+                    Selecione uma obra primeiro
+                  </p>
+                ) : availableEmployees.length === 0 ? (
+                  <p className="py-8 text-center text-sm text-muted-foreground">
+                    Nenhum colaborador encontrado para esta obra
                   </p>
                 ) : (
                   <ul className="divide-y">
@@ -195,7 +280,7 @@ function RdvDetail() {
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold truncate">{e.name}</p>
                           <p className="text-xs text-muted-foreground truncate">
-                            #{e.id} · {e.cpf} · {e.role}
+                            #{e.id}{e.cpf ? ` · ${e.cpf}` : ""}{e.role ? ` · ${e.role}` : ""}
                           </p>
                         </div>
                       </li>

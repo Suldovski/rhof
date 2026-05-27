@@ -22,8 +22,8 @@ import {
 } from "@/components/ui/select";
 import { useAuth, authStore, type AppUser, useAllUsers } from "@/lib/auth-store";
 import { useHorarios, horariosStore, type Horario } from "@/lib/horarios-store";
-import type { Role } from "@/lib/permissions";
-import { isClienteObra } from "@/lib/permissions";
+import { isClienteObra, type UserType } from "@/lib/permissions";
+import { useWorks } from "@/lib/works";
 
 export const Route = createFileRoute("/configuracoes")({
   head: () => ({ meta: [{ title: "Configurações · Bucagrans RH" }] }),
@@ -181,7 +181,7 @@ function UsersPanel() {
                   </div>
                   <div>
                     <Badge variant="outline" className="border-accent/40 bg-accent/10 text-accent">
-                      {u.role}
+                      {u.type === "main" ? "Matriz" : (u.workName || u.workId || "Obra")}
                     </Badge>
                   </div>
                   <div>
@@ -232,23 +232,43 @@ function UsersPanel() {
 
 function UserFormDialog({ editing, onDone }: { editing: AppUser | null; onDone: () => void }) {
   const auth = useAuth();
+  const works = useWorks();
   const [name, setName] = useState(editing?.name ?? "");
   const [email, setEmail] = useState(editing?.email ?? "");
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [role, setRole] = useState<Role>(editing?.role ?? "rh_matriz");
+  const [seat, setSeat] = useState<string>(editing?.type === "work" ? (editing.workId ?? editing.obraId ?? "") : "main");
   const [loading, setLoading] = useState(false);
 
   const isCurrentUser = editing && editing.uid === auth.currentUserId;
+
+  useEffect(() => {
+    setName(editing?.name ?? "");
+    setEmail(editing?.email ?? "");
+    setPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setSeat(editing?.type === "work" ? (editing.workId ?? editing.obraId ?? "") : "main");
+  }, [editing]);
+
+  const selectedWork = seat === "main" ? null : works.find((work) => work.id === seat) ?? null;
+  const selectedType: UserType = seat === "main" ? "main" : "work";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
+      const payload = {
+        name,
+        email,
+        type: selectedType,
+        workId: selectedType === "work" ? (selectedWork?.id ?? seat) : null,
+        workName: selectedType === "work" ? (selectedWork?.name ?? null) : null,
+      };
+
       if (editing) {
-        // Update user info
-        await authStore.update(editing.uid, { name, email, role });
+        await authStore.update(editing.uid, payload);
 
         // Update password if current user and new password is provided
         if (isCurrentUser && newPassword) {
@@ -268,7 +288,7 @@ function UserFormDialog({ editing, onDone }: { editing: AppUser | null; onDone: 
           toast.success("Usuário atualizado.");
         }
       } else {
-        await authStore.create({ name, email, password, role });
+        await authStore.create({ name, email, password, ...payload });
         toast.success("Usuário criado.");
       }
       onDone();
@@ -349,16 +369,16 @@ function UserFormDialog({ editing, onDone }: { editing: AppUser | null; onDone: 
           </>
         )}
         <div>
-          <Label htmlFor="role">Perfil</Label>
-          <Select value={role} onValueChange={(value) => setRole(value as Role)}>
-            <SelectTrigger id="role">
-              <SelectValue />
+          <Label htmlFor="seat">Sede</Label>
+          <Select value={seat} onValueChange={setSeat}>
+            <SelectTrigger id="seat">
+              <SelectValue placeholder="Selecione a sede" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="rh_matriz">RH Matriz</SelectItem>
-              <SelectItem value="administrativo_matriz">Administrativo Matriz</SelectItem>
-              <SelectItem value="rh_obra">RH Obra</SelectItem>
-              <SelectItem value="operacional">Operacional</SelectItem>
+              <SelectItem value="main">Matriz</SelectItem>
+              {works.map((work) => (
+                <SelectItem key={work.id} value={work.id}>{work.name}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

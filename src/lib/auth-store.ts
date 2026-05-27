@@ -9,16 +9,15 @@ import {
 } from "firebase/auth";
 import { doc, getDoc, setDoc, collection, query, where, getDocs, deleteDoc, updateDoc } from "firebase/firestore";
 import { auth, db } from "./firebase";
-import type { Role } from "./permissions";
+import {
+  legacyRoleForUser,
+  normalizeUserRecord,
+  resolveUserType,
+  type AppUser,
+  type Role,
+} from "./permissions";
 
-export interface AppUser {
-  uid: string;
-  name: string;
-  email: string;
-  role: Role;
-  obraId?: string | null;
-  createdAt: string;
-}
+export type { AppUser } from "./permissions";
 
 interface AuthState {
   currentUser: AppUser | null;
@@ -32,8 +31,12 @@ const DEMO_USER: AppUser = {
   uid: "demo-user-001",
   name: "Demonstração",
   email: "demo@bucagrans.com.br",
+  type: "main",
   role: "rh_matriz",
+  workId: null,
+  workName: null,
   obraId: null,
+  obraNome: null,
   createdAt: new Date().toISOString(),
 };
 
@@ -61,6 +64,13 @@ function commit(next: AuthState) {
   listeners.forEach((l) => l());
 }
 
+function resolveUserDoc(uid: string, data: Record<string, any>, fallbackEmail = ""): AppUser {
+  return normalizeUserRecord(uid, data, {
+    email: fallbackEmail,
+    role: data.role,
+  });
+}
+
 // Initialize Firebase auth listener
 if (typeof window !== "undefined") {
   // Tentar localStorage primeiro (GitHub Pages demo)
@@ -84,14 +94,7 @@ if (typeof window !== "undefined") {
           const userData = userDocSnap.data();
           commit({
             ...state,
-            currentUser: {
-              uid: firebaseUser.uid,
-              name: userData.name || firebaseUser.displayName || "",
-              email: firebaseUser.email || "",
-              role: userData.role,
-              obraId: userData.obraId || null,
-              createdAt: userData.createdAt || new Date().toISOString(),
-            },
+            currentUser: resolveUserDoc(firebaseUser.uid, userData, firebaseUser.email || ""),
             loading: false,
             isLocalStorage: false,
           });
@@ -133,14 +136,7 @@ export const authStore = {
         
         if (userDocSnap.exists()) {
           const userData = userDocSnap.data();
-          const user: AppUser = {
-            uid: result.user.uid,
-            name: userData.name || result.user.displayName || "",
-            email: result.user.email || "",
-            role: userData.role,
-            obraId: userData.obraId || null,
-            createdAt: userData.createdAt || new Date().toISOString(),
-          };
+          const user = resolveUserDoc(result.user.uid, userData, result.user.email || "");
           commit({ ...state, currentUser: user, loading: false, isLocalStorage: false });
           return user;
         }
@@ -174,14 +170,7 @@ export const authStore = {
       const users: AppUser[] = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        users.push({
-          uid: doc.id,
-          name: data.name || "",
-          email: data.email || "",
-          role: data.role,
-          obraId: data.obraId || null,
-          createdAt: data.createdAt || new Date().toISOString(),
-        });
+        users.push(resolveUserDoc(doc.id, data));
       });
       // Salvar no localStorage também
       try {
@@ -221,8 +210,9 @@ export const authStore = {
     email: string;
     password?: string; // opcional para cliente
     name: string;
-    role: Role;
-    obraId?: string;
+    type: "main" | "work";
+    workId?: string | null;
+    workName?: string | null;
   }): Promise<AppUser | null> => {
     try {
       // Verificar se email já existe
@@ -238,12 +228,22 @@ export const authStore = {
       const password = data.password || Math.random().toString(36).slice(-16);
       const result = await createUserWithEmailAndPassword(auth, data.email, password);
 
+      const workId = data.type === "work" ? data.workId ?? null : null;
+      const workName = data.type === "work" ? data.workName ?? null : null;
+      const role = legacyRoleForUser(data.type, workId);
+
       // Salvar dados no Firestore
       const userData: Omit<AppUser, "uid"> = {
         name: data.name,
         email: data.email,
-        role: data.role,
-        obraId: data.obraId || null,
+        type: data.type,
+        workId,
+        workName,
+        role,
+        obraId: workId,
+        obraNome: workName,
+        sector: null,
+        headquarter: null,
         createdAt: new Date().toISOString(),
       };
 
@@ -269,7 +269,22 @@ export const authStore = {
   update: async (uid: string, patch: Partial<AppUser>): Promise<void> => {
     try {
       const userRef = doc(db, "usuarios", uid);
-      await updateDoc(userRef, patch as any);
+      const current = state.allUsers.find((user) => user.uid === uid) ?? state.currentUser;
+      const merged = normalizeUserRecord(uid, { ...(current as any), ...(patch as any) }, current ?? undefined);
+      const nextPayload: Omit<AppUser, "uid"> = {
+        name: merged.name ?? "",
+        email: merged.email ?? "",
+        type: resolveUserType(merged),
+        workId: merged.workId ?? null,
+        workName: merged.workName ?? null,
+        role: merged.role ?? legacyRoleForUser(resolveUserType(merged), merged.workId ?? null),
+        obraId: merged.workId ?? null,
+        obraNome: merged.workName ?? null,
+        sector: null,
+        headquarter: null,
+        createdAt: merged.createdAt ?? new Date().toISOString(),
+      };
+      await updateDoc(userRef, nextPayload as any);
       // Atualizar lista de usuários
       await authStore.fetchAllUsers();
     } catch (error) {

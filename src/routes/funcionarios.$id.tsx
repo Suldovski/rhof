@@ -36,7 +36,7 @@ import { fetchCep } from "@/lib/cep";
 import { downloadFRE } from "@/lib/fre-pdf";
 import { dismissalsStore } from "@/lib/dismissals-store";
 import { authStore, useAuth } from "@/lib/auth-store";
-import { isClienteObra } from "@/lib/permissions";
+import { useRouteProtection, roleChecks } from "@/lib/route-protection";
 
 export const Route = createFileRoute("/funcionarios/$id")({
   head: ({ params }) => ({ meta: [{ title: `Funcionário #${params.id} · Bucagrans RH` }] }),
@@ -57,18 +57,11 @@ function Detail() {
   const e = useEmployee(id);
   const navigate = useNavigate();
   const auth = useAuth();
+  useRouteProtection(roleChecks.funcionarios, "Funcionários");
   const [confirmDel, setConfirmDel] = useState(false);
   const [editing, setEditing] = useState(false);
   const [trocaOpen, setTrocaOpen] = useState(false);
   const [demOpen, setDemOpen] = useState(false);
-
-  // Redirect cliente_obra - they can't access employee details
-  useEffect(() => {
-    if (isClienteObra(auth.currentUser?.role)) {
-      toast.error("Você não tem permissão para acessar funcionários.");
-      navigate({ to: "/" });
-    }
-  }, [auth.currentUser?.role, navigate]);
 
   if (!e) {
     return (

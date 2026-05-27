@@ -15,123 +15,177 @@ export type Role =
   | "financeiro_matriz"
   | string; // rh_obra_<obraId> or cliente_obra_<obraId>
 
+export type UserType = "main" | "work";
+
 export interface AppUser {
   uid: string;
   nome?: string;
   name?: string;
   email: string;
-  role: Role;
+  type: UserType;
+  workId?: string | null;
+  workName?: string | null;
+  role?: Role;
   obraId?: string | null;
+  obraNome?: string | null;
+  sector?: string | null;
+  headquarter?: string | null;
   createdAt?: string;
 }
+
+type UserLike = AppUser | Role | null | undefined;
+
+export function resolveUserType(userLike?: UserLike): UserType {
+  if (!userLike) return "main";
+  if (typeof userLike === "string") {
+    if (
+      userLike === "work" ||
+      userLike.startsWith("rh_obra_") ||
+      userLike.startsWith("cliente_obra_")
+    ) {
+      return "work";
+    }
+    return "main";
+  }
+
+  if (userLike.type === "main" || userLike.type === "work") {
+    return userLike.type;
+  }
+
+  if (userLike.workId || userLike.obraId || userLike.workName || userLike.obraNome) {
+    return "work";
+  }
+
+  return resolveUserType(userLike.role);
+}
+
+export const isMainUser = (userLike?: UserLike) => resolveUserType(userLike) === "main";
+export const isWorkUser = (userLike?: UserLike) => resolveUserType(userLike) === "work";
+
+export const getUserWorkId = (user?: AppUser | null) => user?.workId ?? user?.obraId ?? null;
+export const getUserWorkName = (user?: AppUser | null) => user?.workName ?? user?.obraNome ?? null;
+
+export const legacyRoleForUser = (type: UserType, workId?: string | null): Role => {
+  if (type === "work") return `rh_obra_${workId ?? "obra"}`;
+  return "rh_matriz";
+};
+
+export const normalizeUserRecord = (
+  uid: string,
+  data: Record<string, any>,
+  fallback?: Partial<AppUser>,
+): AppUser => {
+  const type = resolveUserType(data.type ?? data.role ?? fallback?.type);
+  const workId = (data.workId ?? data.obraId ?? fallback?.workId ?? fallback?.obraId ?? null) as string | null;
+  const workName = (data.workName ?? data.obraNome ?? fallback?.workName ?? fallback?.obraNome ?? null) as string | null;
+  const role = (typeof data.role === "string" && data.role) ? data.role : legacyRoleForUser(type, workId);
+
+  return {
+    uid,
+    name: data.name ?? data.nome ?? fallback?.name ?? fallback?.nome ?? "",
+    email: data.email ?? fallback?.email ?? "",
+    type,
+    workId,
+    workName,
+    role,
+    obraId: workId,
+    obraNome: workName,
+    sector: data.sector ?? fallback?.sector ?? null,
+    headquarter: data.headquarter ?? fallback?.headquarter ?? null,
+    createdAt: data.createdAt ?? fallback?.createdAt ?? new Date().toISOString(),
+  };
+};
 
 // ============================================================================
 // HELPERS: Role classification
 // ============================================================================
 
-export const isMatrizProfile = (role?: Role) =>
-  role === "rh_matriz" || 
-  role === "administrativo_matriz" || 
-  role === "financeiro_matriz";
+export const isMatrizProfile = (userLike?: UserLike) => isMainUser(userLike);
 
-export const isRhMatriz = (role?: Role) => role === "rh_matriz";
+export const isRhMatriz = (userLike?: UserLike) => isMainUser(userLike);
 
-export const isAdministrativoMatriz = (role?: Role) => role === "administrativo_matriz";
+export const isAdministrativoMatriz = (userLike?: UserLike) => isMainUser(userLike);
 
-export const isFinanceiroMatriz = (role?: Role) => role === "financeiro_matriz";
+export const isFinanceiroMatriz = (userLike?: UserLike) => isMainUser(userLike);
 
-export const isRhObra = (role?: Role) =>
-  !!role && role.startsWith("rh_obra_");
+export const isRhObra = (userLike?: UserLike) => isWorkUser(userLike);
 
-export const isClienteObra = (role?: Role) =>
-  !!role && role.startsWith("cliente_obra_");
+export const isClienteObra = (userLike?: UserLike) => {
+  const role = typeof userLike === "string" ? userLike : userLike?.role;
+  return !!role && role.startsWith("cliente_obra_");
+};
 
-export const isFinanceiro = (role?: Role) => isFinanceiroMatriz(role);
+export const isFinanceiro = (userLike?: UserLike) => isFinanceiroMatriz(userLike);
 
 // ============================================================================
 // PAGE ACCESS: Determine visibility
 // ============================================================================
 
 /** Pode acessar página Painel? Todos menos cliente de obra. */
-export const canAccessPainel = (role?: Role) => 
-  !isClienteObra(role);
+export const canAccessPainel = (userLike?: UserLike) => !isClienteObra(userLike);
 
 /** Pode acessar página Funcionários? Apenas RH matriz, administrativo_matriz e financeiro_matriz. RH_obra NÃO acessa. */
-export const canAccessFuncionarios = (role?: Role) => 
-  isRhMatriz(role) || isAdministrativoMatriz(role) || isFinanceiroMatriz(role);
+export const canAccessFuncionarios = (userLike?: UserLike) => isMainUser(userLike);
 
 /** Pode EDITAR funcionários? Não se for financeiro. Apenas RH matriz e administrativo podem. RH obra NÃO edita. */
-export const canEditFuncionarios = (role?: Role) => 
-  isRhMatriz(role) || isAdministrativoMatriz(role);
+export const canEditFuncionarios = (userLike?: UserLike) => isMainUser(userLike);
 
 /** Pode acessar página Obras? Todos. Para rh_obra aparece apenas a sua. */
-export const canAccessObras = (role?: Role) => 
-  !isClienteObra(role) || isClienteObra(role); // true para todos
+export const canAccessObras = (_userLike?: UserLike) => true;
 
 /** Pode acessar página Folha Salarial? RH_matriz, administrativo_matriz, financeiro_matriz e rh_obra. */
-export const canAccessFolhaSalarial = (role?: Role) =>
-  isRhMatriz(role) || isAdministrativoMatriz(role) || isFinanceiroMatriz(role) || isRhObra(role);
+export const canAccessFolhaSalarial = (userLike?: UserLike) =>
+  isMainUser(userLike) || isRhObra(userLike);
 
 /** Pode EDITAR Folha Salarial? Não se for financeiro. */
-export const canEditFolhaSalarial = (role?: Role) =>
-  isRhMatriz(role) || isAdministrativoMatriz(role);
+export const canEditFolhaSalarial = (userLike?: UserLike) => isMainUser(userLike);
 
 /** Pode acessar página Horas Extras? Apenas perfis de matriz e rh_obra. Financeiro não edita. */
-export const canAccessHorasExtras = (role?: Role) =>
-  isMatrizProfile(role) || isRhObra(role);
+export const canAccessHorasExtras = (userLike?: UserLike) => isMainUser(userLike);
 
 /** Pode EDITAR Horas Extras? Não se for financeiro. */
-export const canEditHorasExtras = (role?: Role) =>
-  isRhMatriz(role) || isAdministrativoMatriz(role);
+export const canEditHorasExtras = (userLike?: UserLike) => isMainUser(userLike);
 
 /** Pode acessar página RDV? Apenas rh_matriz, administrativo_matriz, financeiro_matriz e rh_obra. */
-export const canAccessRDV = (role?: Role) =>
-  isRhMatriz(role) || isAdministrativoMatriz(role) || isFinanceiroMatriz(role) || isRhObra(role);
+export const canAccessRDV = (userLike?: UserLike) => isMainUser(userLike);
 
 /** Pode EDITAR RDV? Não se for financeiro. */
-export const canEditRDV = (role?: Role) =>
-  isRhMatriz(role) || isAdministrativoMatriz(role);
+export const canEditRDV = (userLike?: UserLike) => isMainUser(userLike);
 
 /** Pode acessar página Documentos? Todos menos cliente de obra. Para rh_obra aparecem apenas os da sua obra. */
-export const canAccessDocumentos = (role?: Role) =>
-  !isClienteObra(role) || isClienteObra(role); // true para todos
+export const canAccessDocumentos = (_userLike?: UserLike) => true;
 
 /** Pode EDITAR Documentos? RH pode, financeiro não. Cliente não. */
-export const canEditDocumentos = (role?: Role) =>
-  isRhMatriz(role) || isAdministrativoMatriz(role) || isRhObra(role);
+export const canEditDocumentos = (userLike?: UserLike) => isMainUser(userLike) || isRhObra(userLike);
 
 /** Pode acessar página Demissões? Apenas rh_matriz, administrativo_matriz e rh_obra. */
-export const canAccessDemissoes = (role?: Role) =>
-  isRhMatriz(role) || isAdministrativoMatriz(role) || isRhObra(role);
+export const canAccessDemissoes = (userLike?: UserLike) => isMainUser(userLike) || isRhObra(userLike);
 
 /** Pode APROVAR demissão? Apenas rh_matriz. */
-export const canApproveDemissoes = (role?: Role) =>
-  isRhMatriz(role);
+export const canApproveDemissoes = (userLike?: UserLike) => isMainUser(userLike);
 
 /** Pode criar/editar demissão? RH pode. */
-export const canEditDemissoes = (role?: Role) =>
-  isRhMatriz(role) || isAdministrativoMatriz(role) || isRhObra(role);
+export const canEditDemissoes = (userLike?: UserLike) => isMainUser(userLike) || isRhObra(userLike);
 
 /** Pode acessar uma obra específica? */
 export const canAccessObra = (user: AppUser | null, obraId: string) => {
   if (!user) return false;
-  if (isMatrizProfile(user.role)) return true;
-  if (isRhObra(user.role)) return user.obraId === obraId;
+  if (isMainUser(user)) return true;
+  if (isWorkUser(user)) return getUserWorkId(user) === obraId;
   if (isClienteObra(user.role)) return user.obraId === obraId;
   return false;
 };
 
 /** Pode ver todos os funcionários da obra ou apenas os da sua? */
-export const shouldFilterObra = (role?: Role, obraId?: string) => {
-  if (isMatrizProfile(role)) return false; // vê todos
-  if (isRhObra(role)) return true; // filtra pela sua obra
-  if (isClienteObra(role)) return true; // filtra pela sua obra
+export const shouldFilterObra = (userLike?: UserLike, obraId?: string) => {
+  if (isMainUser(userLike)) return false;
+  if (isWorkUser(userLike)) return true;
+  if (isClienteObra(userLike)) return true;
   return false;
 };
 
 /** Pode ver salário? Cliente de obra não pode. */
-export const canViewSalary = (role?: Role) => 
-  !isClienteObra(role);
+export const canViewSalary = (userLike?: UserLike) => !isClienteObra(userLike);
 
 /** Gera o cargo dinâmico para o RH de uma obra recém-criada. */
 export const roleForRhObra = (obraId: string) => `rh_obra_${obraId}`;

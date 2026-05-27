@@ -25,6 +25,7 @@ import { rdvStore, useRdvPayments } from "@/lib/rdv-store";
 import { listarObras, type Obra } from "@/lib/obras";
 import { useAuth } from "@/lib/auth-store";
 import { isRhObra, getObraIdFromRhObra } from "@/lib/permissions";
+import { useRouteProtection, roleChecks } from "@/lib/route-protection";
 
 export const Route = createFileRoute("/rdv")({
   head: () => ({ meta: [{ title: "RDV · Bucagrans RH" }] }),
@@ -43,6 +44,7 @@ function fmtDate(iso: string) {
 function RdvIndex() {
   const payments = useRdvPayments();
   const auth = useAuth();
+  useRouteProtection(roleChecks.rdv, "RDV");
   const [open, setOpen] = useState(false);
   const [data, setData] = useState(new Date().toISOString().slice(0, 10));
   const [obraId, setObraId] = useState("");
@@ -70,11 +72,11 @@ function RdvIndex() {
     if (isRhObra(auth.currentUser?.role)) {
       const oid = getObraIdFromRhObra(auth.currentUser!.role);
       const obra = obras.find((o) => o.id === oid);
-      return payments.filter((p) => p.descricao === obra?.nome);
+      return payments.filter((p) => p.obraId === oid || p.descricao === obra?.nome);
     }
     if (filterObra !== "todas") {
       const obra = obras.find((o) => o.id === filterObra);
-      return payments.filter((p) => p.descricao === obra?.nome);
+      return payments.filter((p) => p.obraId === filterObra || p.descricao === obra?.nome);
     }
     return payments;
   }, [payments, auth.currentUser?.role, obras, filterObra]);
@@ -94,8 +96,8 @@ function RdvIndex() {
       toast.error("Selecione a obra.");
       return;
     }
-    const obraNome = obras.find((o) => o.id === obraId)?.nome || "";
-    const p = rdvStore.create(data, obraNome);
+    const obra = obras.find((o) => o.id === obraId);
+    const p = rdvStore.create(data, obra?.nome || "", obra ? { id: obra.id, nome: obra.nome } : undefined);
     toast.success("Dia de pagamento criado.");
     setOpen(false);
     if (!isRhObra(auth.currentUser?.role)) setObraId("");
