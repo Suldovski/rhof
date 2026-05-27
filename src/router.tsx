@@ -8,9 +8,8 @@ export const getRouter = () => {
   const router = createRouter({
     routeTree,
     context: { queryClient },
-    history: typeof document === "undefined" ? undefined : createHashHistory({
-      basename: "/rhof",
-    }),
+    // Use a plain hash history; Vite base already handles the /rhof prefix.
+    history: typeof document === "undefined" ? undefined : createHashHistory(),
     scrollRestoration: true,
     defaultPreloadStaleTime: 0,
   });
