@@ -1,4 +1,6 @@
 import { useSyncExternalStore } from "react";
+import { db } from "./firebase";
+import { collection, getDocs, onSnapshot, setDoc, doc, updateDoc, deleteDoc, addDoc } from "firebase/firestore";
 
 export interface Site {
   id: string;
@@ -28,6 +30,35 @@ let state: Site[] = (() => {
   return seed;
 })();
 
+// Try to sync with Firestore on clients. If Firestore is reachable, prefer its data as
+// source of truth and subscribe to real-time updates. Do not throw if network/rules
+// prevent access — keep local fallback.
+if (typeof window !== "undefined") {
+  (async () => {
+    try {
+      const col = collection(db, "obras");
+      // initial load
+      const snap = await getDocs(col);
+      if (!snap.empty) {
+        const remote = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+        state = remote as Site[];
+        try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {}
+        listeners.forEach((l) => l());
+      }
+      // subscribe to changes
+      onSnapshot(col, (snapshot) => {
+        const remote = snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+        state = remote as Site[];
+        try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {}
+        listeners.forEach((l) => l());
+      });
+    } catch (err) {
+      // fail silently and keep local seed/state
+      // console.warn('sites-store: Firestore sync failed', err);
+    }
+  })();
+}
+
 const listeners = new Set<() => void>();
 
 function commit(next: Site[]) {
@@ -54,15 +85,27 @@ export const sitesStore = {
     const id = site.id || slugify(site.name) || `obra-${Date.now()}`;
     const newSite: Site = { ...site, id };
     commit([...state, newSite]);
+    // Try to persist to Firestore; do it asynchronously but don't block the UI.
+    try {
+      setDoc(doc(db, "obras", id), { name: newSite.name, status: newSite.status, start: newSite.start, manager: newSite.manager, address: newSite.address ?? null, description: newSite.description ?? null }).catch(() => {});
+    } catch (e) {
+      // ignore
+    }
     // Dispara listeners sincronamente para garantir que a nova obra aparece imediatamente
     listeners.forEach((l) => l());
     return id;
   },
   update: (id: string, patch: Partial<Site>) => {
     commit(state.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+    try {
+      updateDoc(doc(db, "obras", id), patch as any).catch(() => {});
+    } catch (e) {}
   },
   remove: (id: string) => {
     commit(state.filter((s) => s.id !== id));
+    try {
+      deleteDoc(doc(db, "obras", id)).catch(() => {});
+    } catch (e) {}
   },
 };
 

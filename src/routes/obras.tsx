@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { HardHat, Users, Calendar, Plus, Pencil, Trash2, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { employees } from "@/lib/employees";
 import { sitesStore, useSites, type Site } from "@/lib/sites-store";
+import { criarObra } from "@/lib/obras";
 import { useAuth } from "@/lib/auth-store";
 import { isClienteObra, getObraIdFromClienteObra } from "@/lib/permissions";
 
@@ -34,6 +35,7 @@ const statusOptions = ["Planejamento", "Fundação", "Estrutura", "Acabamento", 
 function Obras() {
   const sites = useSites();
   const auth = useAuth();
+  const navigate = useNavigate();
   const [editing, setEditing] = useState<Site | null>(null);
   const [creating, setCreating] = useState(false);
   const [removeId, setRemoveId] = useState<string | null>(null);
@@ -157,10 +159,26 @@ function Obras() {
           <SiteFormDialog
             open={creating}
             onOpenChange={setCreating}
-            onSubmit={(data) => {
-              sitesStore.add(data);
-              toast.success("Obra cadastrada.");
+            onSubmit={async (data) => {
+              // adiciona localmente para mostrar imediatamente na UI e gerar o slug id
+              const id = sitesStore.add(data);
+              try {
+                // cria no Firestore usando o mesmo id para garantir que o cargo dinâmico
+                // (rh_obra_<id>) seja gerado com a mesma chave
+                await criarObra(data.name, id);
+                toast.success("Obra cadastrada.");
+              } catch (err) {
+                // se falhar no backend, ainda mantemos a obra localmente
+                console.error("Erro criando obra no Firestore:", err);
+                toast.error("Obra cadastrada localmente, falha ao persistir no servidor.");
+              }
               setCreating(false);
+              // redireciona automaticamente para a página da obra criada
+              try {
+                navigate({ to: "/obras/$id", params: { id } });
+              } catch (e) {
+                // ignore navigation errors
+              }
             }}
           />
           <SiteFormDialog

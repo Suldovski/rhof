@@ -8,7 +8,7 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import { roleForRhObra, isMatrizProfile, type AppUser } from "./permissions";
+import { roleForRhObra, roleForClienteObra, isMatrizProfile, type AppUser } from "./permissions";
 
 export interface Obra {
   id: string;
@@ -20,16 +20,36 @@ export interface Obra {
  * Cria uma obra e já registra o cargo dinâmico rh_<obraId> em /cargos.
  * Esse cargo poderá ser atribuído a usuários do RH dessa obra.
  */
-export async function criarObra(nome: string) {
-  const ref = await addDoc(collection(db, "obras"), { nome });
-  const obraId = ref.id;
-  const role = roleForRhObra(obraId);
-  await setDoc(doc(db, "cargos", role), {
-    role,
+/**
+ * Cria uma obra no Firestore. Se um `id` for passado, usa esse id (útil para
+ * manter sincronização com o `sitesStore` que já gera o slug localmente).
+ */
+export async function criarObra(nome: string, id?: string) {
+  let obraId: string;
+  if (id) {
+    // grava com o id informado
+    await setDoc(doc(db, "obras", id), { nome });
+    obraId = id;
+  } else {
+    const ref = await addDoc(collection(db, "obras"), { nome });
+    obraId = ref.id;
+  }
+
+  const rhRole = roleForRhObra(obraId);
+  await setDoc(doc(db, "cargos", rhRole), {
+    role: rhRole,
     obraId,
     descricao: `RH da obra ${nome}`,
   });
-  return { id: obraId, role };
+
+  const clienteRole = roleForClienteObra(obraId);
+  await setDoc(doc(db, "cargos", clienteRole), {
+    role: clienteRole,
+    obraId,
+    descricao: `Cliente da obra ${nome}`,
+  });
+
+  return { id: obraId, role: rhRole, clienteRole };
 }
 
 export async function listarObras(user: AppUser | null): Promise<Obra[]> {
