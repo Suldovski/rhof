@@ -90,16 +90,19 @@ function CreateUserDialog({ obras }: { obras: Obra[] }) {
         return;
       }
 
-      const roleConfig = role.startsWith("rh_obra_") || role.startsWith("cliente_obra_") 
-        ? role 
-        : role;
+      // Determine final role string: for obra-scoped roles build dynamic role
+      let roleConfig = role;
+      if ((role === "rh_obra" || role === "cliente_obra") && obraId) {
+        // build dynamic role string expected by permissions helpers
+        roleConfig = role === "rh_obra" ? `rh_obra_${obraId}` : `cliente_obra_${obraId}`;
+      }
 
-      await authStore.create({ 
-        name, 
-        email, 
-        password, 
+      await authStore.create({
+        name,
+        email,
+        password,
         role: roleConfig,
-        obraId: (roleConfig.startsWith("rh_obra_") || roleConfig.startsWith("cliente_obra_")) ? obraId : undefined,
+        obraId: roleConfig.startsWith("rh_obra_") || roleConfig.startsWith("cliente_obra_") ? obraId : undefined,
       });
       toast.success("Usuário criado.");
       setOpen(false);
@@ -113,7 +116,7 @@ function CreateUserDialog({ obras }: { obras: Obra[] }) {
     }
   };
 
-  const needsObra = role.startsWith("rh_obra_") || role.startsWith("cliente_obra_");
+  const needsObra = role === "rh_obra" || role === "cliente_obra";
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -157,9 +160,9 @@ function CreateUserDialog({ obras }: { obras: Obra[] }) {
               <Select value={obraId} onValueChange={setObraId}>
                 <SelectTrigger><SelectValue placeholder="Selecione uma obra" /></SelectTrigger>
                 <SelectContent>
-                  {obras.map((o) => (
-                    <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>
-                  ))}
+                    {obras.map((o) => (
+                      <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
