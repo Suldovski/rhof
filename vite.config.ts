@@ -15,6 +15,7 @@ export default defineConfig({
       // Ajustado para o subdiretório do GitHub Pages
       base: "/rhof/", 
     },
+    ssr: false,
     spa: {
       enabled: true,
       prerender: {

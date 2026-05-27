@@ -112,7 +112,7 @@ function RootComponent() {
 
   if (auth.loading && !isLogin) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center" suppressHydrationWarning>
         <p className="text-sm text-muted-foreground">Carregando...</p>
       </div>
     );

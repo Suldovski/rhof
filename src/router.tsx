@@ -8,7 +8,9 @@ export const getRouter = () => {
   const router = createRouter({
     routeTree,
     context: { queryClient },
-    history: typeof document === "undefined" ? undefined : createHashHistory(),
+    history: typeof document === "undefined" ? undefined : createHashHistory({
+      basename: "/rhof",
+    }),
     scrollRestoration: true,
     defaultPreloadStaleTime: 0,
   });
