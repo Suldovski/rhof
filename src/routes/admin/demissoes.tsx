@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { dismissalsStore, useDismissals } from "@/lib/dismissals-store";
 import { employeesStore } from "@/lib/employees";
 import { useAuth } from "@/lib/auth-store";
-import { isRhMatriz, isRhObra } from "@/lib/permissions";
+import { isRhMatriz, isRhObra, getUserWorkName } from "@/lib/permissions";
 
 export const Route = createFileRoute("/admin/demissoes")({
   head: () => ({ meta: [{ title: "Demissões · Bucagrans RH" }] }),
@@ -24,7 +24,11 @@ function AdminDemissoes() {
   // Filter dismissals based on user role
   const filteredItems = items.filter((d) => {
     if (isRhMatriz(currentUser?.role)) return true; // RH Matriz sees all
-    if (isRhObra(currentUser?.role)) return d.site === currentUser?.name; // RH Obra sees only their obra
+    if (isRhObra(currentUser?.role)) {
+      // RH Obra should only see resolved history for their own obra
+      const workName = getUserWorkName(currentUser as any);
+      return (!!workName && d.site === workName && d.status !== "pendente");
+    }
     return false;
   });
 

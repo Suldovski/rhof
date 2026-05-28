@@ -64,10 +64,7 @@ const getOpsMenuItems = (user?: any) => {
     if (Permissions.canAccessFolhaSalarial(user?.role)) items.push({ title: "Folha Salarial", url: "/folha-salarial", icon: Wallet });
     // Documentos
     if (Permissions.canAccessDocumentos(user?.role)) items.push({ title: "Documentos", url: "/documentos", icon: FileText });
-    // Demissões
-    if (Permissions.canAccessDemissoes(user?.role)) items.push({ title: "Demissões", url: "/demissoes", icon: UserMinus });
-    // Configurações
-    items.push({ title: "Configurações", url: "/configuracoes", icon: Settings });
+    // Note: Demissões and Configurações intentionally hidden for obra users per hierarchy rules
     return items;
   }
 
@@ -166,7 +163,7 @@ export function AppSidebar() {
 
       <SidebarFooter className="border-t border-sidebar-border">
         <SidebarMenu>
-          {Permissions.canAccessDemissoes(role) && (
+          {Permissions.isRhMatriz(role) && (
             <AdminDemissoesItem />
           )}
           <SidebarMenuItem>
