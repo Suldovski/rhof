@@ -300,40 +300,51 @@ function List() {
       eyebrow="Quadro de pessoal"
       title="Funcionários"
       description={`${employees.length} colaboradores cadastrados em ${sites.length} canteiros.`}
-      actions={
-        <>
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".xlsx,.xls,.csv"
-            className="hidden"
-            onChange={async (e) => {
-              const f = e.target.files?.[0];
-              if (!f) return;
-              try { await importFromFile(f); }
-              catch (err: any) { toast.error("Falha ao importar: " + (err?.message ?? err)); }
-              if (fileRef.current) fileRef.current.value = "";
-            }}
-          />
-          <Button variant="outline" onClick={() => fileRef.current?.click()}>
-            <Upload className="mr-1 h-4 w-4" /> Importar planilha
-          </Button>
-          <Button variant="outline" onClick={() => exportCSV(filtered)}>
-            <Download className="mr-1 h-4 w-4" /> Exportar CSV
-          </Button>
-          <Button asChild>
-            <Link to="/funcionarios/novo">
-              <Plus className="mr-1 h-4 w-4" /> Novo
-            </Link>
-          </Button>
-                        <Button variant="outline" className="text-destructive" onClick={() => {
-                if (!confirm(`Apagar todos os funcionários de ${obra.name}?`)) return;
-                employeesStore.removeAllFromSite(obra.name);
-                toast.success("Funcionários apagados.");
-              }}>
-                Apagar todos
-              </Button>
-        </>
+     actions={
+  <>
+    <input
+      ref={fileRef}
+      type="file"
+      accept=".xlsx,.xls,.csv"
+      className="hidden"
+      onChange={async (e) => {
+        const f = e.target.files?.[0];
+        if (!f) return;
+        try { await importFromFile(f); }
+        catch (err: any) { toast.error("Falha ao importar: " + (err?.message ?? err)); }
+        if (fileRef.current) fileRef.current.value = "";
+      }}
+    />
+    <Button variant="outline" onClick={() => fileRef.current?.click()}>
+      <Upload className="mr-1 h-4 w-4" /> Importar planilha
+    </Button>
+    <Button variant="outline" onClick={() => exportCSV(filtered)}>
+      <Download className="mr-1 h-4 w-4" /> Exportar CSV
+    </Button>
+    <Button asChild>
+      <Link to="/funcionarios/novo">
+        <Plus className="mr-1 h-4 w-4" /> Novo
+      </Link>
+    </Button>
+    <Button 
+      variant="outline" 
+      className="text-destructive" 
+      onClick={() => {
+        if (!confirm("Apagar TODOS os funcionários? Esta ação não pode ser desfeita!")) return;
+        const allEmployees = employeesStore.list();
+        allEmployees.forEach(emp => {
+          try {
+            employeesStore.remove(emp.id);
+          } catch (err) {
+            console.error(`Erro ao remover ${emp.id}:`, err);
+          }
+        });
+        toast.success("Todos os funcionários foram apagados.");
+      }}
+    >
+      Apagar todos
+    </Button>
+  </>
       }
     >
       <Card className="mb-4 flex flex-wrap items-center gap-3 p-4">
