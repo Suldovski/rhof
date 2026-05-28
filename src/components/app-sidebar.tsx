@@ -170,14 +170,6 @@ export function AppSidebar() {
             <AdminDemissoesItem />
           )}
           <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <Link to="/configuracoes">
-                <Settings className="h-4 w-4" />
-                <span>Configurações</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
             <Button
               onClick={handleLogout}
               variant="ghost"
