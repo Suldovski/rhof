@@ -6,7 +6,7 @@ import { PageShell } from "@/components/page-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
-import { employees } from "@/lib/employees";
+import { useEmployees } from "@/lib/employees";
 import { useAuth } from "@/lib/auth-store";
 import { useRouteProtection, roleChecks } from "@/lib/route-protection";
 
@@ -16,6 +16,7 @@ export const Route = createFileRoute("/funcionarios/ferias")({
 });
 
 function Ferias() {
+  const employees = useEmployees();
   const list = employees.filter((e) => e.status === "ferias");
   const auth = useAuth();
   const navigate = useNavigate();

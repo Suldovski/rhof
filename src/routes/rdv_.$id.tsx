@@ -104,7 +104,28 @@ function RdvDetail() {
 
   const availableEmployees = useMemo(() => {
     const used = new Set(payment?.entries.map((e) => e.employeeId) ?? []);
-    const filteredByObra = workers.filter((worker) => {
+
+    const localWorkers = employees.map((emp) => {
+      const siteMatch = sites.find((s) => s.name === (emp.site || emp.organograma));
+      const obraId = siteMatch ? siteMatch.id : "";
+      return {
+        id: emp.id,
+        name: emp.name,
+        cpf: emp.cpf,
+        role: emp.role || emp.cargoFuncao,
+        obraId,
+        workId: obraId,
+        site: emp.site,
+        organograma: emp.organograma,
+      };
+    });
+
+    const combined = [...workers];
+    for (const lw of localWorkers) {
+      if (!combined.find((c) => c.id === lw.id)) combined.push(lw as any);
+    }
+
+    const filteredByObra = combined.filter((worker) => {
       if (!activeObraId) return false;
       const workerObraId = worker.workId || worker.obraId || "";
       return workerObraId === activeObraId;

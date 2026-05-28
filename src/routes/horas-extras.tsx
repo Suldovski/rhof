@@ -179,7 +179,30 @@ function HorasExtras() {
   const availableEmployees = useMemo(() => {
     if (!active) return [];
     const used = new Set(active.entries.map((e) => e.employeeId));
-    const matchedWorkers = firestoreWorkers.filter((worker) => {
+    // Combine Firestore workers with local employees as a fallback/augmentation.
+    const localWorkers = employees.map((emp) => {
+      const siteMatch = sites.find((s) => s.name === (emp.site || emp.organograma));
+      const obraId = siteMatch ? siteMatch.id : "";
+      return {
+        id: emp.id,
+        name: emp.name,
+        cpf: emp.cpf,
+        role: emp.role || emp.cargoFuncao,
+        salary: emp.salary,
+        salarioHora: emp.salarioHora,
+        obraId,
+        workId: obraId,
+        site: emp.site,
+        organograma: emp.organograma,
+      } as WorkerOption;
+    });
+
+    const combined = [...firestoreWorkers];
+    for (const lw of localWorkers) {
+      if (!combined.find((c) => c.id === lw.id)) combined.push(lw);
+    }
+
+    const matchedWorkers = combined.filter((worker) => {
       const workerObraId = pickWorkerObraId(worker);
       return !activeObraId || workerObraId === activeObraId;
     });
@@ -339,7 +362,7 @@ function HorasExtras() {
                   <Badge variant="secondary">{picked.size} selecionado(s)</Badge>
                 </div>
                 <div className="max-h-[50vh] overflow-y-auto">
-                  {firestoreWorkers.filter((worker) => !activeObraId || pickWorkerObraId(worker) === activeObraId).length === 0 ? (
+                  {combined.filter((worker) => !activeObraId || pickWorkerObraId(worker) === activeObraId).length === 0 ? (
                     <p className="py-8 text-center text-sm text-muted-foreground">
                       Nenhum colaborador encontrado para esta obra
                     </p>

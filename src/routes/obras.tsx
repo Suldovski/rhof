@@ -19,7 +19,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { employees } from "@/lib/employees";
+import { useEmployees } from "@/lib/employees";
 import { sitesStore, useSites, type Site } from "@/lib/sites-store";
 import { criarObra } from "@/lib/obras";
 import { useAuth } from "@/lib/auth-store";
@@ -102,6 +102,7 @@ function resolveResponsibleName(rawValue: unknown, lookup: Map<string, string>):
 function Obras() {
   const sites = useSites();
   const auth = useAuth();
+  const employees = useEmployees();
   const navigate = useNavigate();
   const [editing, setEditing] = useState<Site | null>(null);
   const [creating, setCreating] = useState(false);
