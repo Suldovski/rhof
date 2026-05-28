@@ -7,6 +7,7 @@ import {
   User as FirebaseUser,
   updatePassword,
   getAuth as getAuthForApp,
+  sendPasswordResetEmail,
 } from "firebase/auth";
 import { initializeApp as initializeFirebaseApp, deleteApp } from "firebase/app";
 import { doc, getDoc, setDoc, collection, query, where, getDocs, deleteDoc, updateDoc } from "firebase/firestore";
@@ -343,6 +344,18 @@ export const authStore = {
       await updatePassword(firebaseUser, newPassword);
     } catch (error) {
       console.error("Update password error:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Envia e-mail de redefinição de senha para qualquer usuário.
+   */
+  sendPasswordReset: async (email: string): Promise<void> => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+    } catch (error) {
+      console.error("Password reset email error:", error);
       throw error;
     }
   },

@@ -250,6 +250,7 @@ function UserFormDialog({ editing, onDone }: { editing: AppUser | null; onDone: 
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [resetSent, setResetSent] = useState(false);
   const [seat, setSeat] = useState<string>(editing?.type === "work" ? (editing.workId ?? editing.obraId ?? "") : "main");
   const [loading, setLoading] = useState(false);
 
@@ -261,6 +262,7 @@ function UserFormDialog({ editing, onDone }: { editing: AppUser | null; onDone: 
     setPassword("");
     setNewPassword("");
     setConfirmPassword("");
+    setResetSent(false);
     setSeat(editing?.type === "work" ? (editing.workId ?? editing.obraId ?? "") : "main");
   }, [editing]);
 
@@ -306,6 +308,23 @@ function UserFormDialog({ editing, onDone }: { editing: AppUser | null; onDone: 
       onDone();
     } catch (err: any) {
       toast.error(err.message || "Erro ao salvar usuário.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendReset = async () => {
+    if (!editing?.email) {
+      toast.error("E-mail do usuário não encontrado.");
+      return;
+    }
+    setLoading(true);
+    try {
+      await authStore.sendPasswordReset(editing.email);
+      setResetSent(true);
+      toast.success("E-mail de redefinição enviado.");
+    } catch (err: any) {
+      toast.error(err.message || "Falha ao enviar redefinição de senha.");
     } finally {
       setLoading(false);
     }
@@ -379,6 +398,19 @@ function UserFormDialog({ editing, onDone }: { editing: AppUser | null; onDone: 
               </div>
             </div>
           </>
+        )}
+        {editing && !isCurrentUser && (
+          <div className="rounded-md border border-dashed border-border p-4">
+            <p className="text-sm font-semibold">Redefinir senha</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Para outro usuário, o Firebase precisa enviar um e-mail de redefinição de senha.
+            </p>
+            <div className="mt-3 flex justify-end">
+              <Button type="button" variant="secondary" onClick={handleSendReset} disabled={loading}>
+                {resetSent ? "E-mail enviado" : "Enviar redefinição de senha"}
+              </Button>
+            </div>
+          </div>
         )}
         <div>
           <Label htmlFor="seat">Sede</Label>
