@@ -93,8 +93,9 @@ function Detail() {
   }
   const initials = e.name.split(" ").slice(0, 2).map((n) => n[0]).join("");
 
-  const setStatus = (s: EmployeeStatus) => {
-    employeesStore.update(e.id, { status: s });
+  // 🔥 CORREÇÃO: Função assíncrona
+  const setStatus = async (s: EmployeeStatus) => {
+    await employeesStore.update(e.id, { status: s });
     toast.success(`Status alterado para ${s}.`);
   };
 
@@ -251,8 +252,9 @@ function Detail() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => {
-              employeesStore.remove(e.id);
+            {/* 🔥 CORREÇÃO: onClick assíncrono */}
+            <AlertDialogAction onClick={async () => {
+              await employeesStore.remove(e.id);
               toast.success("Funcionário apagado.");
               navigate({ to: "/funcionarios" });
             }}>Apagar</AlertDialogAction>
@@ -270,14 +272,16 @@ function TrocaFuncaoDialog({ open, onOpenChange, employee }: {
   open: boolean; onOpenChange: (o: boolean) => void; employee: Employee;
 }) {
   const [novaFuncao, setNovaFuncao] = useState("");
-  const confirmar = () => {
+  
+  // 🔥 CORREÇÃO: Função assíncrona
+  const confirmar = async () => {
     if (!novaFuncao.trim()) { toast.error("Informe a nova função."); return; }
     const history = [...(employee.roleHistory ?? []), {
       from: employee.cargoFuncao || employee.role,
       to: novaFuncao.trim(),
       date: new Date().toISOString(),
     }];
-    employeesStore.update(employee.id, {
+    await employeesStore.update(employee.id, {
       cargoFuncao: novaFuncao.trim(),
       role: novaFuncao.trim(),
       roleHistory: history,
@@ -286,6 +290,7 @@ function TrocaFuncaoDialog({ open, onOpenChange, employee }: {
     onOpenChange(false);
     setNovaFuncao("");
   };
+  
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -433,10 +438,11 @@ function EditEmployeeDialog({
     toast.success("Endereço preenchido pelo CEP.");
   };
 
-  const onSubmit = (ev: React.FormEvent) => {
+  // 🔥 CORREÇÃO: Função assíncrona
+  const onSubmit = async (ev: React.FormEvent) => {
     ev.preventDefault();
     if (!form.name.trim()) { toast.error("Informe o nome."); return; }
-    employeesStore.update(employee.id, {
+    await employeesStore.update(employee.id, {
       ...form,
       role: form.cargoFuncao || form.role,
       site: form.organograma || form.site,

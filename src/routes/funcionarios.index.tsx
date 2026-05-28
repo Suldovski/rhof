@@ -125,7 +125,6 @@ function mapStatus(v: any): EmployeeStatus {
   return "ativo";
 }
 
-/** Procura o índice de coluna cujo header normalizado contenha qualquer um dos termos */
 function findCol(headers: string[], terms: string[]): number {
   for (let i = 0; i < headers.length; i++) {
     const h = headers[i];
@@ -142,7 +141,6 @@ async function importFromFile(file: File): Promise<void> {
   const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: true });
   if (rows.length < 2) { toast.error("Planilha vazia."); return; }
 
-  // Detecta a linha de cabeçalho: a que tenha mais cabeçalhos reconhecíveis
   let headerIdx = -1;
   let bestScore = 0;
   for (let i = 0; i < Math.min(15, rows.length); i++) {
@@ -219,7 +217,8 @@ async function importFromFile(file: File): Promise<void> {
     const id = idRaw != null && idRaw !== "" ? String(idRaw).trim() : undefined;
 
     try {
-      employeesStore.add({
+      // 🔥 AGORA É ASSÍNCRONO
+      await employeesStore.add({
         id, name, cpf,
         nascimento: col.nasc >= 0 ? parseAnyDate(row[col.nasc]) : "",
         admission: col.admission >= 0 ? parseAnyDate(row[col.admission]) : "",
@@ -233,10 +232,9 @@ async function importFromFile(file: File): Promise<void> {
       created++;
     } catch (err: any) {
       const msg = err?.message ?? "erro";
-      // Se for conflito de matrícula, tenta de novo sem id (auto-gera)
       if (msg.includes("matrícula") && id) {
         try {
-          employeesStore.add({
+          await employeesStore.add({
             name, cpf,
             nascimento: col.nasc >= 0 ? parseAnyDate(row[col.nasc]) : "",
             admission: col.admission >= 0 ? parseAnyDate(row[col.admission]) : "",
@@ -300,51 +298,49 @@ function List() {
       eyebrow="Quadro de pessoal"
       title="Funcionários"
       description={`${employees.length} colaboradores cadastrados em ${sites.length} canteiros.`}
-     actions={
-  <>
-    <input
-      ref={fileRef}
-      type="file"
-      accept=".xlsx,.xls,.csv"
-      className="hidden"
-      onChange={async (e) => {
-        const f = e.target.files?.[0];
-        if (!f) return;
-        try { await importFromFile(f); }
-        catch (err: any) { toast.error("Falha ao importar: " + (err?.message ?? err)); }
-        if (fileRef.current) fileRef.current.value = "";
-      }}
-    />
-    <Button variant="outline" onClick={() => fileRef.current?.click()}>
-      <Upload className="mr-1 h-4 w-4" /> Importar planilha
-    </Button>
-    <Button variant="outline" onClick={() => exportCSV(filtered)}>
-      <Download className="mr-1 h-4 w-4" /> Exportar CSV
-    </Button>
-    <Button asChild>
-      <Link to="/funcionarios/novo">
-        <Plus className="mr-1 h-4 w-4" /> Novo
-      </Link>
-    </Button>
-    <Button 
-      variant="outline" 
-      className="text-destructive" 
-      onClick={() => {
-        if (!confirm("Apagar TODOS os funcionários? Esta ação não pode ser desfeita!")) return;
-        const allEmployees = employeesStore.list();
-        allEmployees.forEach(emp => {
-          try {
-            employeesStore.remove(emp.id);
-          } catch (err) {
-            console.error(`Erro ao remover ${emp.id}:`, err);
-          }
-        });
-        toast.success("Todos os funcionários foram apagados.");
-      }}
-    >
-      Apagar todos
-    </Button>
-  </>
+      actions={
+        <>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            className="hidden"
+            onChange={async (e) => {
+              const f = e.target.files?.[0];
+              if (!f) return;
+              try { 
+                // 🔥 AGORA É ASSÍNCRONO
+                await importFromFile(f); 
+              } catch (err: any) { 
+                toast.error("Falha ao importar: " + (err?.message ?? err)); 
+              }
+              if (fileRef.current) fileRef.current.value = "";
+            }}
+          />
+          <Button variant="outline" onClick={() => fileRef.current?.click()}>
+            <Upload className="mr-1 h-4 w-4" /> Importar planilha
+          </Button>
+          <Button variant="outline" onClick={() => exportCSV(filtered)}>
+            <Download className="mr-1 h-4 w-4" /> Exportar CSV
+          </Button>
+          <Button asChild>
+            <Link to="/funcionarios/novo">
+              <Plus className="mr-1 h-4 w-4" /> Novo
+            </Link>
+          </Button>
+          <Button 
+            variant="outline" 
+            className="text-destructive" 
+            onClick={async () => {
+              // 🔥 AGORA É ASSÍNCRONO
+              if (!confirm("Apagar TODOS os funcionários? Esta ação não pode ser desfeita!")) return;
+              await employeesStore.removeAll();
+              toast.success("Todos os funcionários foram apagados.");
+            }}
+          >
+            Apagar todos
+          </Button>
+        </>
       }
     >
       <Card className="mb-4 flex flex-wrap items-center gap-3 p-4">

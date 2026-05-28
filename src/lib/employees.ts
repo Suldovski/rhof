@@ -1,4 +1,14 @@
 import { useSyncExternalStore } from "react";
+import { db } from "./firebase";
+import { 
+  collection, 
+  doc, 
+  setDoc, 
+  deleteDoc, 
+  writeBatch, 
+  onSnapshot 
+} from 'firebase/firestore';
+import { departmentFromRole } from "./role-department";
 
 export type EmployeeStatus =
   | "admissao"
@@ -7,7 +17,7 @@ export type EmployeeStatus =
   | "ferias"
   | "afastado"
   | "desligado"
-  | "ativo"; // legado (migrado para "efetivo")
+  | "ativo";
 
 export interface BankAccount {
   bank: string;
@@ -41,7 +51,6 @@ export interface DocAnexo {
   name: string;
   size: number;
   type: string;
-  /** Data URL (base64) — pequenos arquivos. Para arquivos grandes substituir por storage. */
   data: string;
   uploadedAt: string;
 }
@@ -55,29 +64,17 @@ export interface RoleChange {
 }
 
 export interface Employee {
-  /* Matrícula / status */
   id: string;
   status: EmployeeStatus;
-
-  /* Foto (base64) — não vai para o FRE */
   photo?: string;
-
-  /* Tipo de contrato + empresa (para PJ/terceiro) */
   tipo?: EmployeeTipo;
   empresaTerceiro?: string;
-
-  /* Histórico de trocas de função */
   roleHistory?: RoleChange[];
-
-  /* Dados pessoais (obrigatórios) */
   name: string;
   cpf: string;
   nascimento: string;
-
   sindicato: string;
   sindicatoUf: string;
-
-  /* Endereço */
   endereco: string;
   enderecoNumero: string;
   cep: string;
@@ -87,23 +84,18 @@ export interface Employee {
   municipio: string;
   telefone: string;
   telefoneRecado: string;
-
   municipioNascimento: string;
   estadoNascimento: string;
   nacionalidade: string;
   rne: string;
-
   sexo: "M" | "F" | "Outro" | "";
   racaCor: string;
   deficienciaFisica: string;
   estadoCivil: string;
   grauInstrucao: string;
-
   cnh?: CNHData;
-
-  /* Dados do contrato */
   admission: string;
-  organograma: string; // obra
+  organograma: string;
   departamento: string;
   primeiroEmprego: boolean;
   periodoExperiencia: "30/30" | "45/45" | "60/60" | "outro" | "";
@@ -121,25 +113,15 @@ export interface Employee {
   percentualPericulosidade: number;
   percentualInsalubridade: number;
   horasExtras: string;
-
-  /* Pagamento */
   bank: BankAccount;
-
-  /* Filiação */
   nomeMae: string;
   nomePai?: string;
-
-  /* Dependentes */
   dependentes: Dependente[];
-
-  /* Documentos anexados */
   documentos: DocAnexo[];
-
-  /* Legado / extras */
-  role: string; // cargo (para compat com telas atuais)
+  role: string;
   department: "Obra" | "Engenharia" | "Administrativo" | "Seguranca";
-  site: string; // nome da obra (compat)
-  phone: string; // compat
+  site: string;
+  phone: string;
   email: string;
   salary: number;
   rg: string;
@@ -147,8 +129,6 @@ export interface Employee {
   pis: string;
   address: string;
   certifications: string[];
-
-  /* Importação de planilhas */
   reImport?: string;
   nomeImport?: string;
   cpfDigits?: string;
@@ -162,8 +142,6 @@ export interface Employee {
   termino30Dias?: string;
   termino60Dias?: string;
 }
-
-const KEY = "bucagrans.employees.v2";
 
 function makeEmpty(): Employee {
   return {
@@ -260,7 +238,7 @@ const seed: Employee[] = [
     organograma: "Residencial Vila Nova",
     admission: "2022-03-14",
     nascimento: "1985-06-12",
-    status: "ativo",
+    status: "efetivo",
     phone: "(11) 98123-4501",
     telefone: "(11) 98123-4501",
     telefoneRecado: "(11) 4321-7654",
@@ -303,7 +281,7 @@ const seed: Employee[] = [
     organograma: "Edifício Atlântico",
     admission: "2021-07-02",
     nascimento: "1990-11-08",
-    status: "ativo",
+    status: "efetivo",
     phone: "(11) 99412-7820",
     telefone: "(11) 99412-7820",
     telefoneRecado: "(11) 3333-2211",
@@ -346,7 +324,7 @@ const seed: Employee[] = [
     organograma: "Residencial Vila Nova",
     admission: "2018-01-10",
     nascimento: "1975-04-23",
-    status: "ativo",
+    status: "efetivo",
     phone: "(11) 97765-4432",
     telefone: "(11) 97765-4432",
     telefoneRecado: "(11) 2222-1111",
@@ -411,7 +389,7 @@ const seed: Employee[] = [
     site: "Edifício Atlântico",
     organograma: "Edifício Atlântico",
     admission: "2020-11-03",
-    status: "ativo",
+    status: "efetivo",
     phone: "(11) 99001-5566",
     telefone: "(11) 99001-5566",
     email: "roberto.nunes@bucagrans.com.br",
@@ -436,7 +414,7 @@ const seed: Employee[] = [
     site: "Galpão Industrial Sul",
     organograma: "Galpão Industrial Sul",
     admission: "2024-02-19",
-    status: "ativo",
+    status: "efetivo",
     phone: "(11) 98233-7788",
     email: "pedro.costa@bucagrans.com.br",
     salary: 3100,
@@ -450,8 +428,6 @@ const seed: Employee[] = [
   },
 ];
 
-import { departmentFromRole } from "./role-department";
-
 function migrate(list: Employee[]): Employee[] {
   return list.map((e) => {
     const status = (e.status as any) === "ativo" ? "efetivo" : e.status;
@@ -460,26 +436,50 @@ function migrate(list: Employee[]): Employee[] {
   });
 }
 
-let state: Employee[] = (() => {
-  if (typeof window === "undefined") return migrate(seed);
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as Employee[];
-      if (Array.isArray(parsed) && parsed.length > 0) return migrate(parsed);
-    }
-  } catch {}
-  return migrate(seed);
-})();
+// Estado sincronizado com Firebase
+const COLLECTION = "employees";
+let state: Employee[] = [];
+let isLoading = true;
 
 const listeners = new Set<() => void>();
 
-function commit(next: Employee[]) {
-  state = next;
-  if (typeof window !== "undefined") {
-    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {}
-  }
-  listeners.forEach((l) => l());
+// Sincronização em tempo real com Firebase
+if (typeof window !== "undefined") {
+  const q = collection(db, COLLECTION);
+  
+  onSnapshot(q, (snapshot) => {
+    const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
+    state = migrate(docs);
+    isLoading = false;
+    
+    // Cache local como backup
+    try { 
+      localStorage.setItem("bucagrans.employees.v2", JSON.stringify(state)); 
+    } catch {}
+    
+    listeners.forEach((l) => l());
+  }, (error) => {
+    console.error("Erro ao carregar funcionários do Firebase:", error);
+    isLoading = false;
+    
+    // Fallback para cache local
+    try {
+      const raw = localStorage.getItem("bucagrans.employees.v2");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          state = migrate(parsed);
+        }
+      }
+    } catch {}
+    
+    // Fallback para seed se não houver cache
+    if (state.length === 0) {
+      state = migrate(seed);
+    }
+    
+    listeners.forEach((l) => l());
+  });
 }
 
 function nextMatricula(isPJ = false): string {
@@ -505,9 +505,6 @@ export const employeesStore = {
   list: () => state,
   get: (id: string) => state.find((e) => e.id === id),
   
-  /**
-   * Verifica se um CPF já existe no sistema (para evitar duplicatas)
-   */
   cpfExists: (cpf: string, excludeId?: string): boolean => {
     const normalized = cpf.replace(/[^\d]/g, "");
     return state.some((e) => {
@@ -516,17 +513,17 @@ export const employeesStore = {
     });
   },
 
-  add: (data: Partial<Employee>) => {
+  add: async (data: Partial<Employee>) => {
     const rawId = data.id?.trim() || "";
     const isPJ = /pj/i.test(rawId);
     let id = rawId;
     if (!id) id = nextMatricula(false);
     else if (isPJ && !/^PJ-/i.test(id)) id = `PJ-${id.replace(/pj/ig, "").replace(/[^a-z0-9]/gi, "") || String(Date.now()).slice(-4)}`;
+    
     if (state.some((e) => e.id === id)) {
       throw new Error("Já existe um funcionário com esta matrícula.");
     }
 
-    // Verificar CPF duplicado
     if (data.cpf && employeesStore.cpfExists(data.cpf)) {
       throw new Error("Este CPF já está registrado no sistema.");
     }
@@ -535,7 +532,6 @@ export const employeesStore = {
       ...makeEmpty(), 
       ...data, 
       id,
-      // Auto-set status to "admissao" on creation
       status: "admissao"
     };
     fresh.role = fresh.role || fresh.cargoFuncao;
@@ -546,32 +542,50 @@ export const employeesStore = {
     fresh.departamento = dept;
     fresh.salary = fresh.salary || fresh.salarioHora * 220;
     fresh.address = fresh.address || `${fresh.endereco}, ${fresh.enderecoNumero} — ${fresh.bairro}, ${fresh.municipio}/${fresh.estado}`;
-    commit([...state, fresh]);
+
+    // Salvar no Firebase
+    await setDoc(doc(db, COLLECTION, id), fresh);
+    
     return fresh;
   },
 
-  update: (id: string, patch: Partial<Employee>) => {
-    // Verificar se está tentando mudar o CPF para um que já existe
+  update: async (id: string, patch: Partial<Employee>) => {
     if (patch.cpf && employeesStore.cpfExists(patch.cpf, id)) {
       throw new Error("Este CPF já está registrado no sistema.");
     }
 
-    commit(state.map((e) => {
-      if (e.id !== id) return e;
-      const merged = { ...e, ...patch };
-      if (patch.cargoFuncao || patch.role) {
-        const dept = departmentFromRole(merged.cargoFuncao || merged.role || "");
-        merged.department = dept as any;
-        merged.departamento = dept;
-      }
-      return merged;
-    }));
+    // Atualizar no Firebase
+    const employeeRef = doc(db, COLLECTION, id);
+    await setDoc(employeeRef, patch, { merge: true });
   },
 
-  remove: (id: string) => commit(state.filter((e) => e.id !== id)),
-  removeAll: () => commit([]),
-  removeAllFromSite: (siteName: string) => commit(state.filter((e) => (e.site || e.organograma || "") !== siteName)),
-  reset: () => commit(seed),
+  remove: async (id: string) => {
+    await deleteDoc(doc(db, COLLECTION, id));
+  },
+  
+  removeAll: async () => {
+    const batch = writeBatch(db);
+    state.forEach(emp => {
+      batch.delete(doc(db, COLLECTION, emp.id));
+    });
+    await batch.commit();
+  },
+  
+  removeAllFromSite: async (siteName: string) => {
+    const toRemove = state.filter((e) => (e.site || e.organograma || "") === siteName);
+    const batch = writeBatch(db);
+    toRemove.forEach(emp => {
+      batch.delete(doc(db, COLLECTION, emp.id));
+    });
+    await batch.commit();
+  },
+  
+  reset: async () => {
+    await employeesStore.removeAll();
+    for (const emp of seed) {
+      await setDoc(doc(db, COLLECTION, emp.id), emp);
+    }
+  },
 };
 
 function subscribe(cb: () => void) {
@@ -587,7 +601,6 @@ export function useEmployee(id: string): Employee | undefined {
   return useEmployees().find((e) => e.id === id);
 }
 
-// Compat com código legado (deprecated — preferir useEmployees)
 export const employees = state;
 export function getEmployee(id: string): Employee | undefined {
   return state.find((e) => e.id === id);
