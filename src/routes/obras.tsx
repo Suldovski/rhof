@@ -23,7 +23,7 @@ import { useEmployees } from "@/lib/employees";
 import { sitesStore, useSites, type Site } from "@/lib/sites-store";
 import { criarObra } from "@/lib/obras";
 import { useAuth } from "@/lib/auth-store";
-import { isClienteObra, getObraIdFromClienteObra } from "@/lib/permissions";
+import { isClienteObra, getObraIdFromClienteObra, isRhObra, isWorkUser, getUserWorkId } from "@/lib/permissions";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
@@ -109,14 +109,25 @@ function Obras() {
   const [removeId, setRemoveId] = useState<string | null>(null);
   const [cardDetails, setCardDetails] = useState<Record<string, CardDetails>>({});
 
-  // Filter sites for cliente_obra - only show their specific obra
+  // Filter sites for obra users (cliente or rh de obra) - only show their specific obra
   const displaySites = useMemo(() => {
-    if (isClienteObra(auth.currentUser?.role)) {
-      const clienteObraId = getObraIdFromClienteObra(auth.currentUser!.role);
-      return sites.filter(s => s.id === clienteObraId);
+    const role = auth.currentUser?.role;
+    // cliente_obra: extract id from role
+    if (isClienteObra(role)) {
+      const clienteObraId = getObraIdFromClienteObra(role!);
+      return sites.filter((s) => s.id === clienteObraId);
     }
+
+    // rh_obra or generic work user: use workId/obraId from the user record
+    if (isRhObra(auth.currentUser) || isWorkUser(auth.currentUser)) {
+      const workId = getUserWorkId(auth.currentUser as any);
+      if (workId) return sites.filter((s) => s.id === workId);
+      return [];
+    }
+
+    // matriz and others see all
     return sites;
-  }, [sites, auth.currentUser?.role]);
+  }, [sites, auth.currentUser?.role, auth.currentUser?.workId, auth.currentUser?.obraId]);
 
   // Check if user can manage works (create, edit, delete)
   // Allow all users EXCEPT cliente_obra

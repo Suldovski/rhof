@@ -1,4 +1,6 @@
 import { useSyncExternalStore } from "react";
+import { authStore } from "./auth-store";
+import { isClienteObra, isRhObra, isWorkUser, getObraIdFromClienteObra, getUserWorkId, isMainUser } from "./permissions";
 import { db } from "./firebase";
 import { collection, getDocs, onSnapshot, setDoc, doc, updateDoc, deleteDoc, addDoc } from "firebase/firestore";
 
@@ -137,7 +139,27 @@ function subscribe(cb: () => void) {
 }
 
 export function useSites(): Site[] {
-  return useSyncExternalStore(subscribe, () => state, () => seed);
+  // Return the sites filtered according to the current user's scope:
+  // - matriz (main): see all
+  // - rh_obra / work users: see only their own obra
+  // - cliente_obra: see only their obra
+  const all = useSyncExternalStore(subscribe, () => state, () => seed);
+  try {
+    const user = authStore.current();
+    if (!user) return all;
+    if (isMainUser(user)) return all;
+    if (isClienteObra(user.role)) {
+      const id = getObraIdFromClienteObra(user.role ?? "");
+      return id ? all.filter((s) => s.id === id) : [];
+    }
+    if (isRhObra(user) || isWorkUser(user)) {
+      const id = getUserWorkId(user as any);
+      return id ? all.filter((s) => s.id === id) : [];
+    }
+    return all;
+  } catch (e) {
+    return all;
+  }
 }
 
 export function useSite(id: string): Site | undefined {
