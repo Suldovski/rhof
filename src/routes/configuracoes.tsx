@@ -252,6 +252,9 @@ function UserFormDialog({ editing, onDone }: { editing: AppUser | null; onDone: 
   const [confirmPassword, setConfirmPassword] = useState("");
   const [resetSent, setResetSent] = useState(false);
   const [seat, setSeat] = useState<string>(editing?.type === "work" ? (editing.workId ?? editing.obraId ?? "") : "main");
+  const [accessKind, setAccessKind] = useState<"rh" | "cliente">(
+    editing && isClienteObra(editing.role) ? "cliente" : "rh",
+  );
   const [loading, setLoading] = useState(false);
 
   const isCurrentUser = editing && editing.uid === auth.currentUserId;
@@ -264,10 +267,12 @@ function UserFormDialog({ editing, onDone }: { editing: AppUser | null; onDone: 
     setConfirmPassword("");
     setResetSent(false);
     setSeat(editing?.type === "work" ? (editing.workId ?? editing.obraId ?? "") : "main");
+    setAccessKind(editing && isClienteObra(editing.role) ? "cliente" : "rh");
   }, [editing]);
 
   const selectedWork = seat === "main" ? null : works.find((work) => work.id === seat) ?? null;
   const selectedType: UserType = seat === "main" ? "main" : "work";
+  const showAccessKind = seat !== "main";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -279,6 +284,7 @@ function UserFormDialog({ editing, onDone }: { editing: AppUser | null; onDone: 
         type: selectedType,
         workId: selectedType === "work" ? (selectedWork?.id ?? seat) : null,
         workName: selectedType === "work" ? (selectedWork?.name ?? null) : null,
+          accessKind: selectedType === "work" ? accessKind : "rh",
       };
 
       if (editing) {
@@ -426,6 +432,23 @@ function UserFormDialog({ editing, onDone }: { editing: AppUser | null; onDone: 
             </SelectContent>
           </Select>
         </div>
+        {showAccessKind && (
+          <div>
+            <Label htmlFor="accessKind">Perfil de acesso</Label>
+            <Select value={accessKind} onValueChange={(value) => setAccessKind(value as "rh" | "cliente") }>
+              <SelectTrigger id="accessKind">
+                <SelectValue placeholder="Selecione o perfil" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="rh">RH da obra</SelectItem>
+                <SelectItem value="cliente">Cliente da obra</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Cliente da obra acessa apenas a própria obra e entra sem senha na tela de login.
+            </p>
+          </div>
+        )}
         {/* no admin password required — creation uses secondary auth to avoid replacing current session */}
         <DialogFooter>
           <Button type="button" variant="ghost" onClick={onDone}>

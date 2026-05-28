@@ -16,6 +16,7 @@ import {
   legacyRoleForUser,
   normalizeUserRecord,
   resolveUserType,
+  roleForClienteObra,
   type AppUser,
   type Role,
 } from "./permissions";
@@ -217,6 +218,7 @@ export const authStore = {
     type: "main" | "work";
     workId?: string | null;
     workName?: string | null;
+    accessKind?: "rh" | "cliente";
   }): Promise<AppUser | null> => {
     try {
       // Verificar se email já existe
@@ -240,7 +242,9 @@ export const authStore = {
 
       const workId = data.type === "work" ? data.workId ?? null : null;
       const workName = data.type === "work" ? data.workName ?? null : null;
-      const role = legacyRoleForUser(data.type, workId);
+      const role = data.type === "work"
+        ? (data.accessKind === "cliente" ? roleForClienteObra(workId ?? "obra") : legacyRoleForUser(data.type, workId))
+        : legacyRoleForUser(data.type, workId);
 
       // Salvar dados no Firestore
       const userData: Omit<AppUser, "uid"> = {
