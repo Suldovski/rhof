@@ -137,20 +137,20 @@ export const canAccessObras = (_userLike?: UserLike) => true;
 export const canAccessFolhaSalarial = (userLike?: UserLike) =>
   isMainUser(userLike) || isRhObra(userLike);
 
-/** Pode EDITAR Folha Salarial? Não se for financeiro. */
-export const canEditFolhaSalarial = (userLike?: UserLike) => isMainUser(userLike);
+/** Pode EDITAR Folha Salarial? Não se for financeiro. RH de obra também pode. */
+export const canEditFolhaSalarial = (userLike?: UserLike) => isMainUser(userLike) || isRhObra(userLike);
 
-/** Pode acessar página Horas Extras? Apenas perfis de matriz e rh_obra. Financeiro não edita. */
-export const canAccessHorasExtras = (userLike?: UserLike) => isMainUser(userLike);
+/** Pode acessar página Horas Extras? Perfis de matriz e RH de obra podem. Financeiro não edita. */
+export const canAccessHorasExtras = (userLike?: UserLike) => isMainUser(userLike) || isRhObra(userLike);
 
-/** Pode EDITAR Horas Extras? Não se for financeiro. */
-export const canEditHorasExtras = (userLike?: UserLike) => isMainUser(userLike);
+/** Pode EDITAR Horas Extras? RH matriz e RH de obra podem; financeiro não. */
+export const canEditHorasExtras = (userLike?: UserLike) => isMainUser(userLike) || isRhObra(userLike);
 
-/** Pode acessar página RDV? Apenas rh_matriz, administrativo_matriz, financeiro_matriz e rh_obra. */
-export const canAccessRDV = (userLike?: UserLike) => isMainUser(userLike);
+/** Pode acessar página RDV? Matriz e RH de obra podem; administrativo e financeiro matriz também. */
+export const canAccessRDV = (userLike?: UserLike) => isMainUser(userLike) || isRhObra(userLike);
 
-/** Pode EDITAR RDV? Não se for financeiro. */
-export const canEditRDV = (userLike?: UserLike) => isMainUser(userLike);
+/** Pode EDITAR RDV? Matriz e RH de obra podem; financeiro não. */
+export const canEditRDV = (userLike?: UserLike) => isMainUser(userLike) || isRhObra(userLike);
 
 /** Pode acessar página Documentos? Todos menos cliente de obra. Para rh_obra aparecem apenas os da sua obra. */
 export const canAccessDocumentos = (_userLike?: UserLike) => true;
