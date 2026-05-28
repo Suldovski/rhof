@@ -36,6 +36,7 @@ import { fetchCep } from "@/lib/cep";
 import { downloadFRE } from "@/lib/fre-pdf";
 import { dismissalsStore } from "@/lib/dismissals-store";
 import { authStore, useAuth } from "@/lib/auth-store";
+import { isWorkUser, getUserWorkName, isRhMatriz } from "@/lib/permissions";
 import { useRouteProtection, roleChecks } from "@/lib/route-protection";
 
 export const Route = createFileRoute("/funcionarios/$id")({
@@ -72,6 +73,23 @@ function Detail() {
         </CardContent></Card>
       </PageShell>
     );
+  }
+  // If the user is a work-site user, ensure the employee belongs to their work
+  const current = auth.currentUser;
+  if (isWorkUser(current) && !isRhMatriz(current?.role)) {
+    const myWorkName = getUserWorkName(current as any);
+    const empSite = e.site || e.organograma || "";
+    if (myWorkName && empSite && empSite !== myWorkName) {
+      return (
+        <PageShell eyebrow="Quadro" title="Acesso negado">
+          <Card>
+            <CardContent className="p-8 text-center text-sm text-muted-foreground">
+              Você não tem permissão para acessar este funcionário.
+            </CardContent>
+          </Card>
+        </PageShell>
+      );
+    }
   }
   const initials = e.name.split(" ").slice(0, 2).map((n) => n[0]).join("");
 

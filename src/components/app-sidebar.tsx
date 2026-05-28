@@ -64,7 +64,9 @@ const getOpsMenuItems = (user?: any) => {
     if (Permissions.canAccessFolhaSalarial(user?.role)) items.push({ title: "Folha Salarial", url: "/folha-salarial", icon: Wallet });
     // Documentos
     if (Permissions.canAccessDocumentos(user?.role)) items.push({ title: "Documentos", url: "/documentos", icon: FileText });
-    // Note: Demissões and Configurações intentionally hidden for obra users per hierarchy rules
+    // Demissões (obra users see only history filtered on the page)
+    if (Permissions.canAccessDemissoes(user?.role)) items.push({ title: "Demissões", url: "/admin/demissoes", icon: UserMinus });
+    // Note: Configurações intentionally hidden for obra users per hierarchy rules
     return items;
   }
 

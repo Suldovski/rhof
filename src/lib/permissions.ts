@@ -124,11 +124,11 @@ export const isFinanceiro = (userLike?: UserLike) => isFinanceiroMatriz(userLike
 /** Pode acessar página Painel? Todos menos cliente de obra. */
 export const canAccessPainel = (userLike?: UserLike) => !isClienteObra(userLike);
 
-/** Pode acessar página Funcionários? Apenas RH matriz, administrativo_matriz e financeiro_matriz. RH_obra NÃO acessa. */
-export const canAccessFuncionarios = (userLike?: UserLike) => isMainUser(userLike);
+/** Pode acessar página Funcionários? Matriz e RH de obra podem (RH de obra apenas sua obra). */
+export const canAccessFuncionarios = (userLike?: UserLike) => isMainUser(userLike) || isRhObra(userLike);
 
-/** Pode EDITAR funcionários? Não se for financeiro. Apenas RH matriz e administrativo podem. RH obra NÃO edita. */
-export const canEditFuncionarios = (userLike?: UserLike) => isMainUser(userLike);
+/** Pode EDITAR funcionários? Matriz e RH de obra podem (RH de obra apenas sua obra). */
+export const canEditFuncionarios = (userLike?: UserLike) => isMainUser(userLike) || isRhObra(userLike);
 
 /** Pode acessar página Obras? Todos. Para rh_obra aparece apenas a sua. */
 export const canAccessObras = (_userLike?: UserLike) => true;
