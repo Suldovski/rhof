@@ -37,11 +37,8 @@ import {
 const getMainMenuItems = (user?: any) => {
   const items: Array<{ title: string; url: string; icon: any }> = [];
 
-  // For work-site users, hide Painel and Funcionários (they should only see limited set in ops)
-  if (user && (Permissions.isWorkUser(user) || Permissions.isRhObra(user))) return items;
-
-  // Painel - todos menos cliente
-  if (Permissions.canAccessPainel(user?.role)) {
+  // Painel - matriz sees it normally; obra users are intentionally hidden here
+  if (!Permissions.isWorkUser(user) && Permissions.canAccessPainel(user?.role)) {
     items.push({ title: "Painel", url: "/", icon: LayoutDashboard });
   }
 
@@ -57,7 +54,7 @@ const getOpsMenuItems = (user?: any) => {
   const items: Array<{ title: string; url: string; icon: any }> = [];
 
   // If the user is a work-site user (rh_obra / work), only show a reduced set
-  if (user && (Permissions.isWorkUser(user) || Permissions.isRhObra(user))) {
+  if (Permissions.isWorkUser(user) || Permissions.isRhObra(user)) {
     // Obras
     if (Permissions.canAccessObras(user?.role)) items.push({ title: "Obras", url: "/obras", icon: HardHat });
     // Folha Salarial
