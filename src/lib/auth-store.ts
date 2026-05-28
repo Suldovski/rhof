@@ -132,6 +132,35 @@ export const authStore = {
     }
   },
 
+  /**
+   * Login simplificado para cliente de obra (sem senha no fluxo da UI).
+   */
+  loginClient: async (email: string): Promise<AppUser | null> => {
+    try {
+      const usersRef = collection(db, "usuarios");
+      const emailQuery = query(usersRef, where("email", "==", email));
+      const result = await getDocs(emailQuery);
+
+      if (result.empty) {
+        return null;
+      }
+
+      const docSnap = result.docs[0];
+      const userData = docSnap.data();
+      const user = resolveUserDoc(docSnap.id, userData, email);
+
+      if (!String(user.role ?? "").startsWith("cliente_obra_")) {
+        throw new Error("Este acesso não é de cliente de obra.");
+      }
+
+      commit({ ...state, currentUser: user, loading: false, isLocalStorage: true });
+      return user;
+    } catch (error) {
+      console.error("Client login error:", error);
+      throw error;
+    }
+  },
+
   logout: async () => {
     try {
       await signOut(auth);

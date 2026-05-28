@@ -18,6 +18,7 @@ import { useAuth } from "@/lib/auth-store";
 import { authStore } from "@/lib/auth-store";
 import { useNavigate } from "@tanstack/react-router";
 import * as Permissions from "@/lib/permissions";
+import { getClientObraId, getClientRedirectUrl, isClientUser } from "@/lib/client-helpers";
 
 import {
   Sidebar,
@@ -53,6 +54,12 @@ const getMainMenuItems = (user?: any) => {
 const getOpsMenuItems = (user?: any) => {
   const items: Array<{ title: string; url: string; icon: any }> = [];
 
+  if (isClientUser(user)) {
+    const obraId = getClientObraId(user);
+    if (obraId) items.push({ title: "Minha obra", url: `/obras/${obraId}`, icon: HardHat });
+    return items;
+  }
+
   // If the user is a work-site user (rh_obra / work), only show a reduced set
   if (Permissions.isWorkUser(user) || Permissions.isRhObra(user)) {
     // Obras
@@ -86,6 +93,7 @@ export function AppSidebar() {
   const auth = useAuth();
   const navigate = useNavigate();
   const role = auth.currentUser?.role;
+  const isClient = isClientUser(auth.currentUser);
 
   const isActive = (url: string) =>
     url === "/" ? path === "/" : path === url || path.startsWith(url + "/");
@@ -101,7 +109,7 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="border-b border-sidebar-border">
-        <Link to="/" className="flex items-center gap-3 px-2 py-3">
+        <Link to={isClient ? getClientRedirectUrl(auth.currentUser) : "/"} className="flex items-center gap-3 px-2 py-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground">
             <HardHat className="h-5 w-5" />
           </div>
@@ -117,7 +125,7 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        {mainItems.length > 0 && (
+        {mainItems.length > 0 && !isClient && (
           <SidebarGroup>
             <SidebarGroupLabel className="text-sidebar-foreground/50">
               Gestão de Pessoas

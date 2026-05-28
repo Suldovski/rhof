@@ -45,8 +45,6 @@ export const getClientRestrictedUrls = (): string[] => {
 export const getClientAllowedUrls = (): string[] => {
   return [
     "/",
-    "/obras",
-    "/documentos",
   ];
 };
 
@@ -56,12 +54,21 @@ export const getClientAllowedUrls = (): string[] => {
 export const isClientAllowedUrl = (pathname: string, user: AppUser | null | undefined): boolean => {
   if (!isClientUser(user)) return true; // Não é cliente, pode acessar
 
+  const obraId = getClientObraId(user);
   const restricted = getClientRestrictedUrls();
   const allowed = getClientAllowedUrls();
 
   // Se está em URL restrita, não pode
   if (restricted.some((url) => pathname === url || pathname.startsWith(url + "/"))) {
     return false;
+  }
+
+  if (pathname === "/obras" && obraId) {
+    return false;
+  }
+
+  if (obraId && (pathname === `/obras/${obraId}` || pathname.startsWith(`/obras/${obraId}/`))) {
+    return true;
   }
 
   // Se está em URL permitida, pode

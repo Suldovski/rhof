@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { authStore, useAuth } from "@/lib/auth-store";
-import { isClientAllowedUrl } from "@/lib/client-helpers";
+import { getClientRedirectUrl } from "@/lib/client-helpers";
 import { initializeAppData } from "@/lib/app-bootstrap";
 
 export const Route = createFileRoute("/login")({
@@ -37,6 +37,11 @@ function Login() {
 
   useEffect(() => {
     if (auth.currentUser && !auth.loading) {
+      if (auth.currentUser.role?.startsWith("cliente_obra_")) {
+        navigate({ to: getClientRedirectUrl(auth.currentUser) });
+        return;
+      }
+
       navigate({ to: redirect || "/" });
     }
   }, [auth.currentUser, auth.loading, navigate, redirect]);
@@ -46,10 +51,14 @@ function Login() {
     setIsLoading(true);
     try {
       if (isClient) {
-        // Cliente login (email only)
-        toast.info("Acesso de cliente: apenas email é necessário.");
-        // For now, just show a message - actual client login would be handled differently
-        toast.error("Acesso de cliente não disponível nesta versão.");
+        const user = await authStore.loginClient(email.trim());
+        if (!user) {
+          toast.error("Cliente não encontrado para este e-mail.");
+          setIsLoading(false);
+          return;
+        }
+        toast.success(`Bem-vindo(a), ${user.name}.`);
+        navigate({ to: getClientRedirectUrl(user) });
         setIsLoading(false);
         return;
       }
