@@ -165,10 +165,8 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border">
-          <div className="flex items-center gap-3 px-2 py-3">
-          {Permissions.isRhMatriz(role) && (
-            <AdminDemissoesItem />
-          )}
+        <SidebarMenu>
+          {Permissions.isRhMatriz(role) && <AdminDemissoesItem />}
           <SidebarMenuItem>
             <Button
               onClick={handleLogout}
@@ -177,8 +175,8 @@ export function AppSidebar() {
               size="sm"
             >
               <LogOut className="h-4 w-4" />
-            </div>
-          </div>
+              <span>Sair</span>
+            </Button>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
