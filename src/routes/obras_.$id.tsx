@@ -1,5 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, HardHat, Calendar, MapPin, User, Users, Trash2, FileText, Search } from "lucide-react";
+import { 
+  ArrowLeft, HardHat, Calendar, MapPin, User, Users, 
+  Trash2, FileText, Search, Upload, Plus 
+} from "lucide-react";
 import { toast } from "sonner";
 import { useMemo, useState, useEffect, useRef } from "react";
 import { PageShell } from "@/components/page-shell";
