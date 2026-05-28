@@ -66,7 +66,8 @@ const getOpsMenuItems = (user?: any) => {
     if (Permissions.canAccessDocumentos(user?.role)) items.push({ title: "Documentos", url: "/documentos", icon: FileText });
     // Demissões (obra users see only history filtered on the page)
     if (Permissions.canAccessDemissoes(user?.role)) items.push({ title: "Demissões", url: "/admin/demissoes", icon: UserMinus });
-    // Note: Configurações intentionally hidden for obra users per hierarchy rules
+    // Configurações (allow user to change their own password)
+    items.push({ title: "Configurações", url: "/configuracoes", icon: Settings });
     return items;
   }
 

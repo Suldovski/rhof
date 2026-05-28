@@ -34,13 +34,7 @@ function Configuracoes() {
   const auth = useAuth();
   const navigate = useNavigate();
 
-  // Redirect work-site users (including RH de obra) - they shouldn't access settings
-  useEffect(() => {
-    if (isWorkUser(auth.currentUser)) {
-      toast.error("Você não tem permissão para acessar as configurações.");
-      navigate({ to: "/" });
-    }
-  }, [auth.currentUser, navigate]);
+  // No redirect: work-site users can access a reduced settings UI (horários + alterar senha)
 
   return (
     <PageShell
@@ -49,13 +43,19 @@ function Configuracoes() {
       description="Preferências da conta, da empresa, dos usuários e do RH."
     >
       {isWorkUser(auth.currentUser) ? (
-        // Work-site users see only horarios
+        // Work-site users see only horarios and change-password
         <Tabs defaultValue="horarios" className="w-full">
-          <TabsList className="grid w-full grid-cols-1">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="horarios">Horários</TabsTrigger>
+            <TabsTrigger value="senha">Alterar senha</TabsTrigger>
           </TabsList>
+
           <TabsContent value="horarios" className="mt-4">
             <HorariosPanel />
+          </TabsContent>
+
+          <TabsContent value="senha" className="mt-4">
+            <PasswordPanel />
           </TabsContent>
         </Tabs>
       ) : (
@@ -561,5 +561,58 @@ function HorariosPanel() {
         </AlertDialogContent>
       </AlertDialog>
     </>
+  );
+}
+
+function PasswordPanel() {
+  const auth = useAuth();
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = async () => {
+    if (!auth.currentUserId) {
+      toast.error("Você precisa estar autenticado para alterar a senha.");
+      return;
+    }
+    if (!password || password.length < 8) {
+      toast.error("A senha deve ter pelo menos 8 caracteres.");
+      return;
+    }
+    if (password !== confirm) {
+      toast.error("As senhas não conferem.");
+      return;
+    }
+    setLoading(true);
+    try {
+      await authStore.updatePassword(auth.currentUserId!, password);
+      toast.success("Senha atualizada com sucesso.");
+      setPassword(""); setConfirm("");
+    } catch (err: any) {
+      toast.error(err.message || "Falha ao atualizar senha.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="font-display text-lg">Alterar senha</CardTitle>
+      </CardHeader>
+      <CardContent className="grid gap-4">
+        <div>
+          <Label>Nova senha</Label>
+          <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        </div>
+        <div>
+          <Label>Confirmar nova senha</Label>
+          <Input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+        </div>
+        <div className="flex justify-end">
+          <Button onClick={handleChange} disabled={loading}>{loading ? 'Atualizando...' : 'Alterar senha'}</Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
