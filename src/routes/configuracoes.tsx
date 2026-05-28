@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import { useAuth, authStore, type AppUser, useAllUsers } from "@/lib/auth-store";
 import { useHorarios, horariosStore, type Horario } from "@/lib/horarios-store";
-import { isClienteObra, type UserType } from "@/lib/permissions";
+import { isClienteObra, isWorkUser, type UserType } from "@/lib/permissions";
 import { useWorks } from "@/lib/works";
 
 export const Route = createFileRoute("/configuracoes")({
@@ -48,43 +48,55 @@ function Configuracoes() {
       title="Configurações"
       description="Preferências da conta, da empresa, dos usuários e do RH."
     >
-      <Tabs defaultValue="empresa" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="empresa">Empresa</TabsTrigger>
-          <TabsTrigger value="usuarios">Usuários</TabsTrigger>
-          <TabsTrigger value="horarios">Horários</TabsTrigger>
-        </TabsList>
+      {isWorkUser(auth.currentUser) ? (
+        // Work-site users see only horarios
+        <Tabs defaultValue="horarios" className="w-full">
+          <TabsList className="grid w-full grid-cols-1">
+            <TabsTrigger value="horarios">Horários</TabsTrigger>
+          </TabsList>
+          <TabsContent value="horarios" className="mt-4">
+            <HorariosPanel />
+          </TabsContent>
+        </Tabs>
+      ) : (
+        <Tabs defaultValue="empresa" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="empresa">Empresa</TabsTrigger>
+            <TabsTrigger value="usuarios">Usuários</TabsTrigger>
+            <TabsTrigger value="horarios">Horários</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="empresa" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-display text-lg">Dados da empresa</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-4">
-              <div>
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Razão social</Label>
-                <Input value="Bucagrans Construções LTDA" readOnly className="mt-1" />
-              </div>
-              <div>
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">CNPJ</Label>
-                <Input value="00.000.000/0000-00" readOnly className="mt-1" />
-              </div>
-              <div>
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Endereço</Label>
-                <Input value="Av. Paulista, 1500 — São Paulo, SP" readOnly className="mt-1" />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+          <TabsContent value="empresa" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-display text-lg">Dados da empresa</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-4">
+                <div>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Razão social</Label>
+                  <Input value="Bucagrans Construções LTDA" readOnly className="mt-1" />
+                </div>
+                <div>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">CNPJ</Label>
+                  <Input value="00.000.000/0000-00" readOnly className="mt-1" />
+                </div>
+                <div>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Endereço</Label>
+                  <Input value="Av. Paulista, 1500 — São Paulo, SP" readOnly className="mt-1" />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        <TabsContent value="usuarios" className="mt-4">
-          <UsersPanel />
-        </TabsContent>
+          <TabsContent value="usuarios" className="mt-4">
+            <UsersPanel />
+          </TabsContent>
 
-        <TabsContent value="horarios" className="mt-4">
-          <HorariosPanel />
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="horarios" className="mt-4">
+            <HorariosPanel />
+          </TabsContent>
+        </Tabs>
+      )}
     </PageShell>
   );
 }

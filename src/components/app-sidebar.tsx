@@ -33,50 +33,50 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-// Menu items - shown based on role
-const getMainMenuItems = (role?: string) => {
-  const items = [];
+// Menu items - shown based on user object (matriz vs obra)
+const getMainMenuItems = (user?: any) => {
+  const items: Array<{ title: string; url: string; icon: any }> = [];
+
+  // For work-site users, hide Painel and Funcionários (they should only see limited set in ops)
+  if (user && (Permissions.isWorkUser(user) || Permissions.isRhObra(user))) return items;
 
   // Painel - todos menos cliente
-  if (Permissions.canAccessPainel(role)) {
+  if (Permissions.canAccessPainel(user?.role)) {
     items.push({ title: "Painel", url: "/", icon: LayoutDashboard });
   }
 
-  // Funcionários - apenas rh_matriz, administrativo_matriz, financeiro_matriz
-  if (Permissions.canAccessFuncionarios(role)) {
+  // Funcionários - apenas perfis de matriz
+  if (Permissions.canAccessFuncionarios(user?.role)) {
     items.push({ title: "Funcionários", url: "/funcionarios", icon: Users });
   }
 
   return items;
 };
 
-const getOpsMenuItems = (role?: string) => {
-  const items = [];
+const getOpsMenuItems = (user?: any) => {
+  const items: Array<{ title: string; url: string; icon: any }> = [];
 
-  // Obras - todos (mas rh_obra vê apenas sua obra)
-  if (Permissions.canAccessObras(role)) {
-    items.push({ title: "Obras", url: "/obras", icon: HardHat });
+  // If the user is a work-site user (rh_obra / work), only show a reduced set
+  if (user && (Permissions.isWorkUser(user) || Permissions.isRhObra(user))) {
+    // Obras
+    if (Permissions.canAccessObras(user?.role)) items.push({ title: "Obras", url: "/obras", icon: HardHat });
+    // Folha Salarial
+    if (Permissions.canAccessFolhaSalarial(user?.role)) items.push({ title: "Folha Salarial", url: "/folha-salarial", icon: Wallet });
+    // Documentos
+    if (Permissions.canAccessDocumentos(user?.role)) items.push({ title: "Documentos", url: "/documentos", icon: FileText });
+    // Demissões
+    if (Permissions.canAccessDemissoes(user?.role)) items.push({ title: "Demissões", url: "/demissoes", icon: UserMinus });
+    // Configurações
+    items.push({ title: "Configurações", url: "/configuracoes", icon: Settings });
+    return items;
   }
 
-  // Folha Salarial - apenas rh_matriz, administrativo_matriz, financeiro_matriz
-  if (Permissions.canAccessFolhaSalarial(role)) {
-    items.push({ title: "Folha Salarial", url: "/folha-salarial", icon: Wallet });
-  }
-
-  // Horas Extras - apenas perfis de matriz
-  if (Permissions.canAccessHorasExtras(role)) {
-    items.push({ title: "Horas Extras", url: "/horas-extras", icon: Clock });
-  }
-
-  // RDV - apenas rh_matriz, administrativo_matriz, financeiro_matriz
-  if (Permissions.canAccessRDV(role)) {
-    items.push({ title: "RDV", url: "/rdv", icon: Receipt });
-  }
-
-  // Documentos - todos menos cliente (aparece, mas não pode editar)
-  if (Permissions.canAccessDocumentos(role)) {
-    items.push({ title: "Documentos", url: "/documentos", icon: FileText });
-  }
+  // Default full set for matriz/admin
+  if (Permissions.canAccessObras(user?.role)) items.push({ title: "Obras", url: "/obras", icon: HardHat });
+  if (Permissions.canAccessFolhaSalarial(user?.role)) items.push({ title: "Folha Salarial", url: "/folha-salarial", icon: Wallet });
+  if (Permissions.canAccessHorasExtras(user?.role)) items.push({ title: "Horas Extras", url: "/horas-extras", icon: Clock });
+  if (Permissions.canAccessRDV(user?.role)) items.push({ title: "RDV", url: "/rdv", icon: Receipt });
+  if (Permissions.canAccessDocumentos(user?.role)) items.push({ title: "Documentos", url: "/documentos", icon: FileText });
 
   return items;
 };
