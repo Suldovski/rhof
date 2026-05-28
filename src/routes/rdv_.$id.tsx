@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { collection, getDocs } from "firebase/firestore";
 import { useEmployees } from "@/lib/employees";
+import { isRhObra, isWorkUser, getUserWorkId, getObraIdFromRhObra } from "@/lib/permissions";
 import { db } from "@/lib/firebase";
 import { rdvStore, useRdvPayment } from "@/lib/rdv-store";
 import { useSites } from "@/lib/sites-store";
@@ -125,13 +126,21 @@ function RdvDetail() {
     return merged;
   }, [employees, sites, workers]);
 
+  const userObraId = useMemo(() => {
+    // RH obra role or generic work user
+    if (isRhObra(auth.currentUser?.role)) return getObraIdFromRhObra(auth.currentUser!.role);
+    if (isWorkUser(auth.currentUser)) return getUserWorkId(auth.currentUser as any);
+    return null;
+  }, [auth.currentUser?.role, auth.currentUser?.workId, auth.currentUser?.obraId]);
+
   const availableEmployees = useMemo(() => {
     const used = new Set(payment?.entries.map((e) => e.employeeId) ?? []);
     const filteredByObra = allWorkers.filter((worker) => {
       if (pickerSite === "todos") return true;
       if (pickerSite === "todos-funcionarios") return true;
-      if (!activeObraId) return true;
       const workerObraId = worker.workId || worker.obraId || "";
+      if (userObraId) return workerObraId === userObraId || worker.site === pickerSite || worker.organograma === pickerSite;
+      if (!activeObraId) return true;
       return workerObraId === activeObraId || worker.site === pickerSite || worker.organograma === pickerSite;
     });
 

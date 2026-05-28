@@ -206,6 +206,7 @@ function HorasExtras() {
     const used = new Set(active.entries.map((e) => e.employeeId));
     const matchedWorkers = combinedWorkers.filter((worker) => {
       const workerObraId = pickWorkerObraId(worker);
+      if (userObraId) return workerObraId === userObraId;
       return !activeObraId || workerObraId === activeObraId;
     });
 
