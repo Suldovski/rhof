@@ -326,6 +326,13 @@ function List() {
               <Plus className="mr-1 h-4 w-4" /> Novo
             </Link>
           </Button>
+                        <Button variant="outline" className="text-destructive" onClick={() => {
+                if (!confirm(`Apagar todos os funcionários de ${obra.name}?`)) return;
+                employeesStore.removeAllFromSite(obra.name);
+                toast.success("Funcionários apagados.");
+              }}>
+                Apagar todos
+              </Button>
         </>
       }
     >

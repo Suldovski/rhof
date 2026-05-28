@@ -150,13 +150,15 @@ function ObraDetail() {
             <Link to="/obras"><ArrowLeft className="mr-1 h-4 w-4" /> Voltar</Link>
           </Button>
           <Button variant="outline" onClick={() => fileRef.current?.click()}>
-            <span className="mr-1">📤</span> Importar planilha
+            <Upload className="mr-1 h-4 w-4" /> Importar planilha
           </Button>
           {canManageWorks && (
             <>
-              <Button onClick={() => navigate({ to: "/funcionarios/novo", search: { site: obra.name } })}>
-                <span className="mr-1">➕</span> Novo
-              </Button>
+          <Button asChild>
+            <Link to="/funcionarios/novo">
+              <Plus className="mr-1 h-4 w-4" /> Novo
+            </Link>
+          </Button>
               <Button variant="destructive" onClick={() => setConfirmDel(true)}>
                 <Trash2 className="mr-1 h-4 w-4" /> Excluir obra
               </Button>
