@@ -23,7 +23,7 @@ import { useEmployees } from "@/lib/employees";
 import { sitesStore, useSites, type Site } from "@/lib/sites-store";
 import { criarObra } from "@/lib/obras";
 import { useAuth } from "@/lib/auth-store";
-import { isClienteObra, getObraIdFromClienteObra, isRhObra, isWorkUser, getUserWorkId } from "@/lib/permissions";
+import { isClienteObra, getObraIdFromClienteObra, isRhObra, isWorkUser, getUserWorkId, isMainUser } from "@/lib/permissions";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
@@ -130,8 +130,8 @@ function Obras() {
   }, [sites, auth.currentUser?.role, auth.currentUser?.workId, auth.currentUser?.obraId]);
 
   // Check if user can manage works (create, edit, delete)
-  // Allow all users EXCEPT cliente_obra
-  const canManageWorks = !isClienteObra(auth.currentUser?.role);
+  // Only matriz users can create/edit/delete obras
+  const canManageWorks = isMainUser(auth.currentUser);
 
   useEffect(() => {
     let cancelled = false;
