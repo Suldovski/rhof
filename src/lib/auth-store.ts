@@ -25,25 +25,10 @@ export type { AppUser } from "./permissions";
 interface AuthState {
   currentUser: AppUser | null;
   loading: boolean;
-  isLocalStorage: boolean; // Demo user (GitHub Pages)
+  isLocalStorage: boolean;
   allUsers: AppUser[];
 }
 
-// DEMO USER para GitHub Pages
-const DEMO_USER: AppUser = {
-  uid: "demo-user-001",
-  name: "Demonstração",
-  email: "demo@bucagrans.com.br",
-  type: "main",
-  role: "rh_matriz",
-  workId: null,
-  workName: null,
-  obraId: null,
-  obraNome: null,
-  createdAt: new Date().toISOString(),
-};
-
-const DEMO_PASSWORD = "demo123";
 const AUTH_STORAGE_KEY = "bucagrans_auth_demo";
 const USERS_STORAGE_KEY = "bucagrans_users_local";
 
@@ -124,13 +109,6 @@ export const authStore = {
 
   login: async (email: string, password: string): Promise<AppUser | null> => {
     try {
-      // Check demo user first (GitHub Pages)
-      if (email.toLowerCase() === DEMO_USER.email.toLowerCase() && password === DEMO_PASSWORD) {
-        console.log("✅ Demo user login (localStorage)");
-        commit({ ...state, currentUser: DEMO_USER, loading: false, isLocalStorage: true });
-        return DEMO_USER;
-      }
-
       // Try Firebase
       try {
         const result = await signInWithEmailAndPassword(auth, email, password);
@@ -195,12 +173,6 @@ export const authStore = {
       } catch {}
       
       // Último recurso: se estiver usando demo user, retorna demo user
-      if (state.isLocalStorage && state.currentUser) {
-        const demoUsers: AppUser[] = [state.currentUser];
-        commit({ ...state, allUsers: demoUsers });
-        return demoUsers;
-      }
-      
       return [];
     }
   },

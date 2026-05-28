@@ -128,14 +128,6 @@ function Login() {
                 : "Use as credenciais cadastradas em Configurações → Usuários."}
             </p>
 
-            {/* Demo User Info */}
-            <div className="mt-4 rounded-md bg-blue-50 p-3 text-xs text-blue-900">
-              <p className="font-semibold">Demo (GitHub Pages):</p>
-              <p>Email: <code className="font-mono">demo@bucagrans.com.br</code></p>
-              <p>Senha: <code className="font-mono">demo123</code></p>
-              <p className="mt-1 text-[10px] opacity-75">Remova após criar seus usuários</p>
-            </div>
-
             <form onSubmit={submit} className="mt-6 space-y-4">
               <div className="grid gap-1.5">
                 <Label className="text-xs uppercase tracking-wider text-muted-foreground">E-mail</Label>
