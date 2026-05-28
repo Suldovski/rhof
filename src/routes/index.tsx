@@ -44,8 +44,9 @@ function Dashboard() {
 
   // Redirect cliente_obra to their specific obra
   useEffect(() => {
-    if (isClienteObra(auth.currentUser?.role)) {
-      const obraId = getObraIdFromClienteObra(auth.currentUser!.role);
+    const role = auth.currentUser?.role;
+    if (typeof role === "string" && isClienteObra(role)) {
+      const obraId = getObraIdFromClienteObra(role);
       if (obraId) {
         setRedirecting(true);
         navigate({ to: "/obras/$id", params: { id: obraId } });
@@ -78,19 +79,7 @@ function Dashboard() {
       eyebrow="Painel geral"
       title={`${greeting()}, ${firstName}`}
       description="Acompanhe os indicadores de pessoal e movimentações nos canteiros."
-      actions={
-        <>
-          <Button variant="outline" asChild>
-            <Link to="/funcionarios">Ver funcionários</Link>
-          </Button>
-          <Button asChild>
-            <Link to="/funcionarios/novo">
-              <Plus className="mr-1 h-4 w-4" /> Novo cadastro
-            </Link>
-          </Button>
-        </>
-      }
-    >
+      > 
       <div className="grid gap-4 md:grid-cols-3">
         {kpis.map((k) => (
           <Link
@@ -182,7 +171,6 @@ function Dashboard() {
             })}
             <div className="mt-4 flex items-center gap-2 rounded-md border border-border bg-muted/40 p-3 text-xs">
               <TrendingUp className="h-4 w-4 text-success" />
-              <span>Crescimento de 12% no quadro vs trimestre anterior</span>
             </div>
           </CardContent>
         </Card>
