@@ -39,6 +39,13 @@ export function resolveUserType(userLike?: UserLike): UserType {
   if (!userLike) return "main";
   if (typeof userLike === "string") {
     if (
+      userLike === "rh_matriz" ||
+      userLike === "administrativo_matriz" ||
+      userLike === "financeiro_matriz"
+    ) {
+      return "main";
+    }
+    if (
       userLike === "work" ||
       userLike.startsWith("rh_obra_") ||
       userLike.startsWith("cliente_obra_")
@@ -50,6 +57,14 @@ export function resolveUserType(userLike?: UserLike): UserType {
 
   if (userLike.type === "main" || userLike.type === "work") {
     return userLike.type;
+  }
+
+  if (
+    userLike.role === "rh_matriz" ||
+    userLike.role === "administrativo_matriz" ||
+    userLike.role === "financeiro_matriz"
+  ) {
+    return "main";
   }
 
   if (userLike.workId || userLike.obraId || userLike.workName || userLike.obraNome) {

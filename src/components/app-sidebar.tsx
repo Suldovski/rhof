@@ -38,12 +38,12 @@ const getMainMenuItems = (user?: any) => {
   const items: Array<{ title: string; url: string; icon: any }> = [];
 
   // Painel - matriz sees it normally; obra users are intentionally hidden here
-  if (!Permissions.isWorkUser(user) && Permissions.canAccessPainel(user?.role)) {
+  if (Permissions.isMainUser(user) && Permissions.canAccessPainel(user?.role)) {
     items.push({ title: "Painel", url: "/", icon: LayoutDashboard });
   }
 
   // Funcionários - apenas perfis de matriz
-  if (Permissions.canAccessFuncionarios(user?.role)) {
+  if (Permissions.isMainUser(user) && Permissions.canAccessFuncionarios(user?.role)) {
     items.push({ title: "Funcionários", url: "/funcionarios", icon: Users });
   }
 
