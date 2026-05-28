@@ -27,6 +27,7 @@ import { db } from "@/lib/firebase";
 import { rdvStore, useRdvPayment } from "@/lib/rdv-store";
 import { useSites } from "@/lib/sites-store";
 import { buildRdvPDF, fmtDate, fmtBRL } from "./rdv";
+import { useAuth } from "@/lib/auth-store";
 import { useRouteProtection, roleChecks } from "@/lib/route-protection";
 
 export const Route = createFileRoute("/rdv_/$id")({
@@ -39,13 +40,20 @@ function RdvDetail() {
   const payment = useRdvPayment(id);
   const employees = useEmployees();
   const sites = useSites();
+  const auth = useAuth();
   const navigate = useNavigate();
   useRouteProtection(roleChecks.rdv, "RDV");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [q, setQ] = useState("");
   const [pickerSite, setPickerSite] = useState<string>("todas");
-  const [workers, setWorkers] = useState<Array<{ id: string; name: string; cpf?: string; role?: string; obraId?: string; workId?: string; site?: string; organograma?: string }>>([]);
+  const [workers, setWorkers] = useState<Array<{ id: string; name: string; cpf?: string; role?: string; obraId?: string; workId?: string; site?: string; organograma?: string; salary?: number; salarioHora?: number }>>([]);
+
+  const userObraId = useMemo(() => {
+    if (isRhObra(auth.currentUser?.role)) return getObraIdFromRhObra(auth.currentUser!.role);
+    if (isWorkUser(auth.currentUser)) return getUserWorkId(auth.currentUser as any);
+    return null;
+  }, [auth.currentUser?.role, auth.currentUser?.workId, auth.currentUser?.obraId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,6 +77,8 @@ function RdvDetail() {
               name: String(data.name ?? data.nome ?? data.fullName ?? data.displayName ?? "").trim(),
               cpf: typeof data.cpf === "string" ? data.cpf.trim() : "",
               role: typeof data.role === "string" ? data.role.trim() : "",
+              salary: typeof data.salary === "number" ? data.salary : undefined,
+              salarioHora: typeof data.salarioHora === "number" ? data.salarioHora : undefined,
               obraId: typeof data.obraId === "string" ? data.obraId.trim() : "",
               workId: typeof data.workId === "string" ? data.workId.trim() : "",
               site: typeof data.site === "string" ? data.site.trim() : "",
@@ -90,6 +100,31 @@ function RdvDetail() {
     };
   }, []);
 
+  const combinedWorkers = useMemo(() => {
+    const localWorkers = employees.map((emp) => {
+      const siteMatch = sites.find((s) => s.name === (emp.site || emp.organograma));
+      const obraId = siteMatch ? siteMatch.id : "";
+      return {
+        id: emp.id,
+        name: emp.name,
+        cpf: emp.cpf,
+        role: emp.role || emp.cargoFuncao,
+        salary: emp.salary,
+        salarioHora: emp.salarioHora,
+        obraId,
+        workId: obraId,
+        site: emp.site,
+        organograma: emp.organograma,
+      };
+    });
+
+    const merged = [...workers];
+    for (const worker of localWorkers) {
+      if (!merged.find((current) => current.id === worker.id)) merged.push(worker as any);
+    }
+    return merged;
+  }, [employees, workers, sites]);
+
   const activeObraId = useMemo(() => {
     if (payment?.obraId) return payment.obraId;
     if (!payment) return null;
@@ -103,50 +138,18 @@ function RdvDetail() {
     return payment?.descricao ?? "";
   }, [payment, activeObraId, sites]);
 
-  const allWorkers = useMemo(() => {
-    const localWorkers = employees.map((emp) => {
-      const siteMatch = sites.find((s) => s.name === (emp.site || emp.organograma));
-      const obraId = siteMatch ? siteMatch.id : "";
-      return {
-        id: emp.id,
-        name: emp.name,
-        cpf: emp.cpf,
-        role: emp.role || emp.cargoFuncao,
-        obraId,
-        workId: obraId,
-        site: emp.site,
-        organograma: emp.organograma,
-      };
-    });
-
-    const merged = [...workers];
-    for (const lw of localWorkers) {
-      if (!merged.find((c) => c.id === lw.id)) merged.push(lw as any);
-    }
-    return merged;
-  }, [employees, sites, workers]);
-
-  const userObraId = useMemo(() => {
-    // RH obra role or generic work user
-    if (isRhObra(auth.currentUser?.role)) return getObraIdFromRhObra(auth.currentUser!.role);
-    if (isWorkUser(auth.currentUser)) return getUserWorkId(auth.currentUser as any);
-    return null;
-  }, [auth.currentUser?.role, auth.currentUser?.workId, auth.currentUser?.obraId]);
-
   const availableEmployees = useMemo(() => {
     const used = new Set(payment?.entries.map((e) => e.employeeId) ?? []);
-    const filteredByObra = allWorkers.filter((worker) => {
-      if (pickerSite === "todos") return true;
-      if (pickerSite === "todos-funcionarios") return true;
+    const filteredByObra = combinedWorkers.filter((worker) => {
       const workerObraId = worker.workId || worker.obraId || "";
-      if (userObraId) return workerObraId === userObraId || worker.site === pickerSite || worker.organograma === pickerSite;
+      if (userObraId) return workerObraId === userObraId;
       if (!activeObraId) return true;
-      return workerObraId === activeObraId || worker.site === pickerSite || worker.organograma === pickerSite;
+      return workerObraId === activeObraId;
     });
 
     return filteredByObra
       .filter((e) => !used.has(e.id))
-      .filter((e) => pickerSite === "todos-funcionarios" || pickerSite === "todas" || e.site === pickerSite || e.organograma === pickerSite)
+      .filter((e) => pickerSite === "todas" || e.site === pickerSite || e.organograma === pickerSite)
       .filter((e) =>
         !q ||
         e.name.toLowerCase().includes(q.toLowerCase()) ||
@@ -154,7 +157,7 @@ function RdvDetail() {
         e.id.includes(q),
       )
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [payment, q, pickerSite, workers, activeObraId, allWorkers]);
+  }, [payment, q, pickerSite, combinedWorkers, activeObraId, userObraId]);
 
   useEffect(() => {
     if (payment) setPickerSite(activeObraName || "todas");
