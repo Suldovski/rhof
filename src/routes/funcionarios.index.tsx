@@ -25,8 +25,19 @@ export const Route = createFileRoute("/funcionarios/")({
   component: List,
 });
 
-type TabKey = "todos" | "efetivo" | "pj" | "terceiro" | "mobilizacao" | "ferias";
-type DeptKey = "todos" | "Obra" | "Engenharia" | "Seguranca" | "Administrativo";
+type StatusKey = "todos" | "efetivo" | "pj" | "mobilizacao";
+type SectorKey = "todos" | "operacional" | "administrativo";
+
+function employeeStatusKey(employee: Employee): StatusKey | "other" {
+  if (employee.status === "mobilizacao") return "mobilizacao";
+  if (employee.tipo === "pj" || /^PJ-/i.test(employee.id)) return "pj";
+  if (employee.status === "efetivo" || employee.status === "ativo" || employee.status === "admissao") return "efetivo";
+  return "other";
+}
+
+function employeeSectorKey(employee: Employee): SectorKey {
+  return employee.department === "Administrativo" ? "administrativo" : "operacional";
+}
 
 function exportCSV(rows: Employee[]) {
   const headers = [
@@ -264,7 +275,8 @@ function List() {
   const employees = useEmployees();
   const [q, setQ] = useState("");
   const [site, setSite] = useState<string>("todos");
-  const [dept, setDept] = useState<string>("todos");
+  const [status, setStatus] = useState<StatusKey>("todos");
+  const [sector, setSector] = useState<SectorKey>("todos");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const filtered = useMemo(() => {
@@ -276,11 +288,12 @@ function List() {
           e.cpf.includes(q) ||
           e.id.includes(q);
         const matchesSite = site === "todos" || e.site === site;
-        const matchesDept = dept === "todos" || e.department === dept;
-        return matchesQ && matchesSite && matchesDept;
+        const matchesStatus = status === "todos" || employeeStatusKey(e) === status;
+        const matchesSector = sector === "todos" || employeeSectorKey(e) === sector;
+        return matchesQ && matchesSite && matchesStatus && matchesSector;
       })
       .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
-  }, [employees, q, site, dept]);
+  }, [employees, q, site, status, sector]);
 
   return (
     <PageShell
@@ -337,16 +350,25 @@ function List() {
             ))}
           </SelectContent>
         </Select>
-        <Select value={dept} onValueChange={setDept}>
+        <Select value={status} onValueChange={(value) => setStatus(value as StatusKey)}>
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Departamento" />
+            <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="todos">Todos depts.</SelectItem>
-            <SelectItem value="Obra">Obra</SelectItem>
-            <SelectItem value="Engenharia">Engenharia</SelectItem>
-            <SelectItem value="Seguranca">Segurança</SelectItem>
-            <SelectItem value="Administrativo">Administrativo</SelectItem>
+            <SelectItem value="todos">Todos</SelectItem>
+            <SelectItem value="efetivo">Efetivos</SelectItem>
+            <SelectItem value="pj">PJ</SelectItem>
+            <SelectItem value="mobilizacao">Mobilização</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={sector} onValueChange={(value) => setSector(value as SectorKey)}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Setor" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos os setores</SelectItem>
+            <SelectItem value="operacional">Operacional</SelectItem>
+            <SelectItem value="administrativo">Administrativo</SelectItem>
           </SelectContent>
         </Select>
         <Button variant="ghost" size="icon" aria-label="Mais filtros">
@@ -359,7 +381,7 @@ function List() {
           <div>Matrícula</div>
           <div>Nome / Função</div>
           <div>Obra</div>
-          <div>Departamento</div>
+          <div>Setor</div>
           <div>Status</div>
           <div />
         </div>
@@ -382,7 +404,7 @@ function List() {
                   </div>
                 </div>
                 <div className="truncate text-sm">{e.site}</div>
-                <div className="text-sm">{e.department === "Seguranca" ? "Segurança" : e.department}</div>
+                <div className="text-sm">{employeeSectorKey(e) === "operacional" ? "Operacional" : "Administrativo"}</div>
                 <div><StatusBadge status={e.status} /></div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </Link>

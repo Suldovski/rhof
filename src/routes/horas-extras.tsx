@@ -175,11 +175,7 @@ function HorasExtras() {
 
   const obraName = (id?: string) => sites.find((s) => s.id === id)?.name || "";
 
-  // Funcionários disponíveis para adicionar ao período: filtrados pela obra do período
-  const availableEmployees = useMemo(() => {
-    if (!active) return [];
-    const used = new Set(active.entries.map((e) => e.employeeId));
-    // Combine Firestore workers with local employees as a fallback/augmentation.
+  const combinedWorkers = useMemo(() => {
     const localWorkers = employees.map((emp) => {
       const siteMatch = sites.find((s) => s.name === (emp.site || emp.organograma));
       const obraId = siteMatch ? siteMatch.id : "";
@@ -197,12 +193,18 @@ function HorasExtras() {
       } as WorkerOption;
     });
 
-    const combined = [...firestoreWorkers];
-    for (const lw of localWorkers) {
-      if (!combined.find((c) => c.id === lw.id)) combined.push(lw);
+    const merged = [...firestoreWorkers];
+    for (const worker of localWorkers) {
+      if (!merged.find((current) => current.id === worker.id)) merged.push(worker);
     }
+    return merged;
+  }, [employees, firestoreWorkers, sites]);
 
-    const matchedWorkers = combined.filter((worker) => {
+  // Funcionários disponíveis para adicionar ao período: filtrados pela obra do período
+  const availableEmployees = useMemo(() => {
+    if (!active) return [];
+    const used = new Set(active.entries.map((e) => e.employeeId));
+    const matchedWorkers = combinedWorkers.filter((worker) => {
       const workerObraId = pickWorkerObraId(worker);
       return !activeObraId || workerObraId === activeObraId;
     });
@@ -362,7 +364,7 @@ function HorasExtras() {
                   <Badge variant="secondary">{picked.size} selecionado(s)</Badge>
                 </div>
                 <div className="max-h-[50vh] overflow-y-auto">
-                  {combined.filter((worker) => !activeObraId || pickWorkerObraId(worker) === activeObraId).length === 0 ? (
+                  {combinedWorkers.filter((worker) => !activeObraId || pickWorkerObraId(worker) === activeObraId).length === 0 ? (
                     <p className="py-8 text-center text-sm text-muted-foreground">
                       Nenhum colaborador encontrado para esta obra
                     </p>

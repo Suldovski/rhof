@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { Plus, Download, Trash2, Calendar, Receipt, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
@@ -22,7 +22,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { rdvStore, useRdvPayments } from "@/lib/rdv-store";
-import { listarObras, type Obra } from "@/lib/obras";
+import { useSites } from "@/lib/sites-store";
 import { useAuth } from "@/lib/auth-store";
 import { isRhObra, getObraIdFromRhObra } from "@/lib/permissions";
 import { useRouteProtection, roleChecks } from "@/lib/route-protection";
@@ -44,16 +44,12 @@ function fmtDate(iso: string) {
 function RdvIndex() {
   const payments = useRdvPayments();
   const auth = useAuth();
+  const sites = useSites();
   useRouteProtection(roleChecks.rdv, "RDV");
   const [open, setOpen] = useState(false);
   const [data, setData] = useState(new Date().toISOString().slice(0, 10));
   const [obraId, setObraId] = useState("");
-  const [obras, setObras] = useState<Obra[]>([]);
   const [filterObra, setFilterObra] = useState<string>("todas");
-
-  useEffect(() => {
-    listarObras(auth.currentUser as any).then(setObras);
-  }, [auth.currentUser]);
 
   // Auto-seleciona obra do RH_Obra
   useEffect(() => {
@@ -67,6 +63,14 @@ function RdvIndex() {
   }, [auth.currentUser?.role]);
 
   const isMatriz = !isRhObra(auth.currentUser?.role);
+  const obras = useMemo(() => {
+    if (!auth.currentUser) return [];
+    if (isMatriz) return sites.map((site) => ({ id: site.id, nome: site.name }));
+    const obraId = getObraIdFromRhObra(auth.currentUser.role);
+    return sites
+      .filter((site) => site.id === obraId)
+      .map((site) => ({ id: site.id, nome: site.name }));
+  }, [auth.currentUser, isMatriz, sites]);
 
   const filtered = useMemo(() => {
     if (isRhObra(auth.currentUser?.role)) {

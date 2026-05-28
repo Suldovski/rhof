@@ -58,7 +58,7 @@ function Dashboard() {
     return null;
   }
 
-  const ativos = employees.filter((e) => e.status === "efetivo" || (e.status as any) === "ativo").length;
+  const ativos = employees.filter((e) => !["ferias", "afastado", "desligado"].includes(e.status)).length;
   const ferias = employees.filter((e) => e.status === "ferias").length;
 
   type Kpi = {

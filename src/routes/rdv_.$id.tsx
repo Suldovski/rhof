@@ -102,9 +102,7 @@ function RdvDetail() {
     return payment?.descricao ?? "";
   }, [payment, activeObraId, sites]);
 
-  const availableEmployees = useMemo(() => {
-    const used = new Set(payment?.entries.map((e) => e.employeeId) ?? []);
-
+  const allWorkers = useMemo(() => {
     const localWorkers = employees.map((emp) => {
       const siteMatch = sites.find((s) => s.name === (emp.site || emp.organograma));
       const obraId = siteMatch ? siteMatch.id : "";
@@ -120,20 +118,26 @@ function RdvDetail() {
       };
     });
 
-    const combined = [...workers];
+    const merged = [...workers];
     for (const lw of localWorkers) {
-      if (!combined.find((c) => c.id === lw.id)) combined.push(lw as any);
+      if (!merged.find((c) => c.id === lw.id)) merged.push(lw as any);
     }
+    return merged;
+  }, [employees, sites, workers]);
 
-    const filteredByObra = combined.filter((worker) => {
-      if (!activeObraId) return false;
+  const availableEmployees = useMemo(() => {
+    const used = new Set(payment?.entries.map((e) => e.employeeId) ?? []);
+    const filteredByObra = allWorkers.filter((worker) => {
+      if (pickerSite === "todos") return true;
+      if (pickerSite === "todos-funcionarios") return true;
+      if (!activeObraId) return true;
       const workerObraId = worker.workId || worker.obraId || "";
-      return workerObraId === activeObraId;
+      return workerObraId === activeObraId || worker.site === pickerSite || worker.organograma === pickerSite;
     });
 
     return filteredByObra
       .filter((e) => !used.has(e.id))
-      .filter((e) => pickerSite === "todas" || e.site === pickerSite || e.organograma === pickerSite)
+      .filter((e) => pickerSite === "todos-funcionarios" || pickerSite === "todas" || e.site === pickerSite || e.organograma === pickerSite)
       .filter((e) =>
         !q ||
         e.name.toLowerCase().includes(q.toLowerCase()) ||
@@ -141,7 +145,7 @@ function RdvDetail() {
         e.id.includes(q),
       )
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [payment, q, pickerSite, workers, activeObraId]);
+  }, [payment, q, pickerSite, workers, activeObraId, allWorkers]);
 
   useEffect(() => {
     if (payment) setPickerSite(activeObraName || "todas");
@@ -253,6 +257,7 @@ function RdvDetail() {
                   <Select value={pickerSite} onValueChange={setPickerSite} disabled={!activeObraId}>
                     <SelectTrigger className="w-[220px]"><SelectValue /></SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="todos-funcionarios">Todos os funcionários</SelectItem>
                       <SelectItem value="todas">Todas as obras</SelectItem>
                       {sites.map((s) => (
                         <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
