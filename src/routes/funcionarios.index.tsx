@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
-import { Plus, Search, Filter, Download, ChevronRight, Upload } from "lucide-react";
+import { Plus, Search, Filter, Download, ChevronRight, Upload, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { PageShell } from "@/components/page-shell";
@@ -15,6 +15,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { employeesStore, useEmployees, type Employee, type EmployeeStatus } from "@/lib/employees";
 import { sitesStore, useSites, slugify } from "@/lib/sites-store";
 
@@ -217,7 +227,6 @@ async function importFromFile(file: File): Promise<void> {
     const id = idRaw != null && idRaw !== "" ? String(idRaw).trim() : undefined;
 
     try {
-      // 🔥 AGORA É ASSÍNCRONO
       await employeesStore.add({
         id, name, cpf,
         nascimento: col.nasc >= 0 ? parseAnyDate(row[col.nasc]) : "",
@@ -275,6 +284,7 @@ function List() {
   const [site, setSite] = useState<string>("todos");
   const [status, setStatus] = useState<StatusKey>("todos");
   const [sector, setSector] = useState<SectorKey>("todos");
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const filtered = useMemo(() => {
@@ -309,7 +319,6 @@ function List() {
               const f = e.target.files?.[0];
               if (!f) return;
               try { 
-                // 🔥 AGORA É ASSÍNCRONO
                 await importFromFile(f); 
               } catch (err: any) { 
                 toast.error("Falha ao importar: " + (err?.message ?? err)); 
@@ -331,12 +340,7 @@ function List() {
           <Button 
             variant="outline" 
             className="text-destructive" 
-            onClick={async () => {
-              // 🔥 AGORA É ASSÍNCRONO
-              if (!confirm("Apagar TODOS os funcionários? Esta ação não pode ser desfeita!")) return;
-              await employeesStore.removeAll();
-              toast.success("Todos os funcionários foram apagados.");
-            }}
+            onClick={() => setConfirmDeleteAll(true)}
           >
             Apagar todos
           </Button>
@@ -431,6 +435,37 @@ function List() {
           )}
         </ul>
       </Card>
+
+      {/* 🔥 AlertDialog estilizado para Apagar Todos */}
+      <AlertDialog open={confirmDeleteAll} onOpenChange={setConfirmDeleteAll}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+              </div>
+              <AlertDialogTitle>Apagar todos os funcionários?</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription>
+              Esta ação removerá <strong>todos</strong> os funcionários do sistema permanentemente.
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                await employeesStore.removeAll();
+                toast.success("Todos os funcionários foram apagados.");
+                setConfirmDeleteAll(false);
+              }}
+            >
+              Apagar todos
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageShell>
   );
 }

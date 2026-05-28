@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
-import { Plus, Trash2, Download, Clock, Search, UserPlus } from "lucide-react";
+import { Plus, Trash2, Download, Clock, Search, UserPlus, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -17,6 +17,16 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { overtimeStore, useOvertime, type OvertimeEntry } from "@/lib/overtime-store";
 import { useEmployees } from "@/lib/employees";
 import { useAuth } from "@/lib/auth-store";
@@ -96,6 +106,10 @@ function HorasExtras() {
   const [pickerQ, setPickerQ] = useState("");
   const [pickerSite, setPickerSite] = useState<string>("todas");
   const [firestoreWorkers, setFirestoreWorkers] = useState<WorkerOption[]>([]);
+  
+  // 🔥 Estado para o AlertDialog de excluir período
+  const [deletePeriodId, setDeletePeriodId] = useState<string | null>(null);
+  const [deletePeriodName, setDeletePeriodName] = useState<string>("");
 
   const userObraId = useMemo(() => {
     if (isRhObra(auth.currentUser?.role)) {
@@ -502,10 +516,19 @@ function HorasExtras() {
               <CardContent>
                 <p className="text-2xl font-display">{fmtBRL(total)}</p>
                 <p className="text-xs text-muted-foreground">{p.entries.length} lançamento(s)</p>
-                <Button size="sm" variant="ghost" className="mt-2 text-destructive" onClick={(e) => {
-                  e.stopPropagation();
-                  if (confirm("Excluir este período?")) overtimeStore.remove(p.id);
-                }}>Excluir</Button>
+                {/* 🔥 Botão estilizado com AlertDialog */}
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  className="mt-2 text-destructive" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDeletePeriodId(p.id);
+                    setDeletePeriodName(p.periodo);
+                  }}
+                >
+                  Excluir
+                </Button>
               </CardContent>
             </Card>
           );
@@ -583,6 +606,39 @@ function HorasExtras() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 🔥 AlertDialog estilizado para Excluir Período */}
+      <AlertDialog open={!!deletePeriodId} onOpenChange={(open) => { if (!open) setDeletePeriodId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+              </div>
+              <AlertDialogTitle>Excluir período?</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription>
+              Esta ação removerá permanentemente o período <strong>{deletePeriodName}</strong> e todos os seus lançamentos.
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (deletePeriodId) {
+                  overtimeStore.remove(deletePeriodId);
+                  toast.success("Período excluído.");
+                }
+                setDeletePeriodId(null);
+              }}
+            >
+              Excluir período
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageShell>
   );
 }
