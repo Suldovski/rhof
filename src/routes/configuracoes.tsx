@@ -34,13 +34,13 @@ function Configuracoes() {
   const auth = useAuth();
   const navigate = useNavigate();
 
-  // Redirect cliente_obra - they can't access settings
+  // Redirect work-site users (including RH de obra) - they shouldn't access settings
   useEffect(() => {
-    if (isClienteObra(auth.currentUser?.role)) {
+    if (isWorkUser(auth.currentUser)) {
       toast.error("Você não tem permissão para acessar as configurações.");
       navigate({ to: "/" });
     }
-  }, [auth.currentUser?.role, navigate]);
+  }, [auth.currentUser, navigate]);
 
   return (
     <PageShell
