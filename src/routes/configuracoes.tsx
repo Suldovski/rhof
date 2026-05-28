@@ -248,7 +248,6 @@ function UserFormDialog({ editing, onDone }: { editing: AppUser | null; onDone: 
   const [name, setName] = useState(editing?.name ?? "");
   const [email, setEmail] = useState(editing?.email ?? "");
   const [password, setPassword] = useState("");
-  const [adminPassword, setAdminPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [seat, setSeat] = useState<string>(editing?.type === "work" ? (editing.workId ?? editing.obraId ?? "") : "main");
@@ -301,20 +300,7 @@ function UserFormDialog({ editing, onDone }: { editing: AppUser | null; onDone: 
           toast.success("Usuário atualizado.");
         }
       } else {
-        // If an admin is creating a user, preserve their session by re-authenticating after creation.
-        if (auth.currentUser && !auth.isLocalStorage) {
-          if (!adminPassword) {
-            toast.error("Digite sua senha para manter a sessão após criar o usuário.");
-            setLoading(false);
-            return;
-          }
-          await authStore.create(
-            { name, email, password, ...payload },
-            { preserveCurrent: { email: auth.currentUser.email ?? "", password: adminPassword } },
-          );
-        } else {
-          await authStore.create({ name, email, password, ...payload });
-        }
+        await authStore.create({ name, email, password, ...payload });
         toast.success("Usuário criado.");
       }
       onDone();
@@ -408,18 +394,7 @@ function UserFormDialog({ editing, onDone }: { editing: AppUser | null; onDone: 
             </SelectContent>
           </Select>
         </div>
-        {!editing && auth.currentUser && !auth.isLocalStorage && (
-          <div>
-            <Label htmlFor="adminPassword">Sua senha (para manter sessão)</Label>
-            <Input
-              id="adminPassword"
-              type="password"
-              value={adminPassword}
-              onChange={(e) => setAdminPassword(e.target.value)}
-              required
-            />
-          </div>
-        )}
+        {/* no admin password required — creation uses secondary auth to avoid replacing current session */}
         <DialogFooter>
           <Button type="button" variant="ghost" onClick={onDone}>
             Cancelar

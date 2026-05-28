@@ -6,9 +6,11 @@ import {
   onAuthStateChanged,
   User as FirebaseUser,
   updatePassword,
+  getAuth as getAuthForApp,
 } from "firebase/auth";
+import { initializeApp as initializeFirebaseApp, deleteApp } from "firebase/app";
 import { doc, getDoc, setDoc, collection, query, where, getDocs, deleteDoc, updateDoc } from "firebase/firestore";
-import { auth, db } from "./firebase";
+import { auth, db, firebaseConfig } from "./firebase";
 import {
   legacyRoleForUser,
   normalizeUserRecord,
@@ -213,7 +215,7 @@ export const authStore = {
     type: "main" | "work";
     workId?: string | null;
     workName?: string | null;
-  }, options?: { preserveCurrent?: { email: string; password: string } }): Promise<AppUser | null> => {
+  }): Promise<AppUser | null> => {
     try {
       // Verificar se email já existe
       const usersRef = collection(db, "usuarios");
@@ -224,9 +226,15 @@ export const authStore = {
         throw new Error("Um usuário com este e-mail já existe.");
       }
 
-      // Criar usuário Firebase Auth
+      // Criar usuário Firebase Auth usando um app/auth secundário para não alterar a sessão principal
       const password = data.password || Math.random().toString(36).slice(-16);
-      const result = await createUserWithEmailAndPassword(auth, data.email, password);
+      const secondaryAppName = `secondary-${Date.now()}`;
+      const secondaryApp = initializeFirebaseApp(firebaseConfig as any, secondaryAppName);
+      const secondaryAuth = getAuthForApp(secondaryApp);
+      const result = await createUserWithEmailAndPassword(secondaryAuth, data.email, password);
+      // sign out secondary auth and delete app instance to clean up
+      try { await signOut(secondaryAuth as any); } catch (e) {}
+      try { await deleteApp(secondaryApp); } catch (e) {}
 
       const workId = data.type === "work" ? data.workId ?? null : null;
       const workName = data.type === "work" ? data.workName ?? null : null;
@@ -256,29 +264,6 @@ export const authStore = {
 
       // Atualizar lista de usuários
       await authStore.fetchAllUsers();
-
-      // Se informado para preservar a sessão atual, volte a autenticar
-      if (options?.preserveCurrent && options.preserveCurrent.email && options.preserveCurrent.password) {
-        try {
-          // Re-autentica o usuário original
-          const adminResult = await signInWithEmailAndPassword(auth, options.preserveCurrent.email, options.preserveCurrent.password);
-          // Carrega o documento do usuário restaurado e comita no estado
-          try {
-            const userDocRef = doc(db, "usuarios", adminResult.user.uid);
-            const userDocSnap = await getDoc(userDocRef);
-            if (userDocSnap.exists()) {
-              const userData = userDocSnap.data();
-              const restored = resolveUserDoc(adminResult.user.uid, userData, adminResult.user.email || "");
-              commit({ ...state, currentUser: restored, loading: false, isLocalStorage: false });
-            }
-          } catch (e) {
-            // ignore, onAuthStateChanged will sync state
-          }
-        } catch (err) {
-          console.error("Falha ao restaurar sessão do usuário criador:", err);
-          throw new Error("Usuário criado, mas falha ao restaurar a sessão. Faça login novamente.");
-        }
-      }
 
       return user;
     } catch (error) {
