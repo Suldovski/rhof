@@ -29,9 +29,9 @@ type StatusKey = "todos" | "efetivo" | "pj" | "mobilizacao";
 type SectorKey = "todos" | "operacional" | "administrativo";
 
 function employeeStatusKey(employee: Employee): StatusKey | "other" {
-  if (employee.status === "mobilizacao") return "mobilizacao";
+  if (employee.status === "mobilizacao" || employee.status === "admissao") return "mobilizacao";
   if (employee.tipo === "pj" || /^PJ-/i.test(employee.id)) return "pj";
-  if (employee.status === "efetivo" || employee.status === "ativo" || employee.status === "admissao") return "efetivo";
+  if (employee.status === "efetivo" || employee.status === "ativo") return "efetivo";
   return "other";
 }
 

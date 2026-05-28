@@ -34,7 +34,8 @@ function ObraDetail() {
   const auth = useAuth();
   const [confirmDel, setConfirmDel] = useState(false);
   const [q, setQ] = useState("");
-  const [dept, setDept] = useState("todos");
+  const [statusFilter, setStatusFilter] = useState("todos");
+  const [sectorFilter, setSectorFilter] = useState("todos");
   const [status, setStatus] = useState("todos");
   const [loading, setLoading] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -93,11 +94,17 @@ function ObraDetail() {
         e.cpf.includes(q) ||
         e.id.includes(q) ||
         e.role.toLowerCase().includes(q.toLowerCase());
-      const matchesDept = dept === "todos" || e.department === dept;
-      const matchesStatus = status === "todos" || e.status === status;
-      return matchesQ && matchesDept && matchesStatus;
+      const normalizedStatus = e.status === "admissao" || e.status === "mobilizacao"
+        ? "mobilizacao"
+        : e.status === "efetivo" || e.status === "ativo"
+          ? "efetivo"
+          : e.status;
+      const matchesStatus = statusFilter === "todos" || normalizedStatus === statusFilter;
+      const matchesSector = sectorFilter === "todos"
+        || (sectorFilter === "administrativo" ? e.department === "Administrativo" : e.department !== "Administrativo");
+      return matchesQ && matchesSector && matchesStatus;
     });
-  }, [team, q, dept, status]);
+  }, [team, q, statusFilter, sectorFilter]);
 
   if (loading) {
     return (
@@ -211,24 +218,21 @@ function ObraDetail() {
                     className="h-9 border-0 bg-transparent shadow-none focus-visible:ring-0"
                   />
                 </div>
-                <Select value={dept} onValueChange={setDept}>
-                  <SelectTrigger className="w-[170px]"><SelectValue placeholder="Departamento" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos depts.</SelectItem>
-                    <SelectItem value="Obra">Obra</SelectItem>
-                    <SelectItem value="Engenharia">Engenharia</SelectItem>
-                    <SelectItem value="Seguranca">Segurança</SelectItem>
-                    <SelectItem value="Administrativo">Administrativo</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={status} onValueChange={setStatus}>
-                  <SelectTrigger className="w-[150px]"><SelectValue placeholder="Status" /></SelectTrigger>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[170px]"><SelectValue placeholder="Status" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todos">Todos status</SelectItem>
-                    <SelectItem value="ativo">Ativo</SelectItem>
-                    <SelectItem value="ferias">Férias</SelectItem>
-                    <SelectItem value="afastado">Afastado</SelectItem>
-                    <SelectItem value="desligado">Desligado</SelectItem>
+                    <SelectItem value="efetivo">Efetivos</SelectItem>
+                    <SelectItem value="pj">PJ</SelectItem>
+                    <SelectItem value="mobilizacao">Mobilização</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={sectorFilter} onValueChange={setSectorFilter}>
+                  <SelectTrigger className="w-[150px]"><SelectValue placeholder="Setor" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos setores</SelectItem>
+                    <SelectItem value="operacional">Operacional</SelectItem>
+                    <SelectItem value="administrativo">Administrativo</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

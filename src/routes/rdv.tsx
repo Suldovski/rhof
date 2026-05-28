@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus, Download, Trash2, Calendar, Receipt, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
