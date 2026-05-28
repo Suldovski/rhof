@@ -74,6 +74,7 @@ const getOpsMenuItems = (user?: any) => {
   if (Permissions.canAccessHorasExtras(user?.role)) items.push({ title: "Horas Extras", url: "/horas-extras", icon: Clock });
   if (Permissions.canAccessRDV(user?.role)) items.push({ title: "RDV", url: "/rdv", icon: Receipt });
   if (Permissions.canAccessDocumentos(user?.role)) items.push({ title: "Documentos", url: "/documentos", icon: FileText });
+  items.push({ title: "Configurações", url: "/configuracoes", icon: Settings });
 
   return items;
 };
