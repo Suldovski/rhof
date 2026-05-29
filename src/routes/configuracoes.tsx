@@ -452,7 +452,7 @@ function UserFormDialog({ editing, createPreset, onDone }: { editing: AppUser | 
         )}
         <div>
           <Label htmlFor="seat">Sede</Label>
-          <Select value={seat} onValueChange={setSeat} disabled={isClientPreset}>
+          <Select value={seat} onValueChange={setSeat}>
             <SelectTrigger id="seat">
               <SelectValue placeholder="Selecione a sede" />
             </SelectTrigger>
