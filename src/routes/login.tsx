@@ -1,11 +1,12 @@
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { HardHat, LogIn } from "lucide-react";
+import { LogIn } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import { BrandLogo } from "@/components/brand-logo";
 import { authStore, useAuth } from "@/lib/auth-store";
 import { getClientRedirectUrl } from "@/lib/client-helpers";
 import { initializeAppData } from "@/lib/app-bootstrap";
@@ -90,17 +91,7 @@ function Login() {
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
       <div className="relative hidden flex-col justify-between bg-primary p-10 text-primary-foreground lg:flex">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-accent text-accent-foreground">
-            <HardHat className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="font-display text-lg leading-tight">BUCAGRANS</p>
-            <p className="text-[10px] uppercase tracking-widest text-primary-foreground/60">
-              Construtora de Obras SA
-            </p>
-          </div>
-        </div>
+        <BrandLogo variant="full" />
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-accent">
             SIGA
@@ -117,11 +108,8 @@ function Login() {
       <div className="flex items-center justify-center bg-background p-6">
         <Card className="w-full max-w-md border-border">
           <CardContent className="p-8">
-            <div className="mb-6 flex items-center gap-3 lg:hidden">
-              <div className="flex h-10 w-10 items-center justify-center rounded-md bg-accent text-accent-foreground">
-                <HardHat className="h-5 w-5" />
-              </div>
-              <p className="font-display text-lg">SIGA</p>
+            <div className="mb-6 flex justify-center lg:hidden">
+              <BrandLogo variant="compact" className="h-20 w-20" />
             </div>
 
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-accent">
