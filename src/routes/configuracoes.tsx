@@ -74,15 +74,15 @@ function Configuracoes() {
               <CardContent className="grid gap-4">
                 <div>
                   <Label className="text-xs uppercase tracking-wider text-muted-foreground">Razão social</Label>
-                  <Input value="Bucagrans Construções LTDA" readOnly className="mt-1" />
+                  <Input value="Bucagrans Construtora de Obras SA" readOnly className="mt-1" />
                 </div>
                 <div>
                   <Label className="text-xs uppercase tracking-wider text-muted-foreground">CNPJ</Label>
-                  <Input value="00.000.000/0000-00" readOnly className="mt-1" />
+                  <Input value="85.465.938/0001-30" readOnly className="mt-1" />
                 </div>
                 <div>
                   <Label className="text-xs uppercase tracking-wider text-muted-foreground">Endereço</Label>
-                  <Input value="Av. Paulista, 1500 — São Paulo, SP" readOnly className="mt-1" />
+                  <Input value="Rua Theodoro de Bona, 401 - Cidade Industrial de Curitiba, Curitiba - PR, 81260-530" readOnly className="mt-1" />
                 </div>
               </CardContent>
             </Card>
