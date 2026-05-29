@@ -95,22 +95,19 @@ function Login() {
             <HardHat className="h-5 w-5" />
           </div>
           <div>
-            <p className="font-display text-lg leading-tight">SIGA</p>
+            <p className="font-display text-lg leading-tight">BUCAGRANS</p>
             <p className="text-[10px] uppercase tracking-widest text-primary-foreground/60">
-              SIGA
+              
             </p>
           </div>
         </div>
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-accent">
-            Sistema Integrado de Gestão Administrativa
+            SIGA
           </p>
           <h1 className="mt-3 font-display text-5xl leading-tight">
-            Gestão de pessoas para empresas de obras.
+            Sistema Integrado de Gestão Administrativa
           </h1>
-          <p className="mt-4 max-w-md text-sm text-primary-foreground/70">
-            Cadastros, ponto, folha e documentos de canteiro em um só lugar.
-          </p>
         </div>
         <p className="text-[10px] uppercase tracking-widest text-primary-foreground/40">
           © {new Date().getFullYear()} SIGA
@@ -142,7 +139,7 @@ function Login() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="seu@empresa.com.br"
+                  placeholder="seu@bucagrans.com.br"
                   required
                   autoFocus
                   disabled={isLoading}
