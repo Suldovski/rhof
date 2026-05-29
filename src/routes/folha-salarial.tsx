@@ -70,7 +70,12 @@ function FolhaSalarial() {
   }, [auth.currentUser?.role, sites]);
 
   const eligibleEmployees = useMemo(
-    () => employees.filter((employee) => employee.tipo !== "pj"),
+    () => employees.filter((employee) => {
+      const re = String(employee.id ?? "").trim();
+      if (!re) return false;
+      if (re.toLowerCase().includes("pj")) return false;
+      return /^\d+$/.test(re);
+    }),
     [employees],
   );
 
