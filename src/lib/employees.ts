@@ -540,6 +540,16 @@ function normalizeEmployeeRecord(employee: Employee): Employee {
   };
 }
 
+function commit(next: Employee[]) {
+  state = next;
+
+  try {
+    localStorage.setItem("bucagrans.employees.v2", JSON.stringify(state));
+  } catch {}
+
+  listeners.forEach((listener) => listener());
+}
+
 // Estado sincronizado com Firebase
 const COLLECTION = "employees";
 let state: Employee[] = [];

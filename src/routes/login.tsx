@@ -91,12 +91,12 @@ function Login() {
     <div className="grid min-h-screen lg:grid-cols-2">
       <div className="relative hidden flex-col justify-between bg-primary p-10 text-primary-foreground lg:flex">
         <div className="flex items-center gap-3">
-          <div className="flex h-18 w-18 items-center justify-center rounded-2xl bg-white/95 shadow-sm ring-1 ring-black/5">
-            <HardHat className="h-10 w-10 text-[#123d77]" />
+          <div className="flex h-18 w-18 items-center justify-center rounded-2xl bg-accent text-accent-foreground shadow-sm ring-1 ring-black/5">
+            <HardHat className="h-10 w-10" />
           </div>
           <div className="leading-none">
-            <div className="font-black tracking-[0.18em] text-white">BUCAGRANS</div>
-            <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.32em] text-white/70">
+            <div className="font-black tracking-[0.18em] text-[#123d77]">BUCAGRANS</div>
+            <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.32em] text-[#66728a]">
               Construtora de Obras LTDA
             </div>
           </div>
@@ -118,7 +118,7 @@ function Login() {
         <Card className="w-full max-w-md border-border">
           <CardContent className="p-8">
             <div className="mb-6 flex justify-center lg:hidden">
-              <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm ring-1 ring-black/5">
+              <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-accent text-accent-foreground shadow-sm ring-1 ring-black/5">
                 <HardHat className="h-11 w-11" />
               </div>
             </div>
