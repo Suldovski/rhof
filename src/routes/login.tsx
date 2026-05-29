@@ -97,7 +97,7 @@ function Login() {
           <div>
             <p className="font-display text-lg leading-tight">BUCAGRANS</p>
             <p className="text-[10px] uppercase tracking-widest text-primary-foreground/60">
-              
+              Construtora de Obras SA
             </p>
           </div>
         </div>
