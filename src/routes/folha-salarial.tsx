@@ -39,12 +39,22 @@ function monthLabel(m: string): string {
   return `${MESES_PT[parseInt(mm, 10) - 1]} / ${y}`;
 }
 function buildMonthOptions(extra: string[]): string[] {
-  const set = new Set<string>(extra);
-  const now = new Date();
-  for (let i = -6; i <= 6; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+  const MIN_MONTH = "2026-05";
+  const FUTURE_MONTHS = 120;
+  const set = new Set<string>();
+
+  // Sempre oferece um horizonte fixo de 10 anos a partir de maio/2026.
+  const [startYear, startMonth] = MIN_MONTH.split("-").map(Number);
+  for (let i = 0; i < FUTURE_MONTHS; i++) {
+    const d = new Date(startYear, (startMonth - 1) + i, 1);
     set.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
   }
+
+  // Mantém meses extras já existentes, desde que não sejam anteriores a maio/2026.
+  extra.forEach((m) => {
+    if (m >= MIN_MONTH) set.add(m);
+  });
+
   return Array.from(set).sort().reverse();
 }
 
