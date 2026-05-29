@@ -44,7 +44,7 @@ import { authStore, useAuth } from "@/lib/auth-store";
 import { getObraIdFromClienteObra, isClienteObra } from "@/lib/permissions";
 
 export const Route = createFileRoute("/obras_/$id")({
-  head: () => ({ meta: [{ title: "Obra · Bucagrans RH" }] }),
+  head: () => ({ meta: [{ title: "Obra · SIGA" }] }),
   component: ObraDetail,
 });
 

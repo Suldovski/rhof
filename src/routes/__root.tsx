@@ -64,8 +64,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Bucagrans · RH da Construção" },
-      { name: "description", content: "Sistema de RH para empresas de obras — cadastros, folha salarial e gestão de canteiro." },
+      { title: "SIGA · Sistema Integrado de Gestão Administrativa" },
+      { name: "description", content: "Sistema integrado para gestão administrativa, financeira e de pessoas." },
     ],
     links: [{ rel: "stylesheet", href: appCss }],
   }),

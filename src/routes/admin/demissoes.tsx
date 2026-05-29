@@ -12,7 +12,7 @@ import { useAuth } from "@/lib/auth-store";
 import { isRhMatriz, isRhObra, getUserWorkName } from "@/lib/permissions";
 
 export const Route = createFileRoute("/admin/demissoes")({
-  head: () => ({ meta: [{ title: "Demissões · Bucagrans RH" }] }),
+  head: () => ({ meta: [{ title: "Demissões · SIGA" }] }),
   component: AdminDemissoes,
 });
 

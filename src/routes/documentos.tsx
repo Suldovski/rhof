@@ -16,7 +16,7 @@ import { useAuth } from "@/lib/auth-store";
 import { isClienteObra } from "@/lib/permissions";
 
 export const Route = createFileRoute("/documentos")({
-  head: () => ({ meta: [{ title: "Documentos · Bucagrans RH" }] }),
+  head: () => ({ meta: [{ title: "Documentos · SIGA" }] }),
   component: Documentos,
 });
 

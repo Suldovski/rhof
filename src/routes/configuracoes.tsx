@@ -26,7 +26,7 @@ import { isClienteObra, isWorkUser, type UserType } from "@/lib/permissions";
 import { useSites } from "@/lib/sites-store";
 
 export const Route = createFileRoute("/configuracoes")({
-  head: () => ({ meta: [{ title: "Configurações · Bucagrans RH" }] }),
+  head: () => ({ meta: [{ title: "Configurações · SIGA" }] }),
   component: Configuracoes,
 });
 

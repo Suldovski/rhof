@@ -37,7 +37,7 @@ import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 export const Route = createFileRoute("/horas-extras")({
-  head: () => ({ meta: [{ title: "Horas Extras · Bucagrans RH" }] }),
+  head: () => ({ meta: [{ title: "Horas Extras · SIGA" }] }),
   component: HorasExtras,
 });
 

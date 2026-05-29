@@ -28,7 +28,7 @@ import { isRhObra, getObraIdFromRhObra } from "@/lib/permissions";
 import { useRouteProtection, roleChecks } from "@/lib/route-protection";
 
 export const Route = createFileRoute("/rdv")({
-  head: () => ({ meta: [{ title: "RDV · Bucagrans RH" }] }),
+  head: () => ({ meta: [{ title: "RDV · SIGA" }] }),
   component: RdvIndex,
 });
 

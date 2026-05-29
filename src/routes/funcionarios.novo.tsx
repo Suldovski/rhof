@@ -22,7 +22,7 @@ import { useAuth } from "@/lib/auth-store";
 import { useRouteProtection, roleChecks } from "@/lib/route-protection";
 
 export const Route = createFileRoute("/funcionarios/novo")({
-  head: () => ({ meta: [{ title: "Novo cadastro · Bucagrans RH" }] }),
+  head: () => ({ meta: [{ title: "Novo cadastro · SIGA" }] }),
   component: NewEmployee,
 });
 

@@ -31,7 +31,7 @@ import { useAuth } from "@/lib/auth-store";
 import { useRouteProtection, roleChecks } from "@/lib/route-protection";
 
 export const Route = createFileRoute("/rdv_/$id")({
-  head: () => ({ meta: [{ title: "RDV · Bucagrans RH" }] }),
+  head: () => ({ meta: [{ title: "RDV · SIGA" }] }),
   component: RdvDetail,
 });
 

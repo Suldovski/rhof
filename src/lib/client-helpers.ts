@@ -30,7 +30,6 @@ export const canClientViewObra = (user: AppUser | null | undefined, obraId: stri
 export const getClientRestrictedUrls = (): string[] => {
   return [
     "/funcionarios",
-    "/funcionarios/novo",
     "/folha-salarial",
     "/horas-extras",
     "/rdv",
@@ -58,6 +57,11 @@ export const isClientAllowedUrl = (pathname: string, user: AppUser | null | unde
   const obraId = getClientObraId(user);
   const restricted = getClientRestrictedUrls();
   const allowed = getClientAllowedUrls();
+
+  // Permite detalhes de funcionário da própria obra, mas mantém lista/cadastro bloqueados
+  if (pathname.startsWith("/funcionarios/") && pathname !== "/funcionarios/novo") {
+    return true;
+  }
 
   // Se está em URL restrita, não pode
   if (restricted.some((url) => pathname === url || pathname.startsWith(url + "/"))) {

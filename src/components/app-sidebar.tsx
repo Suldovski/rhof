@@ -115,9 +115,9 @@ export function AppSidebar() {
           </div>
           {!collapsed && (
             <div className="leading-tight">
-              <p className="font-display text-base text-sidebar-foreground">BUCAGRANS</p>
+              <p className="font-display text-base text-sidebar-foreground">SIGA</p>
               <p className="text-[10px] uppercase tracking-widest text-sidebar-foreground/60">
-                Recursos Humanos
+                Sistema Integrado de Gestão Administrativa
               </p>
             </div>
           )}

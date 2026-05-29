@@ -40,7 +40,7 @@ import { isWorkUser, getUserWorkName, isRhMatriz, isClienteObra } from "@/lib/pe
 import { useRouteProtection, roleChecks } from "@/lib/route-protection";
 
 export const Route = createFileRoute("/funcionarios/$id")({
-  head: ({ params }) => ({ meta: [{ title: `Funcionário #${params.id} · Bucagrans RH` }] }),
+  head: ({ params }) => ({ meta: [{ title: `Funcionário #${params.id} · SIGA` }] }),
   notFoundComponent: () => (
     <div className="p-12 text-center">
       <p className="text-sm text-muted-foreground">Funcionário não encontrado.</p>

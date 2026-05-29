@@ -23,7 +23,7 @@ import { useAuth } from "@/lib/auth-store";
 import { isRhObra, getObraIdFromRhObra } from "@/lib/permissions";
 
 export const Route = createFileRoute("/folha-salarial")({
-  head: () => ({ meta: [{ title: "Folha Salarial · Bucagrans RH" }] }),
+  head: () => ({ meta: [{ title: "Folha Salarial · SIGA" }] }),
   component: FolhaSalarial,
 });
 

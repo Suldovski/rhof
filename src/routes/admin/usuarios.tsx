@@ -23,7 +23,7 @@ import { isRhMatriz } from "@/lib/permissions";
 import { useWorks } from "@/lib/works";
 
 export const Route = createFileRoute("/admin/usuarios")({
-  head: () => ({ meta: [{ title: "Usuários · Bucagrans RH" }] }),
+  head: () => ({ meta: [{ title: "Usuários · SIGA" }] }),
   component: UsersPage,
 });
 

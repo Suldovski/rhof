@@ -20,7 +20,7 @@ import { isClienteObra, getObraIdFromClienteObra } from "@/lib/permissions";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Painel · Bucagrans RH" },
+      { title: "Painel · SIGA" },
       { name: "description", content: "Visão geral do RH da construtora — funcionários e obras." },
     ],
   }),

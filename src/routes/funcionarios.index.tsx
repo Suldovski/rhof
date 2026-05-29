@@ -30,7 +30,7 @@ import { sitesStore, useSites, slugify } from "@/lib/sites-store";
 
 export const Route = createFileRoute("/funcionarios/")({
   head: () => ({
-    meta: [{ title: "Funcionários · Bucagrans RH" }],
+    meta: [{ title: "Funcionários · SIGA" }],
   }),
   component: List,
 });

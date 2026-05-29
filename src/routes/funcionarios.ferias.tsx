@@ -11,7 +11,7 @@ import { useAuth } from "@/lib/auth-store";
 import { useRouteProtection, roleChecks } from "@/lib/route-protection";
 
 export const Route = createFileRoute("/funcionarios/ferias")({
-  head: () => ({ meta: [{ title: "Funcionários em férias · Bucagrans RH" }] }),
+  head: () => ({ meta: [{ title: "Funcionários em férias · SIGA" }] }),
   component: Ferias,
 });
 

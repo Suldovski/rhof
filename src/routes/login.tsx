@@ -11,7 +11,7 @@ import { getClientRedirectUrl } from "@/lib/client-helpers";
 import { initializeAppData } from "@/lib/app-bootstrap";
 
 export const Route = createFileRoute("/login")({
-  head: () => ({ meta: [{ title: "Entrar · Bucagrans RH" }] }),
+  head: () => ({ meta: [{ title: "Entrar · SIGA" }] }),
   validateSearch: (search: Record<string, unknown>) => ({
     redirect: (search.redirect as string) || "/",
   }),
@@ -95,15 +95,15 @@ function Login() {
             <HardHat className="h-5 w-5" />
           </div>
           <div>
-            <p className="font-display text-lg leading-tight">BUCAGRANS</p>
+            <p className="font-display text-lg leading-tight">SIGA</p>
             <p className="text-[10px] uppercase tracking-widest text-primary-foreground/60">
-              Recursos Humanos
+              SIGA
             </p>
           </div>
         </div>
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-accent">
-            Plataforma RH
+            Sistema Integrado de Gestão Administrativa
           </p>
           <h1 className="mt-3 font-display text-5xl leading-tight">
             Gestão de pessoas para empresas de obras.
@@ -113,7 +113,7 @@ function Login() {
           </p>
         </div>
         <p className="text-[10px] uppercase tracking-widest text-primary-foreground/40">
-          © {new Date().getFullYear()} Bucagrans Construtora
+          © {new Date().getFullYear()} SIGA
         </p>
       </div>
 
@@ -124,7 +124,7 @@ function Login() {
               <div className="flex h-10 w-10 items-center justify-center rounded-md bg-accent text-accent-foreground">
                 <HardHat className="h-5 w-5" />
               </div>
-              <p className="font-display text-lg">BUCAGRANS</p>
+              <p className="font-display text-lg">SIGA</p>
             </div>
 
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-accent">
@@ -142,7 +142,7 @@ function Login() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="seu@bucagrans.com.br"
+                  placeholder="seu@empresa.com.br"
                   required
                   autoFocus
                   disabled={isLoading}
