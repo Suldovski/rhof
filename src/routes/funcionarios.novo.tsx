@@ -86,14 +86,96 @@ function NewEmployee() {
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Obrigatórios: dados pessoais, estado civil, dados para contrato, info pagamento, nome da mãe
-    const requiredOk =
-      form.name && form.cpf && form.nascimento && form.estadoCivil &&
-      form.admission && form.organograma && form.cargoFuncao &&
-      form.bank.bank && form.bank.agency && form.bank.account &&
-      form.nomeMae;
-    if (!requiredOk) {
-      toast.error("Preencha todos os campos obrigatórios (marcados com *).");
+    const missing: string[] = [];
+    const requireText = (value: string, label: string) => {
+      if (!value?.trim()) missing.push(label);
+    };
+
+    const requireNumber = (value: number, label: string) => {
+      if (!Number.isFinite(value)) missing.push(label);
+    };
+
+    if (!form.photo) missing.push("Foto do colaborador");
+    requireText(form.tipo ?? "", "Tipo de contrato");
+    if (form.tipo === "pj" || form.tipo === "terceiro") {
+      requireText(form.empresaTerceiro ?? "", "Empresa");
+    }
+
+    requireText(form.name, "Nome completo");
+    requireText(form.cpf, "CPF");
+    requireText(form.nascimento, "Data de nascimento");
+    requireText(form.sexo, "Sexo");
+    requireText(form.racaCor, "Raça/cor");
+    requireText(form.estadoCivil, "Estado civil");
+    requireText(form.grauInstrucao, "Grau de instrução");
+    requireText(form.deficienciaFisica, "Deficiência física");
+    requireText(form.nacionalidade, "Nacionalidade");
+    requireText(form.rne, "RNE");
+    requireText(form.municipioNascimento, "Município de nascimento");
+    requireText(form.estadoNascimento, "Estado de nascimento");
+    requireText(form.sindicatoUf, "UF Sindicato");
+    requireText(form.sindicato, "Sindicato");
+
+    requireText(form.endereco, "Endereço");
+    requireText(form.enderecoNumero, "Número");
+    requireText(form.cep, "CEP");
+    requireText(form.complemento, "Complemento");
+    requireText(form.bairro, "Bairro");
+    requireText(form.municipio, "Município");
+    requireText(form.estado, "Estado");
+    requireText(form.telefone, "Telefone");
+    requireText(form.telefoneRecado, "Telefone recado");
+    requireText(form.email, "E-mail");
+
+    requireText(form.cnh?.numero ?? "", "Nº CNH");
+    requireText(form.cnh?.categoria ?? "", "Categoria CNH");
+    requireText(form.cnh?.uf ?? "", "UF CNH");
+    requireText(form.cnh?.primeiraHabilitacao ?? "", "1ª habilitação CNH");
+    requireText(form.cnh?.expedicao ?? "", "Expedição CNH");
+    requireText(form.cnh?.validade ?? "", "Validade CNH");
+
+    requireText(form.admission, "Data de admissão");
+    requireText(form.organograma, "Organograma (obra)");
+    requireText(form.status, "Status inicial");
+    requireText(form.cargoFuncao, "Cargo / Função");
+    requireNumber(form.salarioHora, "Salário/hora");
+    requireText(form.periodoExperiencia, "Período de experiência");
+    if (form.periodoExperiencia === "outro") {
+      requireText(form.periodoExperienciaOutro, "Outro per. experiência");
+    }
+    requireText(form.escalaHorario, "Escala/Horário");
+    requireText(form.ctps, "CTPS");
+    requireText(form.pis, "PIS/PASEP");
+    requireText(form.rg, "RG");
+    requireNumber(form.percentualPericulosidade, "% Periculosidade");
+    requireNumber(form.percentualInsalubridade, "% Insalubridade");
+    requireNumber(form.ajudaCusto, "Ajuda de custo (R$)");
+    requireText(form.horasExtras, "Horas extras");
+
+    if (form.vt) {
+      requireNumber(form.vtIda, "Valor ida (VT)");
+      requireNumber(form.vtVolta, "Valor volta (VT)");
+    }
+    if (form.valeAlimentacao) {
+      requireNumber(form.valorDescontoVA, "Desconto VA");
+    }
+
+    requireText(form.bank.bank, "Banco");
+    requireText(form.bank.agency, "Agência");
+    requireText(form.bank.account, "Conta");
+    requireText(form.bank.type, "Tipo de conta");
+    requireText(form.bank.pix, "Chave PIX");
+
+    requireText(form.nomeMae, "Nome da mãe");
+
+    if (form.documentos.length === 0) {
+      missing.push("Documentos anexados");
+    }
+
+    if (missing.length > 0) {
+      const preview = missing.slice(0, 6).join(", ");
+      const suffix = missing.length > 6 ? ` e mais ${missing.length - 6}` : "";
+      toast.error(`Preencha os campos obrigatórios: ${preview}${suffix}.`);
       return;
     }
     setSubmitting(true);
