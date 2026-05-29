@@ -110,6 +110,17 @@ function RootComponent() {
     }
   }, [pathname, auth.currentUser, auth.loading, navigate]);
 
+  useEffect(() => {
+    if (!auth.loading && auth.currentUser && isClientAllowedUrl(pathname, auth.currentUser)) {
+      if (pathname === "/" || pathname === "/obras") {
+        const obraId = auth.currentUser.workId || auth.currentUser.obraId;
+        if (obraId) {
+          navigate({ to: "/obras/$id", params: { id: obraId } });
+        }
+      }
+    }
+  }, [pathname, auth.currentUser, auth.loading, navigate]);
+
   if (auth.loading && !isLogin) {
     return (
       <div className="flex min-h-screen items-center justify-center" suppressHydrationWarning>

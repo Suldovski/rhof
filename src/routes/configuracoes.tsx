@@ -104,8 +104,10 @@ function Configuracoes() {
 function UsersPanel() {
   const auth = useAuth();
   const allUsers = useAllUsers();
+  const works = useWorks();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<AppUser | null>(null);
+  const [createPreset, setCreatePreset] = useState<"rh" | "cliente" | null>(null);
   const [removeId, setRemoveId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -148,13 +150,37 @@ function UsersPanel() {
               Usuários cadastrados aqui podem acessar a tela de login.
             </p>
           </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              onClick={() => {
+                setEditing(null);
+                setCreatePreset("rh");
+                setOpen(true);
+              }}
+            >
+              <Plus className="mr-1 h-4 w-4" /> Novo usuário
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                if (works.length === 0) {
+                  toast.error("Cadastre ao menos uma obra antes de criar um cliente.");
+                  return;
+                }
+                setEditing(null);
+                setCreatePreset("cliente");
+                setOpen(true);
+              }}
+            >
+              <Plus className="mr-1 h-4 w-4" /> Novo cliente de obra
+            </Button>
+          </div>
           <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={() => setEditing(null)}>
-                <Plus className="mr-1 h-4 w-4" /> Novo usuário
-              </Button>
-            </DialogTrigger>
-            <UserFormDialog editing={editing} onDone={() => { setOpen(false); setEditing(null); }} />
+            <UserFormDialog
+              editing={editing}
+              createPreset={createPreset}
+              onDone={() => { setOpen(false); setEditing(null); setCreatePreset(null); }}
+            />
           </Dialog>
         </CardHeader>
         <CardContent className="p-0">
@@ -242,7 +268,7 @@ function UsersPanel() {
   );
 }
 
-function UserFormDialog({ editing, onDone }: { editing: AppUser | null; onDone: () => void }) {
+function UserFormDialog({ editing, createPreset, onDone }: { editing: AppUser | null; createPreset: "rh" | "cliente" | null; onDone: () => void }) {
   const auth = useAuth();
   const works = useWorks();
   const [name, setName] = useState(editing?.name ?? "");
@@ -256,7 +282,6 @@ function UserFormDialog({ editing, onDone }: { editing: AppUser | null; onDone: 
     editing && isClienteObra(editing.role) ? "cliente" : "rh",
   );
   const [loading, setLoading] = useState(false);
-
   const isCurrentUser = editing && editing.uid === auth.currentUserId;
 
   useEffect(() => {
@@ -266,13 +291,20 @@ function UserFormDialog({ editing, onDone }: { editing: AppUser | null; onDone: 
     setNewPassword("");
     setConfirmPassword("");
     setResetSent(false);
-    setSeat(editing?.type === "work" ? (editing.workId ?? editing.obraId ?? "") : "main");
-    setAccessKind(editing && isClienteObra(editing.role) ? "cliente" : "rh");
-  }, [editing]);
+    if (editing) {
+      setSeat(editing.type === "work" ? (editing.workId ?? editing.obraId ?? "") : "main");
+      setAccessKind(isClienteObra(editing.role) ? "cliente" : "rh");
+      return;
+    }
+
+    setSeat(createPreset === "cliente" ? (works[0]?.id ?? "main") : "main");
+    setAccessKind(createPreset === "cliente" ? "cliente" : "rh");
+  }, [editing, createPreset, works]);
 
   const selectedWork = seat === "main" ? null : works.find((work) => work.id === seat) ?? null;
   const selectedType: UserType = seat === "main" ? "main" : "work";
   const showAccessKind = seat !== "main";
+  const isClientPreset = !editing && createPreset === "cliente";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -339,9 +371,9 @@ function UserFormDialog({ editing, onDone }: { editing: AppUser | null; onDone: 
   return (
     <DialogContent>
       <DialogHeader>
-        <DialogTitle>{editing ? "Editar usuário" : "Novo usuário"}</DialogTitle>
+        <DialogTitle>{editing ? "Editar usuário" : isClientPreset ? "Novo cliente de obra" : "Novo usuário"}</DialogTitle>
         <DialogDescription>
-          {editing ? "Atualize os dados do usuário." : "Crie um novo acesso ao sistema."}
+          {editing ? "Atualize os dados do usuário." : isClientPreset ? "Crie um acesso restrito para cliente da obra." : "Crie um novo acesso ao sistema."}
         </DialogDescription>
       </DialogHeader>
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -420,7 +452,7 @@ function UserFormDialog({ editing, onDone }: { editing: AppUser | null; onDone: 
         )}
         <div>
           <Label htmlFor="seat">Sede</Label>
-          <Select value={seat} onValueChange={setSeat}>
+          <Select value={seat} onValueChange={setSeat} disabled={isClientPreset}>
             <SelectTrigger id="seat">
               <SelectValue placeholder="Selecione a sede" />
             </SelectTrigger>
@@ -435,7 +467,7 @@ function UserFormDialog({ editing, onDone }: { editing: AppUser | null; onDone: 
         {showAccessKind && (
           <div>
             <Label htmlFor="accessKind">Perfil de acesso</Label>
-            <Select value={accessKind} onValueChange={(value) => setAccessKind(value as "rh" | "cliente") }>
+            <Select value={accessKind} onValueChange={(value) => setAccessKind(value as "rh" | "cliente") } disabled={isClientPreset}>
               <SelectTrigger id="accessKind">
                 <SelectValue placeholder="Selecione o perfil" />
               </SelectTrigger>

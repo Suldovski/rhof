@@ -152,11 +152,11 @@ function ObraDetail() {
           <Button variant="outline" asChild>
             <Link to="/obras"><ArrowLeft className="mr-1 h-4 w-4" /> Voltar</Link>
           </Button>
-          <Button variant="outline" onClick={() => fileRef.current?.click()}>
-            <Upload className="mr-1 h-4 w-4" /> Importar planilha
-          </Button>
           {canManageWorks && (
             <>
+              <Button variant="outline" onClick={() => fileRef.current?.click()}>
+                <Upload className="mr-1 h-4 w-4" /> Importar planilha
+              </Button>
           <Button asChild>
             <Link to="/funcionarios/novo">
               <Plus className="mr-1 h-4 w-4" /> Novo

@@ -45,6 +45,7 @@ export const getClientRestrictedUrls = (): string[] => {
 export const getClientAllowedUrls = (): string[] => {
   return [
     "/",
+    "/obras",
   ];
 };
 
@@ -64,7 +65,7 @@ export const isClientAllowedUrl = (pathname: string, user: AppUser | null | unde
   }
 
   if (pathname === "/obras" && obraId) {
-    return false;
+    return true;
   }
 
   if (obraId && (pathname === `/obras/${obraId}` || pathname.startsWith(`/obras/${obraId}/`))) {
