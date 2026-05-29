@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import {
   Users,
   HardHat,
-  TrendingUp,
   ArrowUpRight,
   CalendarClock,
   Plus,
@@ -169,9 +168,6 @@ function Dashboard() {
                 </div>
               );
             })}
-            <div className="mt-4 flex items-center gap-2 rounded-md border border-border bg-muted/40 p-3 text-xs">
-              <TrendingUp className="h-4 w-4 text-success" />
-            </div>
           </CardContent>
         </Card>
       </div>
