@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { authStore, useAuth } from "@/lib/auth-store";
 import { getClientRedirectUrl } from "@/lib/client-helpers";
 import { initializeAppData } from "@/lib/app-bootstrap";
@@ -25,7 +24,6 @@ function Login() {
   const { redirect } = useSearch({ from: "/login" });
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isClient, setIsClient] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   // Executar seed na primeira vez
@@ -50,26 +48,28 @@ function Login() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      if (isClient) {
-        const user = await authStore.loginClient(email.trim());
-        if (!user) {
-          toast.error("Cliente não encontrado para este e-mail.");
-          setIsLoading(false);
-          return;
-        }
+      const trimmedEmail = email.trim();
+      let user = password
+        ? await authStore.login(trimmedEmail, password)
+        : null;
+
+      if (!user) {
+        user = await authStore.loginClient(trimmedEmail);
+      }
+
+      if (!user) {
+        toast.error("E-mail ou senha incorretos.");
+        setIsLoading(false);
+        return;
+      }
+
+      if (user.role?.startsWith("cliente_obra_")) {
         toast.success(`Bem-vindo(a), ${user.name}.`);
         navigate({ to: getClientRedirectUrl(user) });
         setIsLoading(false);
         return;
       }
 
-      // Regular user login
-      const user = await authStore.login(email.trim(), password);
-      if (!user) {
-        toast.error("E-mail ou senha incorretos.");
-        setIsLoading(false);
-        return;
-      }
       toast.success(`Bem-vindo(a), ${user.name}.`);
       // Navigation happens via useEffect when auth.currentUser updates
     } catch (error) {
@@ -132,9 +132,7 @@ function Login() {
             </p>
             <h2 className="mt-2 font-display text-3xl">Acesse sua conta</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              {isClient 
-                ? "Use seu e-mail de acesso como cliente."
-                : "Use as credenciais cadastradas em Configurações → Usuários."}
+              Clientes de obra podem entrar com o e-mail cadastrado. Usuários internos usam as credenciais cadastradas em Configurações → Usuários.
             </p>
 
             <form onSubmit={submit} className="mt-6 space-y-4">
@@ -151,30 +149,15 @@ function Login() {
                 />
               </div>
 
-              {!isClient && (
-                <div className="grid gap-1.5">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Senha</Label>
-                  <Input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    required={!isClient}
-                    disabled={isLoading}
-                  />
-                </div>
-              )}
-
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="isClient"
-                  checked={isClient}
-                  onCheckedChange={(checked) => setIsClient(checked as boolean)}
+              <div className="grid gap-1.5">
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Senha</Label>
+                <Input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
                   disabled={isLoading}
                 />
-                <Label htmlFor="isClient" className="text-xs font-normal cursor-pointer">
-                  Sou um cliente (acesso apenas para visualizar)
-                </Label>
               </div>
 
               <Button type="submit" className="w-full" size="lg" disabled={isLoading}>

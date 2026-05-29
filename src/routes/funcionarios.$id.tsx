@@ -58,12 +58,22 @@ function Detail() {
   const e = useEmployee(id);
   const navigate = useNavigate();
   const auth = useAuth();
-  useRouteProtection(roleChecks.funcionarios, "Funcionários");
   const isClient = isClienteObra(auth.currentUser?.role);
   const [confirmDel, setConfirmDel] = useState(false);
   const [editing, setEditing] = useState(false);
   const [trocaOpen, setTrocaOpen] = useState(false);
   const [demOpen, setDemOpen] = useState(false);
+
+  useRouteProtection((user) => {
+    if (isClienteObra(user)) {
+      if (!e) return true;
+      const myWorkName = getUserWorkName(user);
+      const empSite = e.site || e.organograma || "";
+      return !!myWorkName && !!empSite && empSite === myWorkName;
+    }
+
+    return roleChecks.funcionarios(user);
+  }, "Funcionários");
 
   if (!e) {
     return (
