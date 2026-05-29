@@ -57,9 +57,6 @@ export function PageShell({ title, eyebrow, description, actions, children }: Pa
             </Avatar>
             <div className="hidden text-right leading-tight md:block">
               <p className="text-xs font-semibold">{user?.name ?? "Convidado"}</p>
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                {user?.role ?? "—"}
-              </p>
             </div>
           </div>
           <Button
