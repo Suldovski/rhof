@@ -23,7 +23,7 @@ import {
 import { useAuth, authStore, type AppUser, useAllUsers } from "@/lib/auth-store";
 import { useHorarios, horariosStore, type Horario } from "@/lib/horarios-store";
 import { isClienteObra, isWorkUser, type UserType } from "@/lib/permissions";
-import { useWorks } from "@/lib/works";
+import { useSites } from "@/lib/sites-store";
 
 export const Route = createFileRoute("/configuracoes")({
   head: () => ({ meta: [{ title: "Configurações · Bucagrans RH" }] }),
@@ -104,7 +104,7 @@ function Configuracoes() {
 function UsersPanel() {
   const auth = useAuth();
   const allUsers = useAllUsers();
-  const works = useWorks();
+  const sites = useSites();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<AppUser | null>(null);
   const [createPreset, setCreatePreset] = useState<"rh" | "cliente" | null>(null);
@@ -163,7 +163,7 @@ function UsersPanel() {
             <Button
               variant="secondary"
               onClick={() => {
-                if (works.length === 0) {
+                if (sites.length === 0) {
                   toast.error("Cadastre ao menos uma obra antes de criar um cliente.");
                   return;
                 }
@@ -270,7 +270,7 @@ function UsersPanel() {
 
 function UserFormDialog({ editing, createPreset, onDone }: { editing: AppUser | null; createPreset: "rh" | "cliente" | null; onDone: () => void }) {
   const auth = useAuth();
-  const works = useWorks();
+  const sites = useSites();
   const [name, setName] = useState(editing?.name ?? "");
   const [email, setEmail] = useState(editing?.email ?? "");
   const [password, setPassword] = useState("");
@@ -297,11 +297,11 @@ function UserFormDialog({ editing, createPreset, onDone }: { editing: AppUser | 
       return;
     }
 
-    setSeat(createPreset === "cliente" ? (works[0]?.id ?? "main") : "main");
+      setSeat(createPreset === "cliente" ? (sites[0]?.id ?? "main") : "main");
     setAccessKind(createPreset === "cliente" ? "cliente" : "rh");
-  }, [editing, createPreset, works]);
+    }, [editing, createPreset, sites]);
 
-  const selectedWork = seat === "main" ? null : works.find((work) => work.id === seat) ?? null;
+  const selectedWork = seat === "main" ? null : sites.find((site) => site.id === seat) ?? null;
   const selectedType: UserType = seat === "main" ? "main" : "work";
   const showAccessKind = seat !== "main";
   const isClientPreset = !editing && createPreset === "cliente";
@@ -458,8 +458,8 @@ function UserFormDialog({ editing, createPreset, onDone }: { editing: AppUser | 
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="main">Matriz</SelectItem>
-              {works.map((work) => (
-                <SelectItem key={work.id} value={work.id}>{work.name}</SelectItem>
+              {sites.map((site) => (
+                <SelectItem key={site.id} value={site.id}>{site.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>

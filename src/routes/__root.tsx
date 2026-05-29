@@ -16,7 +16,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Toaster } from "@/components/ui/sonner";
 import { useAuth } from "@/lib/auth-store";
-import { isClientAllowedUrl } from "@/lib/client-helpers";
+import { isClientAllowedUrl, isClientUser } from "@/lib/client-helpers";
 
 function NotFoundComponent() {
   return (
@@ -132,7 +132,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <SidebarProvider>
-        {auth.currentUser && !isLogin && <AppSidebar />}
+        {auth.currentUser && !isLogin && !isClientUser(auth.currentUser) && <AppSidebar />}
 
         <main className="w-full">
           <Outlet />

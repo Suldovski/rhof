@@ -21,7 +21,7 @@ import {
 import { useEmployees, employeesStore } from "@/lib/employees";
 import { importFromFile } from "@/lib/employees-import-fixed";
 import { sitesStore, useSites, useSite } from "@/lib/sites-store";
-import { useAuth } from "@/lib/auth-store";
+import { authStore, useAuth } from "@/lib/auth-store";
 import { isClienteObra, getObraIdFromClienteObra } from "@/lib/permissions";
 
 export const Route = createFileRoute("/obras_/$id")({
@@ -42,6 +42,7 @@ function ObraDetail() {
   const [status, setStatus] = useState("todos");
   const [loading, setLoading] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
+  const isClient = isClienteObra(auth.currentUser?.role);
 
   // Check permission for cliente_obra
   useEffect(() => {
@@ -137,6 +138,11 @@ function ObraDetail() {
 
   const canManageWorks = !isClienteObra(auth.currentUser?.role);
 
+  const handleLogout = async () => {
+    await authStore.logout();
+    navigate({ to: "/login", search: { redirect: "/" } });
+  };
+
   return (
     <PageShell
       eyebrow="Canteiro de obras"
@@ -144,35 +150,75 @@ function ObraDetail() {
       description={obra.description || "Detalhes da obra e equipe alocada."}
       actions={
         <>
-          <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={async (e) => {
-            const f = e.target.files?.[0]; if (!f) return;
-            try { await importFromFile(f, obra?.name); } catch (err: any) { toast.error("Falha: " + (err?.message ?? err)); }
-            if (fileRef.current) fileRef.current.value = "";
-          }} />
-          <Button variant="outline" asChild>
-            <Link to="/obras"><ArrowLeft className="mr-1 h-4 w-4" /> Voltar</Link>
-          </Button>
-          {canManageWorks && (
+          {isClient ? (
             <>
-              <Button variant="outline" onClick={() => fileRef.current?.click()}>
-                <Upload className="mr-1 h-4 w-4" /> Importar planilha
-              </Button>
-          <Button asChild>
-            <Link to="/funcionarios/novo">
-              <Plus className="mr-1 h-4 w-4" /> Novo
-            </Link>
-          </Button>
-              <Button variant="destructive" onClick={() => setConfirmDel(true)}>
-                <Trash2 className="mr-1 h-4 w-4" /> Excluir obra
-              </Button>
-              <Button variant="outline" className="text-destructive" onClick={() => {
-                if (!confirm(`Apagar todos os funcionários de ${obra.name}?`)) return;
-                employeesStore.removeAllFromSite(obra.name);
-                toast.success("Funcionários da obra apagados.");
-              }}>
-                Apagar todos
+              <Button variant="outline" onClick={handleLogout}>
+                <ArrowLeft className="mr-1 h-4 w-4" /> Sair
               </Button>
             </>
+          ) : (
+            <>
+              <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={async (e) => {
+                const f = e.target.files?.[0]; if (!f) return;
+                try { await importFromFile(f, obra?.name); } catch (err: any) { toast.error("Falha: " + (err?.message ?? err)); }
+                if (fileRef.current) fileRef.current.value = "";
+              }} />
+              <Button variant="outline" asChild>
+                <Link to="/obras"><ArrowLeft className="mr-1 h-4 w-4" /> Voltar</Link>
+              </Button>
+              {canManageWorks && (
+                <>
+                  <Button variant="outline" onClick={() => fileRef.current?.click()}>
+                    <Upload className="mr-1 h-4 w-4" /> Importar planilha
+                  </Button>
+                  <Button asChild>
+                    <Link to="/funcionarios/novo">
+                      <Plus className="mr-1 h-4 w-4" /> Novo
+                    </Link>
+                  </Button>
+                  <Button variant="destructive" onClick={() => setConfirmDel(true)}>
+            const allSites = sites.length > 0 ? sites : sitesStore.list();
+            const resolvedObra = useMemo(() => {
+              if (obra) return obra;
+
+              const currentClientName = auth.currentUser?.workName || auth.currentUser?.obraNome || "";
+              const targetSlug = String(id || "")
+                .toLowerCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/[^a-z0-9]+/g, "-")
+                .replace(/(^-|-$)/g, "");
+
+              return allSites.find((site) => {
+                const siteSlug = site.name
+                  .toLowerCase()
+                  .normalize("NFD")
+                  .replace(/[\u0300-\u036f]/g, "")
+                  .replace(/[^a-z0-9]+/g, "-")
+                  .replace(/(^-|-$)/g, "");
+                return site.id === id || siteSlug === targetSlug || site.name === currentClientName;
+              }) ?? null;
+            }, [allSites, auth.currentUser?.obraNome, auth.currentUser?.workName, obra, id]);
+
+            useEffect(() => {
+              if (isClient && !obra && resolvedObra && resolvedObra.id !== id) {
+                navigate({ to: "/obras/$id", params: { id: resolvedObra.id } });
+              }
+            }, [isClient, obra, resolvedObra, id, navigate]);
+                    <Trash2 className="mr-1 h-4 w-4" /> Excluir obra
+                  </Button>
+                  <Button variant="outline" className="text-destructive" onClick={() => {
+                    if (!confirm(`Apagar todos os funcionários de ${obra.name}?`)) return;
+                    employeesStore.removeAllFromSite(obra.name);
+                    toast.success("Funcionários da obra apagados.");
+                  }}>
+                    Apagar todos
+            const activeObra = obra ?? resolvedObra;
+
+            const team = useMemo(
+              () => (activeObra ? employees.filter((e) => e.site === activeObra.name) : []),
+              [activeObra, employees],
+            );
           )}
         </>
       }
@@ -230,8 +276,8 @@ function ObraDetail() {
                     <SelectItem value="efetivo">Efetivos</SelectItem>
                     <SelectItem value="pj">PJ</SelectItem>
                     <SelectItem value="mobilizacao">Mobilização</SelectItem>
-                  </SelectContent>
-                </Select>
+                title={activeObra.name}
+                description={activeObra.description || "Detalhes da obra e equipe alocada."}
                 <Select value={sectorFilter} onValueChange={setSectorFilter}>
                   <SelectTrigger className="w-[150px]"><SelectValue placeholder="Setor" /></SelectTrigger>
                   <SelectContent>
@@ -264,8 +310,8 @@ function ObraDetail() {
                             #{p.id} · {p.role} · {p.department === "Seguranca" ? "Segurança" : p.department}
                           </p>
                         </div>
-                        <StatusBadge status={p.status} />
-                      </Link>
+                              if (!confirm(`Apagar todos os funcionários de ${activeObra.name}?`)) return;
+                              employeesStore.removeAllFromSite(activeObra.name);
                     </li>
                   ))}
                 </ul>
@@ -284,15 +330,15 @@ function ObraDetail() {
                   <span className="flex-1 text-sm">{d}</span>
                   <Button size="sm" variant="ghost" asChild>
                     <Link to="/documentos">Abrir</Link>
-                  </Button>
+                        {activeObra.status}
                 </div>
-              ))}
+                      <h2 className="mt-3 font-display text-xl">{activeObra.name}</h2>
             </CardContent>
           </Card>
         </div>
       </div>
 
-      <AlertDialog open={confirmDel} onOpenChange={setConfirmDel}>
+                            const d = new Date(activeObra.start);
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir {obra.name}?</AlertDialogTitle>

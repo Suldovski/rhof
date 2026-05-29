@@ -69,6 +69,11 @@ function FolhaSalarial() {
     }
   }, [auth.currentUser?.role, sites]);
 
+  const effectiveEmployees = useMemo(
+    () => employees.filter((employee) => employee.status === "efetivo"),
+    [employees],
+  );
+
   const monthMap = overrides[month] ?? {};
   const getValue = (e: Employee): number | "" =>
     monthMap[e.id] !== undefined ? monthMap[e.id] : "";
@@ -80,7 +85,7 @@ function FolhaSalarial() {
   const grouped = useMemo(() => {
     const map = new Map<string, Employee[]>();
     sites.forEach((s) => map.set(s.name, []));
-    employees.forEach((e) => {
+    effectiveEmployees.forEach((e) => {
       if (filterObra !== "__all__" && e.site !== filterObra) return;
       if (!map.has(e.site)) map.set(e.site, []);
       const list = map.get(e.site)!;
@@ -99,7 +104,7 @@ function FolhaSalarial() {
         siteName,
         [...list].sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" })),
       ] as const);
-  }, [sites, employees, q, filterObra]);
+  }, [sites, effectiveEmployees, q, filterObra]);
 
   const totalGeral = useMemo(
     () =>
