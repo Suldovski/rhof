@@ -1,12 +1,11 @@
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { LogIn } from "lucide-react";
+import { HardHat, LogIn } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { BrandLogo } from "@/components/brand-logo";
 import { authStore, useAuth } from "@/lib/auth-store";
 import { getClientRedirectUrl } from "@/lib/client-helpers";
 import { initializeAppData } from "@/lib/app-bootstrap";
@@ -91,7 +90,17 @@ function Login() {
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
       <div className="relative hidden flex-col justify-between bg-primary p-10 text-primary-foreground lg:flex">
-        <BrandLogo variant="full" />
+        <div className="flex items-center gap-3">
+          <div className="flex h-18 w-18 items-center justify-center rounded-2xl bg-white/95 shadow-sm ring-1 ring-black/5">
+            <HardHat className="h-10 w-10 text-[#123d77]" />
+          </div>
+          <div className="leading-none">
+            <div className="font-black tracking-[0.18em] text-white">BUCAGRANS</div>
+            <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.32em] text-white/70">
+              Construtora de Obras LTDA
+            </div>
+          </div>
+        </div>
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-accent">
             SIGA
@@ -109,7 +118,9 @@ function Login() {
         <Card className="w-full max-w-md border-border">
           <CardContent className="p-8">
             <div className="mb-6 flex justify-center lg:hidden">
-              <BrandLogo variant="compact" className="h-20 w-20" />
+              <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm ring-1 ring-black/5">
+                <HardHat className="h-11 w-11" />
+              </div>
             </div>
 
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-accent">
