@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -16,9 +15,6 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
 import { useEmployees } from "@/lib/employees";
 import { sitesStore, useSites, type Site } from "@/lib/sites-store";
 import { criarObra } from "@/lib/obras";
@@ -31,8 +27,6 @@ export const Route = createFileRoute("/obras")({
   head: () => ({ meta: [{ title: "Obras · SIGA" }] }),
   component: Obras,
 });
-
-const statusOptions = ["Planejamento", "Fundação", "Estrutura", "Acabamento", "Em execução", "Operação", "Concluída"];
 
 type CardDetails = {
   startDate: string | null;
@@ -217,9 +211,6 @@ function Obras() {
                     <h3 className="truncate font-display text-lg">{s.name}</h3>
                   </div>
                 </button>
-                <Badge variant="outline" className="ml-2 border-accent/40 bg-accent/10 text-accent">
-                  {s.status}
-                </Badge>
               </div>
               <CardContent className="space-y-4 p-5">
                 <div className="grid grid-cols-3 gap-3 text-sm">
@@ -369,22 +360,16 @@ function SiteFormDialog({
   onSubmit: (data: Omit<Site, "id">) => void;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
-  const [status, setStatus] = useState(initial?.status ?? "Planejamento");
   const [start, setStart] = useState(initial?.start ?? "");
   const [manager, setManager] = useState(initial?.manager ?? "");
-  const [address, setAddress] = useState(initial?.address ?? "");
-  const [description, setDescription] = useState(initial?.description ?? "");
 
   // reset when dialog reopens with different initial
   const key = `${open}-${initial?.id ?? "new"}`;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useStateReset(key, () => {
     setName(initial?.name ?? "");
-    setStatus(initial?.status ?? "Planejamento");
     setStart(initial?.start ?? "");
     setManager(initial?.manager ?? "");
-    setAddress(initial?.address ?? "");
-    setDescription(initial?.description ?? "");
   });
 
   return (
@@ -409,32 +394,13 @@ function SiteFormDialog({
             <Label className="text-xs uppercase tracking-wider text-muted-foreground">Nome da obra *</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} required />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-1.5">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Status</Label>
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {statusOptions.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-1.5">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Início *</Label>
-              <Input type="date" value={start} onChange={(e) => setStart(e.target.value)} required />
-            </div>
+          <div className="grid gap-1.5">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Início *</Label>
+            <Input type="date" value={start} onChange={(e) => setStart(e.target.value)} required />
           </div>
           <div className="grid gap-1.5">
             <Label className="text-xs uppercase tracking-wider text-muted-foreground">Responsável *</Label>
             <Input value={manager} onChange={(e) => setManager(e.target.value)} required />
-          </div>
-          <div className="grid gap-1.5">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Endereço</Label>
-            <Input value={address} onChange={(e) => setAddress(e.target.value)} />
-          </div>
-          <div className="grid gap-1.5">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Descrição</Label>
-            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
           </div>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
