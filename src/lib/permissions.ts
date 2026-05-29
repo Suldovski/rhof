@@ -95,16 +95,18 @@ export const normalizeUserRecord = (
   const workName = (data.workName ?? data.obraNome ?? fallback?.workName ?? fallback?.obraNome ?? null) as string | null;
   const role = (typeof data.role === "string" && data.role) ? data.role : legacyRoleForUser(type, workId);
 
+  const upperText = (value: unknown) => (typeof value === "string" ? value.trim().toUpperCase() : "");
+
   return {
     uid,
-    name: data.name ?? data.nome ?? fallback?.name ?? fallback?.nome ?? "",
+    name: upperText(data.name ?? data.nome ?? fallback?.name ?? fallback?.nome ?? ""),
     email: data.email ?? fallback?.email ?? "",
     type,
     workId,
-    workName,
+    workName: upperText(workName),
     role,
     obraId: workId,
-    obraNome: workName,
+    obraNome: upperText(workName),
     sector: data.sector ?? fallback?.sector ?? null,
     headquarter: data.headquarter ?? fallback?.headquarter ?? null,
     createdAt: data.createdAt ?? fallback?.createdAt ?? new Date().toISOString(),

@@ -104,7 +104,6 @@ function HorasExtras() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [pickerQ, setPickerQ] = useState("");
-  const [pickerSite, setPickerSite] = useState<string>("todas");
   const [firestoreWorkers, setFirestoreWorkers] = useState<WorkerOption[]>([]);
   
   // 🔥 Estado para o AlertDialog de excluir período
@@ -179,14 +178,6 @@ function HorasExtras() {
     return null;
   }, [active, sites]);
 
-  useEffect(() => {
-    if (active) {
-      setPickerSite(active.obraNome || "todas");
-    } else {
-      setPickerSite("todas");
-    }
-  }, [active]);
-
   const obraName = (id?: string) => sites.find((s) => s.id === id)?.name || "";
 
   const combinedWorkers = useMemo(() => {
@@ -226,7 +217,6 @@ function HorasExtras() {
 
     return matchedWorkers
       .filter((e) => !used.has(e.id))
-      .filter((e) => pickerSite === "todas" || e.site === pickerSite || e.organograma === pickerSite)
       .filter((e) =>
         !pickerQ ||
         e.name.toLowerCase().includes(pickerQ.toLowerCase()) ||
@@ -234,7 +224,7 @@ function HorasExtras() {
         e.id.includes(pickerQ),
       )
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [active, activeObraId, firestoreWorkers, pickerQ, pickerSite]);
+  }, [active, activeObraId, firestoreWorkers, pickerQ]);
 
   function togglePick(eid: string) {
     setPicked((prev) => {
@@ -348,16 +338,6 @@ function HorasExtras() {
                   <DialogTitle>Selecionar funcionários{active.obraNome ? ` — ${active.obraNome}` : ""}</DialogTitle>
                 </DialogHeader>
                 <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-3">
-                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Filtrar por obra</Label>
-                    <Select value={pickerSite} onValueChange={setPickerSite}>
-                      <SelectTrigger className="w-[220px]"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="todas">Todas as obras</SelectItem>
-                        {sites.map((s) => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
                   <div className="flex items-center gap-2 rounded-md border border-input px-3">
                     <Search className="h-4 w-4 text-muted-foreground" />
                     <Input

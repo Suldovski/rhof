@@ -108,7 +108,7 @@ async function createSeedUser(user: SeedUser): Promise<void> {
 
     // Salvar dados no Firestore
     await setDoc(doc(db, "usuarios", result.user.uid), {
-      name: user.name,
+      name: user.name.trim().toUpperCase(),
       email: user.email,
       role: user.role,
       obraId: user.obraId || null,

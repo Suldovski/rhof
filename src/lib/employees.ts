@@ -432,8 +432,112 @@ function migrate(list: Employee[]): Employee[] {
   return list.map((e) => {
     const status = (e.status as any) === "ativo" ? "efetivo" : e.status;
     const dept = departmentFromRole(e.cargoFuncao || e.role || "");
-    return { ...e, status, department: dept as any, departamento: dept };
+    return normalizeEmployeeRecord({ ...makeEmpty(), ...e, status, department: dept as any, departamento: dept } as Employee);
   });
+}
+
+function upperText(value: unknown): string {
+  return typeof value === "string" ? value.trim().toUpperCase() : "";
+}
+
+function keepText(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeEmployeeRecord(employee: Employee): Employee {
+  const dept = departmentFromRole(employee.cargoFuncao || employee.role || "");
+
+  return {
+    ...employee,
+    name: upperText(employee.name),
+    empresaTerceiro: upperText(employee.empresaTerceiro),
+    roleHistory: employee.roleHistory?.map((change) => ({
+      ...change,
+      from: upperText(change.from),
+      to: upperText(change.to),
+    })),
+    role: upperText(employee.role),
+    cpf: keepText(employee.cpf),
+    nascimento: keepText(employee.nascimento),
+    sindicato: upperText(employee.sindicato),
+    sindicatoUf: keepText(employee.sindicatoUf),
+    endereco: upperText(employee.endereco),
+    enderecoNumero: keepText(employee.enderecoNumero),
+    cep: keepText(employee.cep),
+    complemento: upperText(employee.complemento),
+    bairro: upperText(employee.bairro),
+    estado: keepText(employee.estado),
+    municipio: upperText(employee.municipio),
+    telefone: keepText(employee.telefone),
+    telefoneRecado: keepText(employee.telefoneRecado),
+    municipioNascimento: upperText(employee.municipioNascimento),
+    estadoNascimento: keepText(employee.estadoNascimento),
+    nacionalidade: upperText(employee.nacionalidade),
+    rne: keepText(employee.rne),
+    racaCor: upperText(employee.racaCor),
+    deficienciaFisica: upperText(employee.deficienciaFisica),
+    estadoCivil: upperText(employee.estadoCivil),
+    grauInstrucao: upperText(employee.grauInstrucao),
+    admission: keepText(employee.admission),
+    organograma: upperText(employee.organograma),
+    department: dept as any,
+    departamento: dept,
+    primeiroEmprego: employee.primeiroEmprego,
+    periodoExperiencia: employee.periodoExperiencia,
+    periodoExperienciaOutro: upperText(employee.periodoExperienciaOutro),
+    vt: employee.vt,
+    vtIda: employee.vtIda,
+    vtVolta: employee.vtVolta,
+    adiantamento: employee.adiantamento,
+    valeAlimentacao: employee.valeAlimentacao,
+    valorDescontoVA: employee.valorDescontoVA,
+    escalaHorario: upperText(employee.escalaHorario),
+    salarioHora: employee.salarioHora,
+    cargoFuncao: upperText(employee.cargoFuncao),
+    ajudaCusto: employee.ajudaCusto,
+    percentualPericulosidade: employee.percentualPericulosidade,
+    percentualInsalubridade: employee.percentualInsalubridade,
+    horasExtras: upperText(employee.horasExtras),
+    bank: {
+      bank: upperText(employee.bank.bank),
+      agency: keepText(employee.bank.agency),
+      account: keepText(employee.bank.account),
+      type: employee.bank.type,
+      pix: keepText(employee.bank.pix),
+    },
+    nomeMae: upperText(employee.nomeMae),
+    nomePai: upperText(employee.nomePai),
+    dependentes: employee.dependentes.map((dependente) => ({
+      ...dependente,
+      nome: upperText(dependente.nome),
+      cpf: keepText(dependente.cpf),
+      nascimento: keepText(dependente.nascimento),
+      cidade: upperText(dependente.cidade),
+      uf: keepText(dependente.uf),
+      parentesco: upperText(dependente.parentesco),
+    })),
+    documentos: employee.documentos,
+    site: upperText(employee.site),
+    phone: keepText(employee.phone),
+    email: keepText(employee.email),
+    rg: keepText(employee.rg),
+    ctps: keepText(employee.ctps),
+    pis: keepText(employee.pis),
+    address: upperText(employee.address),
+    certifications: employee.certifications.map((certification) => upperText(certification)),
+    reImport: keepText(employee.reImport),
+    nomeImport: upperText(employee.nomeImport),
+    cpfDigits: keepText(employee.cpfDigits),
+    dataNascimentoImport: keepText(employee.dataNascimentoImport),
+    dataAdmissaoImport: keepText(employee.dataAdmissaoImport),
+    cbo: keepText(employee.cbo),
+    funcaoImport: upperText(employee.funcaoImport),
+    obraImport: upperText(employee.obraImport),
+    salarioHoraImport: employee.salarioHoraImport,
+    salarioMensalImport: employee.salarioMensalImport,
+    termino30Dias: keepText(employee.termino30Dias),
+    termino60Dias: keepText(employee.termino60Dias),
+  };
 }
 
 // Estado sincronizado com Firebase
@@ -528,12 +632,12 @@ export const employeesStore = {
       throw new Error("Este CPF já está registrado no sistema.");
     }
 
-    const fresh: Employee = { 
-      ...makeEmpty(), 
-      ...data, 
+    const fresh: Employee = normalizeEmployeeRecord({
+      ...makeEmpty(),
+      ...data,
       id,
-      status: "admissao"
-    };
+      status: "admissao",
+    } as Employee);
     fresh.role = fresh.role || fresh.cargoFuncao;
     fresh.site = fresh.site || fresh.organograma;
     fresh.phone = fresh.phone || fresh.telefone;
@@ -554,9 +658,17 @@ export const employeesStore = {
       throw new Error("Este CPF já está registrado no sistema.");
     }
 
+    const current = state.find((e) => e.id === id);
+    if (!current) {
+      throw new Error("Funcionário não encontrado.");
+    }
+
+    const next = normalizeEmployeeRecord({ ...current, ...patch });
+    commit(state.map((e) => (e.id === id ? next : e)));
+
     // Atualizar no Firebase
     const employeeRef = doc(db, COLLECTION, id);
-    await setDoc(employeeRef, patch, { merge: true });
+    await setDoc(employeeRef, next);
   },
 
   remove: async (id: string) => {
@@ -594,7 +706,7 @@ function subscribe(cb: () => void) {
 }
 
 export function useEmployees(): Employee[] {
-  return useSyncExternalStore(subscribe, () => state, () => seed);
+  return useSyncExternalStore(subscribe, () => state, () => migrate(seed));
 }
 
 export function useEmployee(id: string): Employee | undefined {

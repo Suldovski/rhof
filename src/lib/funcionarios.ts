@@ -11,6 +11,10 @@ import {
 import { db } from "./firebase";
 import { isMatrizProfile, type AppUser } from "./permissions";
 
+function toCaps(value: unknown): string {
+  return typeof value === "string" ? value.trim().toUpperCase() : "";
+}
+
 export type TipoContrato = "CLT" | "PJ";
 export type StatusFuncionario =
   | "admissao"
@@ -46,7 +50,7 @@ export interface NovoFuncionarioInput {
 export async function criarFuncionario(input: NovoFuncionarioInput) {
   const re = input.tipo === "PJ" ? "PJ" : (input.re ?? "");
   const payload = {
-    nome: input.nome,
+    nome: toCaps(input.nome),
     tipo: input.tipo,
     obraId: input.obraId,
     salario: input.salario ?? 0,
@@ -91,7 +95,10 @@ export async function atualizarFuncionario(
 ) {
   // garante que PJ nunca grava número no RE
   if (data.tipo === "PJ") data.re = "PJ";
-  await updateDoc(doc(db, "funcionarios", id), data);
+  await updateDoc(doc(db, "funcionarios", id), {
+    ...data,
+    nome: toCaps(data.nome),
+  });
 }
 
 export async function atualizarStatus(id: string, status: StatusFuncionario) {

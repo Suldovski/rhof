@@ -93,7 +93,12 @@ function FolhaSalarial() {
         list.push(e);
       }
     });
-    return Array.from(map.entries()).filter(([n]) => filterObra === "__all__" || n === filterObra);
+    return Array.from(map.entries())
+      .filter(([n]) => filterObra === "__all__" || n === filterObra)
+      .map(([siteName, list]) => [
+        siteName,
+        [...list].sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" })),
+      ] as const);
   }, [sites, employees, q, filterObra]);
 
   const totalGeral = useMemo(

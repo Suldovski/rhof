@@ -2,7 +2,7 @@ import { useSyncExternalStore } from "react";
 import { authStore } from "./auth-store";
 import { isClienteObra, isRhObra, isWorkUser, getObraIdFromClienteObra, getUserWorkId, isMainUser } from "./permissions";
 import { db } from "./firebase";
-import { collection, getDocs, onSnapshot, setDoc, doc, updateDoc, deleteDoc, addDoc } from "firebase/firestore";
+import { collection, getDocs, onSnapshot, setDoc, doc, deleteDoc } from "firebase/firestore";
 
 export interface Site {
   id: string;
@@ -24,7 +24,7 @@ const seed: Site[] = [
 ];
 
 let state: Site[] = (() => {
-  if (typeof window === "undefined") return seed;
+  if (typeof window === "undefined") return seed.map((site) => normalizeSite(site));
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) {
@@ -33,13 +33,13 @@ let state: Site[] = (() => {
         if (Array.isArray(parsed)) {
           return parsed.map((p) => normalizeSite(p));
         }
-        return seed;
+        return seed.map((site) => normalizeSite(site));
       } catch (e) {
-        return seed;
+        return seed.map((site) => normalizeSite(site));
       }
     }
   } catch {}
-  return seed;
+  return seed.map((site) => normalizeSite(site));
 })();
 const listeners = new Set<() => void>();
 
@@ -93,12 +93,26 @@ function normalizeSite(raw: any): Site {
   if (!raw) return { id: raw?.id || `obra-${Date.now()}`, name: "", status: "Planejamento", start: "", manager: "", address: "", description: "" };
   return {
     id: raw.id || raw._id || slugify(raw.name ?? raw.nome ?? (raw.title || "obra")),
-    name: raw.name ?? raw.nome ?? raw.title ?? "",
+    name: upperText(raw.name ?? raw.nome ?? raw.title ?? ""),
     status: raw.status ?? raw.estado ?? "Planejamento",
     start: raw.start ?? raw.inicio ?? raw.data ?? "",
-    manager: raw.manager ?? raw.responsavel ?? raw.coordinator ?? "",
-    address: raw.address ?? raw.endereco ?? raw.location ?? "",
-    description: raw.description ?? raw.descricao ?? raw.note ?? "",
+    manager: upperText(raw.manager ?? raw.responsavel ?? raw.coordinator ?? ""),
+    address: upperText(raw.address ?? raw.endereco ?? raw.location ?? ""),
+    description: upperText(raw.description ?? raw.descricao ?? raw.note ?? ""),
+  };
+}
+
+function upperText(value: unknown): string {
+  return typeof value === "string" ? value.trim().toUpperCase() : "";
+}
+
+function normalizeSiteRecord(site: Site): Site {
+  return {
+    ...site,
+    name: upperText(site.name),
+    manager: upperText(site.manager),
+    address: upperText(site.address),
+    description: upperText(site.description),
   };
 }
 
@@ -107,11 +121,11 @@ export const sitesStore = {
   get: (id: string) => state.find((s) => s.id === id),
   add: (site: Omit<Site, "id"> & { id?: string }) => {
     const id = site.id || slugify(site.name) || `obra-${Date.now()}`;
-    const newSite: Site = { ...site, id };
+    const newSite: Site = normalizeSiteRecord({ ...site, id });
     commit([...state, newSite]);
     // Try to persist to Firestore; do it asynchronously but don't block the UI.
     try {
-      setDoc(doc(db, "obras", id), { name: newSite.name, status: newSite.status, start: newSite.start, manager: newSite.manager, address: newSite.address ?? null, description: newSite.description ?? null }).catch(() => {});
+      setDoc(doc(db, "obras", id), newSite).catch(() => {});
     } catch (e) {
       // ignore
     }
@@ -120,9 +134,12 @@ export const sitesStore = {
     return id;
   },
   update: (id: string, patch: Partial<Site>) => {
-    commit(state.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+    const current = state.find((s) => s.id === id);
+    if (!current) return;
+    const next = normalizeSiteRecord({ ...current, ...patch });
+    commit(state.map((s) => (s.id === id ? next : s)));
     try {
-      updateDoc(doc(db, "obras", id), patch as any).catch(() => {});
+      setDoc(doc(db, "obras", id), next).catch(() => {});
     } catch (e) {}
   },
   remove: (id: string) => {
@@ -143,7 +160,7 @@ export function useSites(): Site[] {
   // - matriz (main): see all
   // - rh_obra / work users: see only their own obra
   // - cliente_obra: see only their obra
-  const all = useSyncExternalStore(subscribe, () => state, () => seed);
+  const all = useSyncExternalStore(subscribe, () => state, () => seed.map((site) => normalizeSite(site)));
   try {
     const user = authStore.current();
     if (!user) return all;

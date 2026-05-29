@@ -248,14 +248,14 @@ export const authStore = {
 
       // Salvar dados no Firestore
       const userData: Omit<AppUser, "uid"> = {
-        name: data.name,
+        name: typeof data.name === "string" ? data.name.trim().toUpperCase() : "",
         email: data.email,
         type: data.type,
         workId,
-        workName,
+        workName: typeof workName === "string" ? workName.trim().toUpperCase() : null,
         role,
         obraId: workId,
-        obraNome: workName,
+        obraNome: typeof workName === "string" ? workName.trim().toUpperCase() : null,
         sector: null,
         headquarter: null,
         createdAt: new Date().toISOString(),
@@ -287,14 +287,14 @@ export const authStore = {
       const current = state.allUsers.find((user) => user.uid === uid) ?? state.currentUser;
       const merged = normalizeUserRecord(uid, { ...(current as any), ...(patch as any) }, current ?? undefined);
       const nextPayload: Omit<AppUser, "uid"> = {
-        name: merged.name ?? "",
+        name: typeof merged.name === "string" ? merged.name.trim().toUpperCase() : "",
         email: merged.email ?? "",
         type: resolveUserType(merged),
         workId: merged.workId ?? null,
-        workName: merged.workName ?? null,
+        workName: typeof merged.workName === "string" ? merged.workName.trim().toUpperCase() : null,
         role: merged.role ?? legacyRoleForUser(resolveUserType(merged), merged.workId ?? null),
         obraId: merged.workId ?? null,
-        obraNome: merged.workName ?? null,
+        obraNome: typeof merged.workName === "string" ? merged.workName.trim().toUpperCase() : null,
         sector: null,
         headquarter: null,
         createdAt: merged.createdAt ?? new Date().toISOString(),

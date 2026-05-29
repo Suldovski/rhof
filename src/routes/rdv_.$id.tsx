@@ -46,7 +46,6 @@ function RdvDetail() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [q, setQ] = useState("");
-  const [pickerSite, setPickerSite] = useState<string>("todas");
   const [workers, setWorkers] = useState<Array<{ id: string; name: string; cpf?: string; role?: string; obraId?: string; workId?: string; site?: string; organograma?: string; salary?: number; salarioHora?: number }>>([]);
 
   const userObraId = useMemo(() => {
@@ -149,7 +148,6 @@ function RdvDetail() {
 
     return filteredByObra
       .filter((e) => !used.has(e.id))
-      .filter((e) => pickerSite === "todas" || e.site === pickerSite || e.organograma === pickerSite)
       .filter((e) =>
         !q ||
         e.name.toLowerCase().includes(q.toLowerCase()) ||
@@ -157,11 +155,7 @@ function RdvDetail() {
         e.id.includes(q),
       )
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [payment, q, pickerSite, combinedWorkers, activeObraId, userObraId]);
-
-  useEffect(() => {
-    if (payment) setPickerSite(activeObraName || "todas");
-  }, [payment, activeObraName]);
+  }, [payment, q, combinedWorkers, activeObraId, userObraId]);
 
   if (!payment) {
     return (
@@ -264,19 +258,6 @@ function RdvDetail() {
                 </p>
               )}
               <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-3">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Filtrar por obra</Label>
-                  <Select value={pickerSite} onValueChange={setPickerSite} disabled={!activeObraId}>
-                    <SelectTrigger className="w-[220px]"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todos-funcionarios">Todos os funcionários</SelectItem>
-                      <SelectItem value="todas">Todas as obras</SelectItem>
-                      {sites.map((s) => (
-                        <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
                 <div className="flex items-center gap-2 rounded-md border border-input px-3">
                   <Search className="h-4 w-4 text-muted-foreground" />
                   <Input
