@@ -36,7 +36,7 @@ import { fetchCep } from "@/lib/cep";
 import { downloadFRE } from "@/lib/fre-pdf";
 import { dismissalsStore } from "@/lib/dismissals-store";
 import { authStore, useAuth } from "@/lib/auth-store";
-import { isWorkUser, getUserWorkName, isRhMatriz } from "@/lib/permissions";
+import { isWorkUser, getUserWorkName, isRhMatriz, isClienteObra } from "@/lib/permissions";
 import { useRouteProtection, roleChecks } from "@/lib/route-protection";
 
 export const Route = createFileRoute("/funcionarios/$id")({
@@ -59,6 +59,7 @@ function Detail() {
   const navigate = useNavigate();
   const auth = useAuth();
   useRouteProtection(roleChecks.funcionarios, "Funcionários");
+  const isClient = isClienteObra(auth.currentUser?.role);
   const [confirmDel, setConfirmDel] = useState(false);
   const [editing, setEditing] = useState(false);
   const [trocaOpen, setTrocaOpen] = useState(false);
@@ -109,47 +110,53 @@ function Detail() {
           <Button variant="outline" asChild>
             <Link to="/funcionarios"><ArrowLeft className="mr-1 h-4 w-4" /> Voltar</Link>
           </Button>
-          <Button variant="outline" onClick={() => { downloadFRE(e); toast.success("FRE exportada."); }}>
-            <Download className="mr-1 h-4 w-4" /> Exportar FRE
-          </Button>
-          {e.status !== "ferias" ? (
-            <Button variant="outline" onClick={() => setStatus("ferias")}>
-              <Plane className="mr-1 h-4 w-4" /> Colocar em férias
-            </Button>
-          ) : (
-            <Button variant="outline" onClick={() => setStatus("efetivo")}>
-              <ArrowLeft className="mr-1 h-4 w-4" /> Voltar de férias
-            </Button>
+          {!isClient && (
+            <>
+              <Button variant="outline" onClick={() => { downloadFRE(e); toast.success("FRE exportada."); }}>
+                <Download className="mr-1 h-4 w-4" /> Exportar FRE
+              </Button>
+              {e.status !== "ferias" ? (
+                <Button variant="outline" onClick={() => setStatus("ferias")}>
+                  <Plane className="mr-1 h-4 w-4" /> Colocar em férias
+                </Button>
+              ) : (
+                <Button variant="outline" onClick={() => setStatus("efetivo")}>
+                  <ArrowLeft className="mr-1 h-4 w-4" /> Voltar de férias
+                </Button>
+              )}
+              <Button variant="outline" onClick={() => setTrocaOpen(true)}>
+                <Repeat className="mr-1 h-4 w-4" /> Trocar função
+              </Button>
+              <Button variant="outline" onClick={() => setDemOpen(true)} className="text-destructive">
+                <UserMinus className="mr-1 h-4 w-4" /> Solicitar demissão
+              </Button>
+              <Button onClick={() => setEditing(true)}><Pencil className="mr-1 h-4 w-4" /> Editar</Button>
+              <Button variant="destructive" onClick={() => setConfirmDel(true)}>
+                <Trash2 className="mr-1 h-4 w-4" /> Apagar
+              </Button>
+            </>
           )}
-          <Button variant="outline" onClick={() => setTrocaOpen(true)}>
-            <Repeat className="mr-1 h-4 w-4" /> Trocar função
-          </Button>
-          <Button variant="outline" onClick={() => setDemOpen(true)} className="text-destructive">
-            <UserMinus className="mr-1 h-4 w-4" /> Solicitar demissão
-          </Button>
-          <Button onClick={() => setEditing(true)}><Pencil className="mr-1 h-4 w-4" /> Editar</Button>
-          <Button variant="destructive" onClick={() => setConfirmDel(true)}>
-            <Trash2 className="mr-1 h-4 w-4" /> Apagar
-          </Button>
         </>
       }
     >
-      <Card className="mb-4 p-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="text-xs uppercase tracking-wider text-muted-foreground">Mover para</span>
-          <Select value={e.status as string} onValueChange={(v) => setStatus(v as EmployeeStatus)}>
-            <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="admissao">Em admissão</SelectItem>
-              <SelectItem value="mobilizacao">Mobilização</SelectItem>
-              <SelectItem value="efetivo">Efetivo</SelectItem>
-              <SelectItem value="ferias">Em férias</SelectItem>
-              <SelectItem value="afastado">Afastado</SelectItem>
-              <SelectItem value="desligado">Desligado</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </Card>
+      {!isClient && (
+        <Card className="mb-4 p-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-xs uppercase tracking-wider text-muted-foreground">Mover para</span>
+            <Select value={e.status as string} onValueChange={(v) => setStatus(v as EmployeeStatus)}>
+              <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="admissao">Em admissão</SelectItem>
+                <SelectItem value="mobilizacao">Mobilização</SelectItem>
+                <SelectItem value="efetivo">Efetivo</SelectItem>
+                <SelectItem value="ferias">Em férias</SelectItem>
+                <SelectItem value="afastado">Afastado</SelectItem>
+                <SelectItem value="desligado">Desligado</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </Card>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
         <Card>
@@ -181,7 +188,7 @@ function Detail() {
         </Card>
 
         <div>
-          <Tabs defaultValue="dados">
+            <Tabs defaultValue="dados">
             <TabsList>
               <TabsTrigger value="dados">Dados pessoais</TabsTrigger>
               <TabsTrigger value="contrato">Contrato</TabsTrigger>
@@ -209,8 +216,14 @@ function Detail() {
                   <Info label="Departamento" value={e.departamento || e.department} />
                   <Info label="Obra alocada" value={e.site} />
                   <Info label="Admissão" value={e.admission ? new Date(e.admission).toLocaleDateString("pt-BR") : "—"} />
-                  <Info label="Salário base" value={e.salary.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} />
-                  <Info label="Salário/hora" value={(e.salarioHora || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} />
+                  {!isClient ? (
+                    <>
+                      <Info label="Salário base" value={e.salary.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} />
+                      <Info label="Salário/hora" value={(e.salarioHora || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} />
+                    </>
+                  ) : (
+                    <Info label="Remuneração" value="Informação restrita ao RH" />
+                  )}
                   <Info label="Escala/Horário" value={e.escalaHorario} />
                 </CardContent>
               </Card>
@@ -238,11 +251,12 @@ function Detail() {
         </div>
       </div>
 
-      {editing && (
+      {!isClient && editing && (
         <EditEmployeeDialog open={editing} onOpenChange={setEditing} employee={e} />
       )}
 
-      <AlertDialog open={confirmDel} onOpenChange={setConfirmDel}>
+      {!isClient && (
+        <AlertDialog open={confirmDel} onOpenChange={setConfirmDel}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Apagar {e.name}?</AlertDialogTitle>
@@ -260,10 +274,11 @@ function Detail() {
             }}>Apagar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog>
+        </AlertDialog>
+      )}
 
-      <TrocaFuncaoDialog open={trocaOpen} onOpenChange={setTrocaOpen} employee={e} />
-      <DemissaoDialog open={demOpen} onOpenChange={setDemOpen} employee={e} />
+      {!isClient && <TrocaFuncaoDialog open={trocaOpen} onOpenChange={setTrocaOpen} employee={e} />}
+      {!isClient && <DemissaoDialog open={demOpen} onOpenChange={setDemOpen} employee={e} />}
     </PageShell>
   );
 }

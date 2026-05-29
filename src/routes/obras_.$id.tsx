@@ -124,10 +124,13 @@ function ObraDetail() {
 
   const activeObra = obra ?? resolvedObra;
 
-  const team = useMemo(
-    () => (activeObra ? employees.filter((employee) => employee.site === activeObra.name) : []),
-    [activeObra, employees],
-  );
+  const team = useMemo(() => {
+    if (!activeObra) return [];
+
+    return employees
+      .filter((employee) => employee.site === activeObra.name)
+      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }));
+  }, [activeObra, employees]);
 
   const filtered = useMemo(() => {
     return team.filter((employee) => {
