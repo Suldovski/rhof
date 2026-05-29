@@ -341,7 +341,7 @@ function NewEmployee() {
               <Input type="number" step="0.01" value={form.salarioHora || ""} onChange={(e) => set("salarioHora", parseFloat(e.target.value) || 0)} />
             </Field>
             <Field label="Salário base mensal">
-              <Input type="number" step="0.01" value={form.salary || ""} onChange={(e) => set("salary", parseFloat(e.target.value) || 0)} />
+              <Input type="number" step="0.01" value={form.salarioHora ? (form.salarioHora * 220).toFixed(2) : ""} readOnly disabled />
             </Field>
             <Field label="Período de experiência">
               <Select value={form.periodoExperiencia} onValueChange={(v) => set("periodoExperiencia", v as Employee["periodoExperiencia"])}>

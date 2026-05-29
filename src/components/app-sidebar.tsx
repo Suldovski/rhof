@@ -11,9 +11,7 @@ import {
   Receipt,
   LogOut,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useDismissals } from "@/lib/dismissals-store";
 import { useAuth } from "@/lib/auth-store";
 import { authStore } from "@/lib/auth-store";
 import { useNavigate } from "@tanstack/react-router";
@@ -70,8 +68,6 @@ const getOpsMenuItems = (user?: any) => {
     if (Permissions.canAccessDocumentos(user?.role)) items.push({ title: "Documentos", url: "/documentos", icon: FileText });
     // Demissões (obra users see only history filtered on the page)
     if (Permissions.canAccessDemissoes(user?.role)) items.push({ title: "Demissões", url: "/admin/demissoes", icon: UserMinus });
-    // Configurações (allow user to change their own password)
-    items.push({ title: "Configurações", url: "/configuracoes", icon: Settings });
     return items;
   }
 
@@ -81,7 +77,7 @@ const getOpsMenuItems = (user?: any) => {
   if (Permissions.canAccessHorasExtras(user?.role)) items.push({ title: "Horas Extras", url: "/horas-extras", icon: Clock });
   if (Permissions.canAccessRDV(user?.role)) items.push({ title: "RDV", url: "/rdv", icon: Receipt });
   if (Permissions.canAccessDocumentos(user?.role)) items.push({ title: "Documentos", url: "/documentos", icon: FileText });
-  items.push({ title: "Configurações", url: "/configuracoes", icon: Settings });
+  if (Permissions.canAccessDemissoes(user?.role)) items.push({ title: "Demissões", url: "/admin/demissoes", icon: UserMinus });
 
   return items;
 };
@@ -172,7 +168,14 @@ export function AppSidebar() {
 
       <SidebarFooter className="border-t border-sidebar-border">
         <SidebarMenu>
-          {Permissions.isRhMatriz(role) && <AdminDemissoesItem />}
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={isActive("/configuracoes")}>
+              <Link to="/configuracoes">
+                <Settings className="h-4 w-4" />
+                <span>Configurações</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <Button
               onClick={handleLogout}
@@ -187,25 +190,5 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
-  );
-}
-
-function AdminDemissoesItem() {
-  const items = useDismissals();
-  const pending = items.filter((d) => d.status === "pendente").length;
-  return (
-    <SidebarMenuItem>
-      <SidebarMenuButton asChild>
-        <Link to="/admin/demissoes">
-          <UserMinus className="h-4 w-4" />
-          <span>Demissões</span>
-          {pending > 0 && (
-            <Badge variant="destructive" className="ml-auto h-5 min-w-5 justify-center px-1.5 text-[10px]">
-              {pending}
-            </Badge>
-          )}
-        </Link>
-      </SidebarMenuButton>
-    </SidebarMenuItem>
   );
 }

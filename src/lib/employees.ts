@@ -646,7 +646,7 @@ export const employeesStore = {
       ...makeEmpty(),
       ...data,
       id,
-      status: "admissao",
+      status: data.status ?? "admissao",
     } as Employee);
     fresh.role = fresh.role || fresh.cargoFuncao;
     fresh.site = fresh.site || fresh.organograma;
@@ -654,7 +654,7 @@ export const employeesStore = {
     const dept = departmentFromRole(fresh.cargoFuncao || fresh.role || "");
     fresh.department = dept as any;
     fresh.departamento = dept;
-    fresh.salary = fresh.salary || fresh.salarioHora * 220;
+    fresh.salary = fresh.salarioHora * 220;
     fresh.address = fresh.address || `${fresh.endereco}, ${fresh.enderecoNumero} — ${fresh.bairro}, ${fresh.municipio}/${fresh.estado}`;
 
     // Salvar no Firebase
@@ -674,6 +674,7 @@ export const employeesStore = {
     }
 
     const next = normalizeEmployeeRecord({ ...current, ...patch });
+    next.salary = next.salarioHora * 220;
     commit(state.map((e) => (e.id === id ? next : e)));
 
     // Atualizar no Firebase

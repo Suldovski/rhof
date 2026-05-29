@@ -83,9 +83,10 @@ function pickWorkerObraId(worker: WorkerOption): string {
 
 function calcTotal(e: OvertimeEntry): number {
   return (
-    e.horas50 * e.salarioHora * 1.5 +
-    e.horas100 * e.salarioHora * 2 +
-    e.noturnas * e.salarioHora * 1.2
+    e.hd50 * e.salarioHora * 1.5 +
+    e.hd100 * e.salarioHora * 2 +
+    e.hn50 * e.salarioHora * 1.7 +
+    e.hn100 * e.salarioHora * 2.2
   );
 }
 
@@ -281,9 +282,10 @@ function HorasExtras() {
         emp?.bank?.agency || "—",
         emp?.bank?.account || "—",
         emp?.bank?.type || "—",
-        e.horas50.toFixed(2),
-        e.horas100.toFixed(2),
-        e.noturnas.toFixed(2),
+        e.hd50.toFixed(2),
+        e.hd100.toFixed(2),
+        e.hn50.toFixed(2),
+        e.hn100.toFixed(2),
         fmtBRL(e.salarioHora),
         fmtBRL(calcTotal(e)),
       ];
@@ -291,9 +293,9 @@ function HorasExtras() {
     const total = active.entries.reduce((s, e) => s + calcTotal(e), 0);
     autoTable(doc, {
       startY: 26,
-      head: [["Nome", "CPF", "Banco", "Ag.", "Conta", "Tp", "HE 50%", "HE 100%", "Not.", "Sal./h", "Total"]],
+      head: [["Nome", "CPF", "Banco", "Ag.", "Conta", "Tp", "HD50%", "HD100%", "HN50%", "HN100%", "Sal./h", "Total"]],
       body,
-      foot: [["", "", "", "", "", "", "", "", "", "TOTAL", fmtBRL(total)]],
+      foot: [["", "", "", "", "", "", "", "", "", "", "TOTAL", fmtBRL(total)]],
       styles: { fontSize: 8, cellPadding: 1.5 },
       headStyles: { fillColor: [15, 27, 61], textColor: 255 },
       footStyles: { fillColor: [240, 244, 250], textColor: 20, fontStyle: "bold" },
@@ -404,9 +406,10 @@ function HorasExtras() {
               <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
                 <tr>
                   <th className="px-3 py-2 text-left">Funcionário</th>
-                  <th className="px-3 py-2 text-right">HE 50%</th>
-                  <th className="px-3 py-2 text-right">HE 100%</th>
-                  <th className="px-3 py-2 text-right">Noturna</th>
+                  <th className="px-3 py-2 text-right">HD50%</th>
+                  <th className="px-3 py-2 text-right">HD100%</th>
+                  <th className="px-3 py-2 text-right">HN50%</th>
+                  <th className="px-3 py-2 text-right">HN100%</th>
                   <th className="px-3 py-2 text-right">Sal./h</th>
                   <th className="px-3 py-2 text-right">Total</th>
                   <th />
@@ -420,13 +423,16 @@ function HorasExtras() {
                       {e.employeeId && <p className="text-xs text-muted-foreground">#{e.employeeId}</p>}
                     </td>
                     <td className="px-3 py-1 text-right">
-                      <Input type="number" step="0.01" value={e.horas50 || ""} onChange={(ev) => updateEntry(i, { horas50: parseFloat(ev.target.value) || 0 })} className="h-8 w-24 ml-auto text-right" />
+                      <Input type="number" step="0.01" value={e.hd50 || ""} onChange={(ev) => updateEntry(i, { hd50: parseFloat(ev.target.value) || 0 })} className="h-8 w-24 ml-auto text-right" />
                     </td>
                     <td className="px-3 py-1 text-right">
-                      <Input type="number" step="0.01" value={e.horas100 || ""} onChange={(ev) => updateEntry(i, { horas100: parseFloat(ev.target.value) || 0 })} className="h-8 w-24 ml-auto text-right" />
+                      <Input type="number" step="0.01" value={e.hd100 || ""} onChange={(ev) => updateEntry(i, { hd100: parseFloat(ev.target.value) || 0 })} className="h-8 w-24 ml-auto text-right" />
                     </td>
                     <td className="px-3 py-1 text-right">
-                      <Input type="number" step="0.01" value={e.noturnas || ""} onChange={(ev) => updateEntry(i, { noturnas: parseFloat(ev.target.value) || 0 })} className="h-8 w-24 ml-auto text-right" />
+                      <Input type="number" step="0.01" value={e.hn50 || ""} onChange={(ev) => updateEntry(i, { hn50: parseFloat(ev.target.value) || 0 })} className="h-8 w-24 ml-auto text-right" />
+                    </td>
+                    <td className="px-3 py-1 text-right">
+                      <Input type="number" step="0.01" value={e.hn100 || ""} onChange={(ev) => updateEntry(i, { hn100: parseFloat(ev.target.value) || 0 })} className="h-8 w-24 ml-auto text-right" />
                     </td>
                     <td className="px-3 py-1 text-right">
                       <Input type="number" step="0.01" value={e.salarioHora || ""} onChange={(ev) => updateEntry(i, { salarioHora: parseFloat(ev.target.value) || 0 })} className="h-8 w-24 ml-auto text-right" />
@@ -436,7 +442,7 @@ function HorasExtras() {
                   </tr>
                 ))}
                 {active.entries.length === 0 && (
-                  <tr><td colSpan={7} className="p-8 text-center text-sm text-muted-foreground">
+                  <tr><td colSpan={8} className="p-8 text-center text-sm text-muted-foreground">
                     Clique em <strong>Adicionar funcionários</strong> para começar.
                   </td></tr>
                 )}

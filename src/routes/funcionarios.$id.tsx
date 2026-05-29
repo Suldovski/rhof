@@ -647,7 +647,7 @@ function EditEmployeeDialog({
                 <Input type="number" step="0.01" value={form.salarioHora || ""} onChange={(e) => set("salarioHora", parseFloat(e.target.value) || 0)} />
               </Field>
               <Field label="Salário base mensal">
-                <Input type="number" step="0.01" value={form.salary || ""} onChange={(e) => set("salary", parseFloat(e.target.value) || 0)} />
+                <Input type="number" step="0.01" value={form.salarioHora ? (form.salarioHora * 220).toFixed(2) : ""} readOnly disabled />
               </Field>
               <Field label="% Periculosidade"><Input type="number" value={form.percentualPericulosidade || ""} onChange={(e) => set("percentualPericulosidade", parseFloat(e.target.value) || 0)} /></Field>
               <Field label="% Insalubridade"><Input type="number" value={form.percentualInsalubridade || ""} onChange={(e) => set("percentualInsalubridade", parseFloat(e.target.value) || 0)} /></Field>

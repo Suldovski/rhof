@@ -127,9 +127,7 @@ function Login() {
               Entrar
             </p>
             <h2 className="mt-2 font-display text-3xl">Acesse sua conta</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Clientes de obra podem entrar com o e-mail cadastrado. Usuários internos usam as credenciais cadastradas em Configurações → Usuários.
-            </p>
+
 
             <form onSubmit={submit} className="mt-6 space-y-4">
               <div className="grid gap-1.5">

@@ -3,9 +3,10 @@ import { useSyncExternalStore } from "react";
 export interface OvertimeEntry {
   employeeId: string;
   employeeName: string;
-  horas50: number;
-  horas100: number;
-  noturnas: number;
+  hd50: number;
+  hd100: number;
+  hn50: number;
+  hn100: number;
   salarioHora: number;
 }
 
@@ -24,7 +25,21 @@ let state: OvertimePeriod[] = (() => {
   if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw) as OvertimePeriod[];
+      return parsed.map((period) => ({
+        ...period,
+        entries: (period.entries || []).map((entry: any) => ({
+          employeeId: entry.employeeId,
+          employeeName: entry.employeeName,
+          hd50: Number(entry.hd50 ?? entry.horas50 ?? 0),
+          hd100: Number(entry.hd100 ?? entry.horas100 ?? 0),
+          hn50: Number(entry.hn50 ?? entry.noturnas ?? 0),
+          hn100: Number(entry.hn100 ?? 0),
+          salarioHora: Number(entry.salarioHora ?? 0),
+        })),
+      }));
+    }
   } catch {}
   return [];
 })();
@@ -69,9 +84,10 @@ export const overtimeStore = {
         .map((e) => ({
           employeeId: e.id,
           employeeName: e.name,
-          horas50: 0,
-          horas100: 0,
-          noturnas: 0,
+          hd50: 0,
+          hd100: 0,
+          hn50: 0,
+          hn100: 0,
           salarioHora: e.salarioHora || (e.salary ? e.salary / 220 : 0),
         }));
       return { ...p, entries: [...p.entries, ...toAdd] };

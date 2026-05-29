@@ -233,8 +233,8 @@ async function importFromFile(file: File): Promise<void> {
         admission: col.admission >= 0 ? parseAnyDate(row[col.admission]) : "",
         role, cargoFuncao: role,
         site, organograma: site,
-        status: col.status >= 0 ? mapStatus(row[col.status]) : "ativo",
-        salary: salaryMensal || salaryHora * 220,
+        status: "ativo",
+        salary: salaryHora * 220,
         salarioHora: salaryHora,
         department: "Obra", departamento: "Obra",
       });
@@ -249,8 +249,8 @@ async function importFromFile(file: File): Promise<void> {
             admission: col.admission >= 0 ? parseAnyDate(row[col.admission]) : "",
             role, cargoFuncao: role,
             site, organograma: site,
-            status: col.status >= 0 ? mapStatus(row[col.status]) : "ativo",
-            salary: salaryMensal || salaryHora * 220,
+            status: "ativo",
+            salary: salaryHora * 220,
             salarioHora: salaryHora,
             department: "Obra", departamento: "Obra",
           });
