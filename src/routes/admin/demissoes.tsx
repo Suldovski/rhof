@@ -25,9 +25,9 @@ function AdminDemissoes() {
   const filteredItems = items.filter((d) => {
     if (isRhMatriz(currentUser?.role)) return true; // RH Matriz sees all
     if (isRhObra(currentUser?.role)) {
-      // RH Obra should only see resolved history for their own obra
+      // RH Obra should see dismissals for their own obra (including pendentes)
       const workName = getUserWorkName(currentUser as any);
-      return (!!workName && d.site === workName && d.status !== "pendente");
+      return !!workName && d.site === workName;
     }
     return false;
   });
@@ -56,6 +56,15 @@ function AdminDemissoes() {
     }
     dismissalsStore.resolve(id, "recusada");
     toast.success("Solicitação recusada.");
+  };
+
+  const cancelRequest = (id: string) => {
+    if (isRhMatriz(currentUser?.role) || isRhObra(currentUser?.role)) {
+      dismissalsStore.remove(id);
+      toast.success("Solicitação cancelada.");
+      return;
+    }
+    toast.error("Você não tem permissão para cancelar esta solicitação.");
   };
 
   if (!canApprove && !isRhObra(currentUser?.role)) {
@@ -105,6 +114,9 @@ function AdminDemissoes() {
                     <Button size="sm" variant="outline" onClick={() => refuse(d.id)}><X className="mr-1 h-4 w-4" /> Recusar</Button>
                     <Button size="sm" variant="destructive" onClick={() => approve(d.id, d.employeeId, d.employeeName)}><Check className="mr-1 h-4 w-4" /> Aprovar e excluir</Button>
                   </>
+                )}
+                {isRhObra(currentUser?.role) && (
+                  <Button size="sm" variant="ghost" onClick={() => cancelRequest(d.id)}>Cancelar solicitação</Button>
                 )}
               </div>
             </CardContent>

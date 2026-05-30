@@ -281,6 +281,7 @@ function HorasExtras() {
         emp?.bank?.bank || "—",
         emp?.bank?.agency || "—",
         emp?.bank?.account || "—",
+        emp?.bank?.pix || "—",
         emp?.bank?.type || "—",
         e.hd50.toFixed(2),
         e.hd100.toFixed(2),
@@ -293,9 +294,9 @@ function HorasExtras() {
     const total = active.entries.reduce((s, e) => s + calcTotal(e), 0);
     autoTable(doc, {
       startY: 26,
-      head: [["Nome", "CPF", "Banco", "Ag.", "Conta", "Tp", "HD50%", "HD100%", "HN50%", "HN100%", "Sal./h", "Total"]],
+      head: [["Nome", "CPF", "Banco", "Ag.", "Conta", "PIX", "Tp", "HD50%", "HD100%", "HN50%", "HN100%", "Sal./h", "Total"]],
       body,
-      foot: [["", "", "", "", "", "", "", "", "", "", "TOTAL", fmtBRL(total)]],
+      foot: [["", "", "", "", "", "", "", "", "", "", "", "TOTAL", fmtBRL(total)]],
       styles: { fontSize: 8, cellPadding: 1.5 },
       headStyles: { fillColor: [15, 27, 61], textColor: 255 },
       footStyles: { fillColor: [240, 244, 250], textColor: 20, fontStyle: "bold" },
