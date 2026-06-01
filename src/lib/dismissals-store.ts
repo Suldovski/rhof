@@ -49,6 +49,7 @@ export const dismissalsStore = {
     commit(state.map((d) => d.id === id ? { ...d, status, resolvedAt: new Date().toISOString() } : d));
   },
   remove: (id: string) => commit(state.filter((d) => d.id !== id)),
+  clearHistory: () => commit(state.filter((d) => d.status === "pendente")),
 };
 
 function subscribe(cb: () => void) { listeners.add(cb); return () => listeners.delete(cb); }

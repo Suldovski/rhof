@@ -6,6 +6,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { dismissalsStore, useDismissals } from "@/lib/dismissals-store";
 import { employeesStore } from "@/lib/employees";
 import { useAuth } from "@/lib/auth-store";
@@ -87,9 +98,38 @@ function AdminDemissoes() {
       title="Solicitações de demissão"
       description={`${pending.length} pendente(s) para análise.`}
       actions={
-        <Button variant="outline" asChild>
-          <Link to="/"><ArrowLeft className="mr-1 h-4 w-4" /> Painel</Link>
-        </Button>
+        <>
+          {canApprove && resolved.length > 0 && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline">Limpar histórico</Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Limpar histórico de demissões?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Isso vai remover {resolved.length} registro(s) resolvido(s) do histórico.
+                    As solicitações pendentes serão mantidas.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => {
+                      dismissalsStore.clearHistory();
+                      toast.success("Histórico de demissões limpo.");
+                    }}
+                  >
+                    Limpar histórico
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+          <Button variant="outline" asChild>
+            <Link to="/"><ArrowLeft className="mr-1 h-4 w-4" /> Painel</Link>
+          </Button>
+        </>
       }
     >
       <h2 className="mb-3 font-display text-lg">Pendentes</h2>
