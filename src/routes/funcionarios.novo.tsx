@@ -536,7 +536,6 @@ function NewEmployee() {
         <Card>
   <CardHeader>
     <CardTitle className="font-display text-lg">RDV Para Admissão</CardTitle>
-    <p className="text-sm text-muted-foreground mt-1">Requerimento de Desligamento Voluntário - Documento necessário para admissão</p>
   </CardHeader>
   <CardContent className="grid gap-4 md:grid-cols-2">
     <Field label="Número da RDV">
