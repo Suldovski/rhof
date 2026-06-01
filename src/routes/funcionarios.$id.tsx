@@ -248,8 +248,7 @@ function Detail() {
                   <Info label="Nascimento" value={e.nascimento ? new Date(e.nascimento).toLocaleDateString("pt-BR") : "—"} />
                   <Info label="Estado civil" value={e.estadoCivil} />
                   <Info label="Sindicato" value={e.sindicato} />
-                  <Info label="Número da RDV" value={e.numeroRdv || "—"} />
-                  <Info label="Valor da RDV" value={e.valorRdv ? e.valorRdv.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—"} />
+                  
                 </CardContent>
               </Card>
             </TabsContent>
@@ -270,6 +269,8 @@ function Detail() {
                     <Info label="Remuneração" value="Informação restrita ao RH" />
                   )}
                   <Info label="Escala/Horário" value={e.escalaHorario} />
+                  <Info label="Número da RDV" value={e.numeroRdv || "—"} />
+                  <Info label="Valor da RDV" value={e.valorRdv ? e.valorRdv.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—"} />
                 </CardContent>
               </Card>
             </TabsContent>
