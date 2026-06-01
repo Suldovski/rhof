@@ -99,7 +99,7 @@ function NewEmployee() {
   };
   const rmDoc = (id: string) => set("documentos", form.documentos.filter((d) => d.id !== id));
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const missing: string[] = [];
     const requireText = (value: string, label: string) => {
