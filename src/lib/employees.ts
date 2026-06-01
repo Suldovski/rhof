@@ -179,6 +179,8 @@ export interface Employee {
   percentualInsalubridade: number;
   horasExtras: string;
   bank: BankAccount;
+  numeroRdv?: string;
+  valorRdv?: number;
   nomeMae: string;
   nomePai?: string;
   dependentes: Dependente[];
@@ -259,6 +261,8 @@ function makeEmpty(): Employee {
     percentualInsalubridade: 0,
     horasExtras: "",
     bank: { bank: "", agency: "", account: "", type: "CC", pix: "" },
+    numeroRdv: "",
+    valorRdv: 0,
     nomeMae: "",
     nomePai: "",
     dependentes: [],

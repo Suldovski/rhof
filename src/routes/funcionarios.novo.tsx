@@ -533,6 +533,31 @@ function NewEmployee() {
           </CardContent>
         </Card>
 
+        <Card>
+  <CardHeader>
+    <CardTitle className="font-display text-lg">RDV Para Admissão</CardTitle>
+    <p className="text-sm text-muted-foreground mt-1">Requerimento de Desligamento Voluntário - Documento necessário para admissão</p>
+  </CardHeader>
+  <CardContent className="grid gap-4 md:grid-cols-2">
+    <Field label="Número da RDV">
+      <Input 
+        value={form.numeroRdv || ""} 
+        onChange={(e) => set("numeroRdv", e.target.value)} 
+        placeholder="Ex: RDV-2024-001"
+      />
+    </Field>
+    <Field label="Valor da RDV">
+      <Input 
+        type="number" 
+        step="0.01" 
+        value={form.valorRdv || ""} 
+        onChange={(e) => set("valorRdv", parseFloat(e.target.value) || 0)} 
+        placeholder="R$ 0,00"
+      />
+    </Field>
+  </CardContent>
+</Card>
+
         {/* FILIAÇÃO + DEPENDENTES */}
         <Card>
           <CardHeader><CardTitle className="font-display text-lg">Filiação *</CardTitle></CardHeader>
