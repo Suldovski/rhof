@@ -71,7 +71,7 @@ function FolhaSalarial() {
   // Auto-filter para RH_Obra
   useEffect(() => {
     if (isRhObra(auth.currentUser?.role)) {
-      const obraId = getObraIdFromRhObra(auth.currentUser!.role);
+      const obraId = getObraIdFromRhObra(auth.currentUser!.role ?? "");
       const obra = sites.find(s => s.id === obraId);
       if (obra) {
         setFilterObra(obra.name);

@@ -145,6 +145,15 @@ function findCol(headers: string[], terms: string[]): number {
   return -1;
 }
 
+function formatCpf(v: any): string {
+  if (v == null || v === "") return "";
+  let digits = String(v).replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.length < 11) digits = digits.padStart(11, "0");
+  if (digits.length > 11) digits = digits.slice(-11);
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9, 11)}`;
+}
+
 async function importFromFile(file: File): Promise<void> {
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type: "array", cellDates: true });
@@ -204,7 +213,7 @@ async function importFromFile(file: File): Promise<void> {
 
     const name = String(row[col.name] ?? "").trim();
     const cpfRaw = col.cpf >= 0 ? row[col.cpf] : "";
-    const cpf = String(cpfRaw ?? "").trim();
+    const cpf = formatCpf(cpfRaw);
     if (!name) { skipReason("nome vazio"); continue; }
 
     const site = col.site >= 0 ? String(row[col.site] ?? "").trim() : "";

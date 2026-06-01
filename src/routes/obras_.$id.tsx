@@ -74,7 +74,7 @@ function ObraDetail() {
 
   useEffect(() => {
     if (isClienteObra(auth.currentUser?.role)) {
-      const clienteObraId = getObraIdFromClienteObra(auth.currentUser!.role);
+      const clienteObraId = getObraIdFromClienteObra(auth.currentUser!.role ?? "");
       if (id !== clienteObraId) {
         toast.error("Você não tem permissão para acessar esta obra.");
         navigate({ to: "/" });

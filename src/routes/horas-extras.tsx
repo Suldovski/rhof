@@ -114,7 +114,7 @@ function HorasExtras() {
 
   const userObraId = useMemo(() => {
     if (isRhObra(auth.currentUser?.role)) {
-      return getObraIdFromRhObra(auth.currentUser!.role);
+      return getObraIdFromRhObra(auth.currentUser!.role ?? "");
     }
     return null;
   }, [auth.currentUser?.role]);

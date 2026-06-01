@@ -50,7 +50,7 @@ function RdvDetail() {
   const [workers, setWorkers] = useState<Array<{ id: string; name: string; cpf?: string; role?: string; obraId?: string; workId?: string; site?: string; organograma?: string; salary?: number; salarioHora?: number }>>([]);
 
   const userObraId = useMemo(() => {
-    if (isRhObra(auth.currentUser?.role)) return getObraIdFromRhObra(auth.currentUser!.role);
+    if (isRhObra(auth.currentUser?.role)) return getObraIdFromRhObra(auth.currentUser!.role ?? "");
     if (isWorkUser(auth.currentUser)) return getUserWorkId(auth.currentUser as any);
     return null;
   }, [auth.currentUser?.role, auth.currentUser?.workId, auth.currentUser?.obraId]);
@@ -152,7 +152,7 @@ function RdvDetail() {
       .filter((e) =>
         !q ||
         e.name.toLowerCase().includes(q.toLowerCase()) ||
-        e.cpf.includes(q) ||
+        (e.cpf ?? "").includes(q) ||
         e.id.includes(q),
       )
       .sort((a, b) => a.name.localeCompare(b.name));

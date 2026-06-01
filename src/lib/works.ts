@@ -20,7 +20,7 @@ let state: WorkOption[] = (() => {
       if (Array.isArray(parsed)) {
         return parsed
           .map((item) => normalizeWork(item))
-          .filter((item): item is WorkOption => !!item.id && !!item.name);
+          .filter((item): item is WorkOption => !!item && !!item.id && !!item.name);
       }
     }
   } catch {}

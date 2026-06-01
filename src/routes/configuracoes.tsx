@@ -204,9 +204,9 @@ function UsersPanel() {
               users.map((u) => (
                 <li key={u.uid} className="grid grid-cols-[1.5fr_1fr_120px_120px_80px] items-center gap-3 px-5 py-4">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-                      {u.name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase()}
-                    </div>
+                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+                       {(u.name ?? "").split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase()}
+                     </div>
                     <div className="min-w-0">
                       <p className="truncate font-semibold">{u.name}</p>
                       <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
@@ -215,7 +215,7 @@ function UsersPanel() {
                     </div>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    {new Date(u.createdAt).toLocaleDateString("pt-BR")}
+                    {u.createdAt ? new Date(u.createdAt).toLocaleDateString("pt-BR") : "—"}
                   </div>
                   <div>
                     <Badge variant="outline" className="border-accent/40 bg-accent/10 text-accent">
@@ -340,7 +340,7 @@ function UserFormDialog({ editing, createPreset, onDone }: { editing: AppUser | 
           toast.success("Usuário atualizado.");
         }
       } else {
-        await authStore.create({ name, email, password, ...payload });
+        await authStore.create({ password, ...payload });
         toast.success("Usuário criado.");
       }
       onDone();

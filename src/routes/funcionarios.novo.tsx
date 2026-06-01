@@ -280,7 +280,7 @@ function NewEmployee() {
               <Input required value={form.name} onChange={(e) => set("name", e.target.value)} />
             </Field>
             <Field label="CPF" required>
-              <Input required value={form.cpf} onChange={(e) => set("cpf", formatCpfPartial(e.target.value))} onBlur={() => set((f) => ({ ...f, cpf: formatCpf(f.cpf) }))} placeholder="000.000.000-00" />
+              <Input required value={form.cpf} onChange={(e) => set("cpf", formatCpfPartial(e.target.value))} onBlur={() => set("cpf", formatCpf(form.cpf))} placeholder="000.000.000-00" />
             </Field>
             <Field label="Data de nascimento" required>
               <Input type="date" required value={form.nascimento} onChange={(e) => set("nascimento", e.target.value)} />

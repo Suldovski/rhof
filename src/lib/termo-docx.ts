@@ -29,7 +29,7 @@ export function exportTermoFromTemplate(template: DocTemplate, employee: Employe
 
   if (!isDocx) {
     const rawBytes = dataUrlToUint8Array(template.data);
-    const blob = new Blob([rawBytes], { type: template.mime || "application/octet-stream" });
+    const blob = new Blob([rawBytes as BlobPart], { type: template.mime || "application/octet-stream" });
     downloadBlob(blob, template.filename);
     return;
   }

@@ -362,6 +362,8 @@ function SiteFormDialog({
   const [name, setName] = useState(initial?.name ?? "");
   const [start, setStart] = useState(initial?.start ?? "");
   const [manager, setManager] = useState(initial?.manager ?? "");
+  const [address, setAddress] = useState(initial?.address ?? "");
+  const [description, setDescription] = useState(initial?.description ?? "");
 
   // reset when dialog reopens with different initial
   const key = `${open}-${initial?.id ?? "new"}`;

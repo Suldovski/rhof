@@ -54,7 +54,7 @@ function RdvIndex() {
   // Auto-seleciona obra do RH_Obra
   useEffect(() => {
     if (isRhObra(auth.currentUser?.role)) {
-      const oid = getObraIdFromRhObra(auth.currentUser!.role);
+      const oid = getObraIdFromRhObra(auth.currentUser!.role ?? "");
       if (oid) {
         setObraId(oid);
         setFilterObra(oid);
@@ -66,7 +66,7 @@ function RdvIndex() {
   const obras = useMemo(() => {
     if (!auth.currentUser) return [];
     if (isMatriz) return sites.map((site) => ({ id: site.id, nome: site.name }));
-    const obraId = getObraIdFromRhObra(auth.currentUser.role);
+    const obraId = getObraIdFromRhObra(auth.currentUser.role ?? "");
     return sites
       .filter((site) => site.id === obraId)
       .map((site) => ({ id: site.id, nome: site.name }));
@@ -74,7 +74,7 @@ function RdvIndex() {
 
   const filtered = useMemo(() => {
     if (isRhObra(auth.currentUser?.role)) {
-      const oid = getObraIdFromRhObra(auth.currentUser!.role);
+      const oid = getObraIdFromRhObra(auth.currentUser!.role ?? "");
       const obra = obras.find((o) => o.id === oid);
       return payments.filter((p) => p.obraId === oid || p.descricao === obra?.nome);
     }

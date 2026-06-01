@@ -7,15 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { authStore, useAuth } from "@/lib/auth-store";
-import { ReactNode } from "react";
-import { Bell, Search, LogOut } from "lucide-react";
-import { Link, useNavigate } from "@tanstack/react-router";
-import { SidebarTrigger } from "@/components/ui/sidebar";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { authStore, useAuth } from "@/lib/auth-store";
 import { useDismissals } from "@/lib/dismissals-store";
 
 interface PageShellProps {
@@ -32,7 +23,7 @@ export function PageShell({ title, eyebrow, description, actions, children }: Pa
   const dismissals = useDismissals();
   const pendingDem = dismissals.filter((d) => d.status === "pendente").length;
   const user = auth.currentUser;
-  const initials = user
+  const initials = user?.name
     ? user.name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase()
     : "??";
 
@@ -82,8 +73,8 @@ export function PageShell({ title, eyebrow, description, actions, children }: Pa
         </div>
       </header>
 
-      <div className="flex flex-col gap-2 border-b border-border bg-card px-4 py-5 md:px-8 md:py-8">
-        <div className="flex flex-col gap-4 md:flex-row md:flex-wrap md:items-start md:justify-between">
+      <div className="flex flex-col gap-4 border-b border-border bg-card px-4 py-5 md:px-8 md:py-8">
+        <div className="flex flex-col gap-2">
           <div className="min-w-0">
             {eyebrow && (
               <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-accent">
@@ -95,8 +86,8 @@ export function PageShell({ title, eyebrow, description, actions, children }: Pa
               <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{description}</p>
             )}
           </div>
-          {actions && <div className="self-start flex flex-wrap items-center gap-2">{actions}</div>}
         </div>
+        {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
       </div>
 
       <main className="flex-1 px-4 py-6 md:px-8 md:py-8">{children}</main>
