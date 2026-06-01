@@ -74,19 +74,19 @@ export function PageShell({ title, eyebrow, description, actions, children }: Pa
       </header>
 
       <div className="flex flex-col gap-2 border-b border-border bg-card px-4 py-5 md:px-8 md:py-8">
-        <div className="flex flex-col gap-4 md:flex-row md:flex-wrap md:items-start md:justify-between">
-          <div className="min-w-0">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div className="min-w-0 max-w-full">
             {eyebrow && (
               <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-accent">
                 {eyebrow}
               </p>
             )}
-            <h1 className="font-display text-2xl md:text-4xl break-words">{title}</h1>
+            <h1 className="font-display text-2xl md:text-4xl break-words truncate">{title}</h1>
             {description && (
               <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{description}</p>
             )}
           </div>
-          {actions && <div className="self-start flex flex-wrap items-center gap-2">{actions}</div>}
+          {actions && <div className="self-start flex items-center gap-2 flex-shrink-0">{actions}</div>}
         </div>
       </div>
 
