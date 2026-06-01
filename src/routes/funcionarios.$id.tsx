@@ -117,7 +117,9 @@ function Detail() {
   const initials = e.name.split(" ").slice(0, 2).map((n) => n[0]).join("");
   const obraName = e.site || e.organograma || "";
   const obraId = sites.find((s) => s.name === obraName)?.id;
-  const termoTemplate = templates.find((tpl) => tpl.category === "termo" && tpl.obraId === obraId);
+  const termoTemplate =
+    templates.find((tpl) => tpl.category === "termo" && tpl.obraId === obraId) ||
+    templates.find((tpl) => tpl.category === "termo" && tpl.name?.includes(obraName));
 
   // 🔥 CORREÇÃO: Função assíncrona
   const setStatus = async (s: EmployeeStatus) => {
@@ -140,21 +142,23 @@ function Detail() {
               <Button variant="outline" onClick={() => { downloadFRE(e); toast.success("FRE exportada."); }}>
                 <Download className="mr-1 h-4 w-4" /> Exportar FRE
               </Button>
-              {termoTemplate && (
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    try {
-                      exportTermoFromTemplate(termoTemplate, e, obraName);
-                      toast.success("Termo gerado a partir do modelo da obra.");
-                    } catch (err: any) {
-                      toast.error(err?.message ?? "Erro ao gerar termo.");
-                    }
-                  }}
-                >
-                  <FileText className="mr-1 h-4 w-4" /> Exportar termo
-                </Button>
-              )}
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (!termoTemplate) {
+                    toast.error("Nenhum termo encontrado para esta obra. Importa o modelo em Documentos.");
+                    return;
+                  }
+                  try {
+                    exportTermoFromTemplate(termoTemplate, e, obraName);
+                    toast.success("Termo gerado a partir do modelo da obra.");
+                  } catch (err: any) {
+                    toast.error(err?.message ?? "Erro ao gerar termo.");
+                  }
+                }}
+              >
+                <FileText className="mr-1 h-4 w-4" /> Exportar termo
+              </Button>
               {e.status !== "ferias" ? (
                 <Button variant="outline" onClick={() => setStatus("ferias")}>
                   <Plane className="mr-1 h-4 w-4" /> Colocar em férias
