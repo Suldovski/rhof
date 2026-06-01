@@ -86,7 +86,7 @@ export function PageShell({ title, eyebrow, description, actions, children }: Pa
               <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{description}</p>
             )}
           </div>
-          {actions && <div className="self-start flex flex-wrap gap-2 [&>*]:flex-1 md:[&>*]:flex-none">{actions}</div>}
+          {actions && <div className="self-start flex flex-wrap items-center gap-2">{actions}</div>}
         </div>
       </div>
 
