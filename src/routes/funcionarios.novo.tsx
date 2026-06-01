@@ -26,6 +26,7 @@ import {
   type EmployeeDocumentCategory,
   type EmployeeStatus,
 } from "@/lib/employees";
+import { formatCpf } from "@/lib/employees";
 import { UFS, SINDICATOS_POR_UF } from "@/lib/sindicatos";
 import { readFileAsDataURL } from "@/lib/doc-templates-store";
 import { useAuth } from "@/lib/auth-store";
@@ -282,7 +283,7 @@ function NewEmployee() {
               <Input required value={form.name} onChange={(e) => set("name", e.target.value)} />
             </Field>
             <Field label="CPF" required>
-              <Input required value={form.cpf} onChange={(e) => set("cpf", e.target.value)} placeholder="000.000.000-00" />
+              <Input required value={form.cpf} onChange={(e) => set("cpf", e.target.value)} onBlur={() => set((f) => ({ ...f, cpf: formatCpf(f.cpf) }))} placeholder="000.000.000-00" />
             </Field>
             <Field label="Data de nascimento" required>
               <Input type="date" required value={form.nascimento} onChange={(e) => set("nascimento", e.target.value)} />
@@ -554,7 +555,7 @@ function NewEmployee() {
             {form.dependentes.map((d) => (
               <div key={d.id} className="grid gap-2 rounded-md border border-border p-3 md:grid-cols-6">
                 <Input placeholder="Nome" value={d.nome} onChange={(e) => updDep(d.id, { nome: e.target.value })} className="md:col-span-2" />
-                <Input placeholder="CPF" value={d.cpf} onChange={(e) => updDep(d.id, { cpf: e.target.value })} />
+                <Input placeholder="CPF" value={d.cpf} onChange={(e) => updDep(d.id, { cpf: e.target.value })} onBlur={(ev) => updDep(d.id, { cpf: formatCpf(ev.currentTarget.value) })} />
                 <Input type="date" placeholder="Nascimento" value={d.nascimento} onChange={(e) => updDep(d.id, { nascimento: e.target.value })} />
                 <Input placeholder="Cidade" value={d.cidade} onChange={(e) => updDep(d.id, { cidade: e.target.value })} />
                 <div className="flex gap-2">

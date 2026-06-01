@@ -25,6 +25,7 @@ import { useEmployees } from "@/lib/employees";
 import { isRhObra, isWorkUser, getUserWorkId, getObraIdFromRhObra } from "@/lib/permissions";
 import { db } from "@/lib/firebase";
 import { rdvStore, useRdvPayment } from "@/lib/rdv-store";
+import { formatCpf } from "@/lib/employees";
 import { useSites } from "@/lib/sites-store";
 import { buildRdvPDF, fmtDate, fmtBRL } from "./rdv";
 import { useAuth } from "@/lib/auth-store";
@@ -299,7 +300,7 @@ function RdvDetail() {
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold truncate">{e.name}</p>
                           <p className="text-xs text-muted-foreground truncate">
-                            #{e.id}{e.cpf ? ` · ${e.cpf}` : ""}{e.role ? ` · ${e.role}` : ""}
+                            #{e.id}{e.cpf ? ` · ${formatCpf(e.cpf)}` : ""}{e.role ? ` · ${e.role}` : ""}
                           </p>
                         </div>
                       </li>
@@ -347,7 +348,7 @@ function RdvDetail() {
                     <tr key={entry.employeeId} className="hover:bg-muted/30">
                       <td className="px-3 py-2 font-mono text-xs text-muted-foreground">#{entry.employeeId}</td>
                       <td className="px-3 py-2 font-semibold">{emp?.name ?? "—"}</td>
-                      <td className="px-3 py-2 font-mono text-xs">{emp?.cpf ?? "—"}</td>
+                      <td className="px-3 py-2 font-mono text-xs">{emp?.cpf ? formatCpf(emp.cpf) : "—"}</td>
                       <td className="px-3 py-2">{emp?.bank.bank ?? "—"}</td>
                       <td className="px-3 py-2 font-mono text-xs">
                         {emp ? `${emp.bank.agency} / ${emp.bank.account} (${emp.bank.type})` : "—"}

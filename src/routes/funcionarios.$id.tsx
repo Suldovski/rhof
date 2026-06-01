@@ -31,6 +31,7 @@ import {
   EMPLOYEE_DOCUMENT_SLOTS,
   employeesStore,
   getEmployeeDocumentLabel,
+  formatCpf,
   useEmployee,
   type Employee,
   type EmployeeStatus,
@@ -242,7 +243,7 @@ function Detail() {
               <Card>
                 <CardHeader><CardTitle className="font-display text-lg">Identificação</CardTitle></CardHeader>
                 <CardContent className="grid gap-4 md:grid-cols-2">
-                  <Info label="CPF" value={e.cpf} />
+                  <Info label="CPF" value={formatCpf(e.cpf)} />
                   <Info label="RG" value={e.rg} />
                   <Info label="CTPS" value={e.ctps} />
                   <Info label="PIS" value={e.pis} />

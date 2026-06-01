@@ -509,7 +509,7 @@ function keepText(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function formatCpf(value: unknown): string {
+export function formatCpf(value: unknown): string {
   const digits = String(value ?? "").replace(/\D/g, "");
   if (digits.length !== 11) return keepText(value);
   return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;

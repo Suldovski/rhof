@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { overtimeStore, useOvertime, type OvertimeEntry } from "@/lib/overtime-store";
+import { formatCpf } from "@/lib/employees";
 import { useEmployees } from "@/lib/employees";
 import { useAuth } from "@/lib/auth-store";
 import { useSites } from "@/lib/sites-store";
@@ -381,7 +382,7 @@ function HorasExtras() {
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold truncate">{e.name}</p>
                             <p className="text-xs text-muted-foreground truncate">
-                              #{e.id}{e.cpf ? ` · ${e.cpf}` : ""}{e.role ? ` · ${e.role}` : ""}
+                              #{e.id}{e.cpf ? ` · ${formatCpf(e.cpf)}` : ""}{e.role ? ` · ${e.role}` : ""}
                             </p>
                           </div>
                         </li>
