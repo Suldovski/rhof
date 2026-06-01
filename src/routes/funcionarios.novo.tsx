@@ -15,7 +15,17 @@ import { useSites } from "@/lib/sites-store";
 import { useHorarios } from "@/lib/horarios-store";
 import { fetchCep } from "@/lib/cep";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { employeesStore, makeEmpty, type Employee, type Dependente, type DocAnexo, type EmployeeStatus } from "@/lib/employees";
+import {
+  EMPLOYEE_DOCUMENT_SLOTS,
+  employeesStore,
+  getEmployeeDocumentLabel,
+  makeEmpty,
+  type Employee,
+  type Dependente,
+  type DocAnexo,
+  type EmployeeDocumentCategory,
+  type EmployeeStatus,
+} from "@/lib/employees";
 import { UFS, SINDICATOS_POR_UF } from "@/lib/sindicatos";
 import { readFileAsDataURL } from "@/lib/doc-templates-store";
 import { useAuth } from "@/lib/auth-store";
@@ -64,23 +74,29 @@ function NewEmployee() {
     set("dependentes", form.dependentes.map((d) => (d.id === id ? { ...d, ...patch } : d)));
   const rmDep = (id: string) => set("dependentes", form.dependentes.filter((d) => d.id !== id));
 
-  // Anexos
-  const onUpload = async (files: FileList | null) => {
-    if (!files) return;
-    const docs: DocAnexo[] = [];
-    for (const file of Array.from(files)) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error(`${file.name} excede 5 MB.`);
-        continue;
-      }
-      const data = await readFileAsDataURL(file);
-      docs.push({
-        id: `f-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        name: file.name, size: file.size, type: file.type, data,
-        uploadedAt: new Date().toISOString(),
-      });
+  const isMotorista = /motorist/i.test(`${form.cargoFuncao} ${form.role}`);
+
+  const uploadDocument = async (category: EmployeeDocumentCategory, file: File | null) => {
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error(`${file.name} excede 5 MB.`);
+      return;
     }
-    set("documentos", [...form.documentos, ...docs]);
+
+    const data = await readFileAsDataURL(file);
+    const slot = EMPLOYEE_DOCUMENT_SLOTS.find((item) => item.category === category);
+    const nextDoc: DocAnexo = {
+      id: `f-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name: file.name,
+      label: slot?.label,
+      category,
+      size: file.size,
+      type: file.type,
+      data,
+      uploadedAt: new Date().toISOString(),
+    };
+
+    set("documentos", [...form.documentos.filter((doc) => doc.category !== category), nextDoc]);
   };
   const rmDoc = (id: string) => set("documentos", form.documentos.filter((d) => d.id !== id));
 
@@ -168,9 +184,14 @@ function NewEmployee() {
 
     requireText(form.nomeMae, "Nome da mãe");
 
-    if (form.documentos.length === 0) {
-      missing.push("Documentos anexados");
-    }
+    const requiredDocumentSlots = EMPLOYEE_DOCUMENT_SLOTS.filter(
+      (slot) => slot.required || (slot.onlyForMotorista && isMotorista),
+    );
+    requiredDocumentSlots.forEach((slot) => {
+      if (!form.documentos.some((doc) => doc.category === slot.category)) {
+        missing.push(slot.label);
+      }
+    });
 
     if (missing.length > 0) {
       const preview = missing.slice(0, 6).join(", ");
@@ -539,23 +560,61 @@ function NewEmployee() {
         {/* DOCUMENTOS ANEXADOS */}
         <Card>
           <CardHeader><CardTitle className="font-display text-lg">Documentos anexados</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            <label className="flex cursor-pointer items-center gap-3 rounded-md border border-dashed border-border p-4 hover:bg-muted/40">
-              <Upload className="h-5 w-5 text-accent" />
-              <span className="flex-1 text-sm">Clique para anexar arquivos (PDF, imagem) — até 5 MB cada</span>
-              <input type="file" multiple className="hidden" onChange={(e) => onUpload(e.target.files)} />
-            </label>
-            {form.documentos.length > 0 && (
-              <ul className="space-y-2">
-                {form.documentos.map((d) => (
-                  <li key={d.id} className="flex items-center gap-3 rounded-md border border-border px-3 py-2">
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-2">
+              {EMPLOYEE_DOCUMENT_SLOTS.map((slot) => {
+                const currentDoc = form.documentos.find((doc) => doc.category === slot.category);
+                const required = slot.required || (slot.onlyForMotorista && isMotorista);
+                return (
+                  <div key={slot.category} className="rounded-md border border-border p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold">
+                          {slot.label}{required && <span className="ml-1 text-destructive">*</span>}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">{slot.description}</p>
+                      </div>
+                      <label className="inline-flex cursor-pointer items-center rounded-md border border-input bg-background px-3 py-2 text-xs font-medium hover:bg-muted">
+                        <Upload className="mr-2 h-4 w-4" />
+                        {currentDoc ? "Trocar" : "Anexar"}
+                        <input
+                          type="file"
+                          accept="application/pdf,image/*"
+                          className="hidden"
+                          onChange={(e) => uploadDocument(slot.category, e.target.files?.[0] ?? null)}
+                        />
+                      </label>
+                    </div>
+                    {currentDoc ? (
+                      <div className="mt-3 flex items-center gap-3 rounded-md bg-muted/40 px-3 py-2 text-sm">
+                        <FileText className="h-4 w-4 text-accent" />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-medium">{getEmployeeDocumentLabel(currentDoc)}</p>
+                          <p className="text-xs text-muted-foreground">{currentDoc.name} · {(currentDoc.size / 1024).toFixed(0)} KB</p>
+                        </div>
+                        <Button type="button" size="icon" variant="ghost" onClick={() => rmDoc(currentDoc.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <p className="mt-3 text-xs text-muted-foreground">Nenhum arquivo anexado.</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            {form.documentos.some((doc) => !doc.category) && (
+              <div className="space-y-2">
+                <p className="text-sm font-semibold">Outros documentos</p>
+                {form.documentos.filter((doc) => !doc.category).map((d) => (
+                  <div key={d.id} className="flex items-center gap-3 rounded-md border border-border px-3 py-2">
                     <FileText className="h-4 w-4 text-accent" />
                     <span className="flex-1 truncate text-sm">{d.name}</span>
                     <span className="text-xs text-muted-foreground">{(d.size / 1024).toFixed(0)} KB</span>
                     <Button type="button" size="icon" variant="ghost" onClick={() => rmDoc(d.id)}><Trash2 className="h-4 w-4" /></Button>
-                  </li>
+                  </div>
                 ))}
-              </ul>
+              </div>
             )}
           </CardContent>
         </Card>

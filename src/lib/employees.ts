@@ -49,10 +49,75 @@ export interface CNHData {
 export interface DocAnexo {
   id: string;
   name: string;
+  label?: string;
+  category?: EmployeeDocumentCategory;
   size: number;
   type: string;
   data: string;
   uploadedAt: string;
+}
+
+export type EmployeeDocumentCategory =
+  | "rg-frente"
+  | "rg-verso"
+  | "cnh"
+  | "aso"
+  | "certidao-nascimento"
+  | "titulo-eleitor"
+  | "comprovante-endereco";
+
+export const EMPLOYEE_DOCUMENT_SLOTS: Array<{
+  category: EmployeeDocumentCategory;
+  label: string;
+  description: string;
+  required?: boolean;
+  onlyForMotorista?: boolean;
+}> = [
+  {
+    category: "rg-frente",
+    label: "Documento pessoal - RG frente",
+    description: "Anexe a frente do RG.",
+    required: true,
+  },
+  {
+    category: "rg-verso",
+    label: "Documento pessoal - RG verso",
+    description: "Anexe o verso do RG.",
+    required: true,
+  },
+  {
+    category: "cnh",
+    label: "CNH",
+    description: "Obrigatório para motorista.",
+    onlyForMotorista: true,
+  },
+  {
+    category: "aso",
+    label: "ASO",
+    description: "Anexe o atestado de saúde ocupacional, quando houver.",
+  },
+  {
+    category: "certidao-nascimento",
+    label: "Certidão de nascimento",
+    description: "Anexe a certidão de nascimento.",
+    required: true,
+  },
+  {
+    category: "titulo-eleitor",
+    label: "Título de eleitor",
+    description: "Anexe o título de eleitor.",
+    required: true,
+  },
+  {
+    category: "comprovante-endereco",
+    label: "Comprovante de endereço",
+    description: "Anexe um comprovante recente de endereço.",
+    required: true,
+  },
+];
+
+export function getEmployeeDocumentLabel(doc: Pick<DocAnexo, "category" | "label" | "name">): string {
+  return doc.label?.trim() || EMPLOYEE_DOCUMENT_SLOTS.find((slot) => slot.category === doc.category)?.label || doc.name;
 }
 
 export type EmployeeTipo = "efetivo" | "pj" | "terceiro";

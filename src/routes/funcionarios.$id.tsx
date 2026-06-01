@@ -27,7 +27,16 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { employeesStore, useEmployee, type Employee, type EmployeeStatus, type Dependente, type DocAnexo } from "@/lib/employees";
+import {
+  EMPLOYEE_DOCUMENT_SLOTS,
+  employeesStore,
+  getEmployeeDocumentLabel,
+  useEmployee,
+  type Employee,
+  type EmployeeStatus,
+  type Dependente,
+  type DocAnexo,
+} from "@/lib/employees";
 import { useSites } from "@/lib/sites-store";
 import { useHorarios, horariosStore } from "@/lib/horarios-store";
 import { UFS, SINDICATOS_POR_UF } from "@/lib/sindicatos";
@@ -241,19 +250,47 @@ function Detail() {
             <TabsContent value="docs" className="mt-4">
               <Card>
                 <CardHeader><CardTitle className="font-display text-lg">Documentos anexados</CardTitle></CardHeader>
-                <CardContent className="space-y-2">
-                  {(!e.documentos || e.documentos.length === 0) ? (
-                    <p className="text-sm text-muted-foreground">Nenhum documento anexado.</p>
-                  ) : e.documentos.map((d) => (
-                    <div key={d.id} className="flex items-center gap-3 rounded-md border border-border px-4 py-3">
-                      <FileText className="h-4 w-4 text-accent" />
-                      <span className="flex-1 text-sm">{d.name}</span>
-                      <span className="text-xs text-muted-foreground">{(d.size / 1024).toFixed(0)} KB</span>
-                      <Button size="sm" variant="ghost" asChild>
-                        <a href={d.data} download={d.name} target="_blank" rel="noopener noreferrer">Abrir</a>
-                      </Button>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {EMPLOYEE_DOCUMENT_SLOTS.map((slot) => {
+                      const doc = e.documentos?.find((item) => item.category === slot.category);
+                      return (
+                        <div key={slot.category} className="rounded-md border border-border p-4">
+                          <p className="text-sm font-semibold">{slot.label}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">{slot.description}</p>
+                          {doc ? (
+                            <div className="mt-3 flex items-center gap-3 rounded-md bg-muted/40 px-3 py-2 text-sm">
+                              <FileText className="h-4 w-4 text-accent" />
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate font-medium">{getEmployeeDocumentLabel(doc)}</p>
+                                <p className="text-xs text-muted-foreground">{doc.name} · {(doc.size / 1024).toFixed(0)} KB</p>
+                              </div>
+                              <Button size="sm" variant="ghost" asChild>
+                                <a href={doc.data} download={doc.name} target="_blank" rel="noopener noreferrer">Abrir</a>
+                              </Button>
+                            </div>
+                          ) : (
+                            <p className="mt-3 text-xs text-muted-foreground">Não anexado.</p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {e.documentos?.some((doc) => !doc.category) && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold">Outros documentos</p>
+                      {e.documentos.filter((doc) => !doc.category).map((d) => (
+                        <div key={d.id} className="flex items-center gap-3 rounded-md border border-border px-4 py-3">
+                          <FileText className="h-4 w-4 text-accent" />
+                          <span className="flex-1 text-sm">{d.name}</span>
+                          <span className="text-xs text-muted-foreground">{(d.size / 1024).toFixed(0)} KB</span>
+                          <Button size="sm" variant="ghost" asChild>
+                            <a href={d.data} download={d.name} target="_blank" rel="noopener noreferrer">Abrir</a>
+                          </Button>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -420,6 +457,7 @@ function EditEmployeeDialog({
   const sites = useSites();
   const horarios = useHorarios();
   const [form, setForm] = useState<Employee>(employee);
+  const isMotorista = /motorist/i.test(`${form.cargoFuncao} ${form.role}`);
 
   const set = <K extends keyof Employee>(k: K, v: Employee[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
@@ -434,19 +472,25 @@ function EditEmployeeDialog({
     set("dependentes", form.dependentes.map((d) => (d.id === id ? { ...d, ...patch } : d)));
   const rmDep = (id: string) => set("dependentes", form.dependentes.filter((d) => d.id !== id));
 
-  const onUpload = async (files: FileList | null) => {
-    if (!files) return;
-    const docs: DocAnexo[] = [];
-    for (const file of Array.from(files)) {
-      if (file.size > 5 * 1024 * 1024) { toast.error(`${file.name} excede 5 MB.`); continue; }
-      const data = await readFileAsDataURL(file);
-      docs.push({
-        id: `f-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        name: file.name, size: file.size, type: file.type, data,
-        uploadedAt: new Date().toISOString(),
-      });
+  const uploadDocument = async (category: DocAnexo["category"], file: File | null) => {
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error(`${file.name} excede 5 MB.`);
+      return;
     }
-    set("documentos", [...form.documentos, ...docs]);
+    const data = await readFileAsDataURL(file);
+    const slot = EMPLOYEE_DOCUMENT_SLOTS.find((item) => item.category === category);
+    const nextDoc: DocAnexo = {
+      id: `f-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name: file.name,
+      label: slot?.label,
+      category,
+      size: file.size,
+      type: file.type,
+      data,
+      uploadedAt: new Date().toISOString(),
+    };
+    set("documentos", [...form.documentos.filter((doc) => doc.category !== category), nextDoc]);
   };
   const rmDoc = (id: string) => set("documentos", form.documentos.filter((d) => d.id !== id));
 
@@ -720,19 +764,59 @@ function EditEmployeeDialog({
 
           <Card>
             <CardHeader><CardTitle className="font-display text-base">Documentos</CardTitle></CardHeader>
-            <CardContent className="space-y-2">
-              <label className="flex cursor-pointer items-center gap-3 rounded-md border border-dashed border-border p-3 hover:bg-muted/40">
-                <Upload className="h-4 w-4 text-accent" />
-                <span className="flex-1 text-sm">Clique para anexar (até 5 MB cada)</span>
-                <input type="file" multiple className="hidden" onChange={(e) => onUpload(e.target.files)} />
-              </label>
-              {form.documentos.map((d) => (
-                <div key={d.id} className="flex items-center gap-3 rounded-md border border-border px-3 py-2">
-                  <FileText className="h-4 w-4 text-accent" />
-                  <span className="flex-1 truncate text-sm">{d.name}</span>
-                  <Button type="button" size="icon" variant="ghost" onClick={() => rmDoc(d.id)}><Trash2 className="h-4 w-4" /></Button>
+            <CardContent className="space-y-4">
+              <div className="grid gap-3 md:grid-cols-2">
+                {EMPLOYEE_DOCUMENT_SLOTS.map((slot) => {
+                  const currentDoc = form.documentos.find((doc) => doc.category === slot.category);
+                  const required = slot.required || (slot.onlyForMotorista && isMotorista);
+                  return (
+                    <div key={slot.category} className="rounded-md border border-border p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold">
+                            {slot.label}{required && <span className="ml-1 text-destructive">*</span>}
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">{slot.description}</p>
+                        </div>
+                        <label className="inline-flex cursor-pointer items-center rounded-md border border-input bg-background px-3 py-2 text-xs font-medium hover:bg-muted">
+                          <Upload className="mr-2 h-4 w-4" />
+                          {currentDoc ? "Trocar" : "Anexar"}
+                          <input
+                            type="file"
+                            accept="application/pdf,image/*"
+                            className="hidden"
+                            onChange={(e) => uploadDocument(slot.category, e.target.files?.[0] ?? null)}
+                          />
+                        </label>
+                      </div>
+                      {currentDoc ? (
+                        <div className="mt-3 flex items-center gap-3 rounded-md bg-muted/40 px-3 py-2 text-sm">
+                          <FileText className="h-4 w-4 text-accent" />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-medium">{getEmployeeDocumentLabel(currentDoc)}</p>
+                            <p className="text-xs text-muted-foreground">{currentDoc.name} · {(currentDoc.size / 1024).toFixed(0)} KB</p>
+                          </div>
+                          <Button type="button" size="icon" variant="ghost" onClick={() => rmDoc(currentDoc.id)}><Trash2 className="h-4 w-4" /></Button>
+                        </div>
+                      ) : (
+                        <p className="mt-3 text-xs text-muted-foreground">Nenhum arquivo anexado.</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              {form.documentos.some((doc) => !doc.category) && (
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold">Outros documentos</p>
+                  {form.documentos.filter((doc) => !doc.category).map((d) => (
+                    <div key={d.id} className="flex items-center gap-3 rounded-md border border-border px-3 py-2">
+                      <FileText className="h-4 w-4 text-accent" />
+                      <span className="flex-1 truncate text-sm">{d.name}</span>
+                      <Button type="button" size="icon" variant="ghost" onClick={() => rmDoc(d.id)}><Trash2 className="h-4 w-4" /></Button>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </CardContent>
           </Card>
 

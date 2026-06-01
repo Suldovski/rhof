@@ -413,8 +413,12 @@ function List() {
               >
                 <div className="font-mono text-xs text-muted-foreground">#{e.id}</div>
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-                    {e.name.split(" ").slice(0, 2).map((n) => n[0]).join("")}
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+                    {e.photo ? (
+                      <img src={e.photo} alt={e.name} className="h-full w-full object-cover" />
+                    ) : (
+                      e.name.split(" ").slice(0, 2).map((n) => n[0]).join("")
+                    )}
                   </div>
                   <div className="min-w-0">
                     <p className="truncate font-semibold">{e.name}</p>
