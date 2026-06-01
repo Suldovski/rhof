@@ -26,7 +26,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { employeesStore, useEmployees, type Employee, type EmployeeStatus } from "@/lib/employees";
-import { employeesStore, useEmployees, type Employee, type EmployeeStatus } from "@/lib/employees";
 import EmployeeAvatar from "@/components/employee-avatar";
 import { sitesStore, useSites, slugify } from "@/lib/sites-store";
 
