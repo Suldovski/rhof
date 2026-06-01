@@ -49,6 +49,12 @@ function Documentos() {
         continue;
       }
       const data = await readFileAsDataURL(file);
+      if (category === "termo") {
+        const existing = templates.find((t) => t.category === "termo" && t.obraId === selected);
+        if (existing) {
+          docTemplatesStore.remove(existing.id);
+        }
+      }
       docTemplatesStore.add({
         name: file.name.replace(/\.[^.]+$/, ""),
         category,

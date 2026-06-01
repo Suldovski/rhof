@@ -509,6 +509,12 @@ function keepText(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function formatCpf(value: unknown): string {
+  const digits = String(value ?? "").replace(/\D/g, "");
+  if (digits.length !== 11) return keepText(value);
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+}
+
 function normalizeEmployeeRecord(employee: Employee): Employee {
   const dept = departmentFromRole(employee.cargoFuncao || employee.role || "");
 
@@ -522,7 +528,7 @@ function normalizeEmployeeRecord(employee: Employee): Employee {
       to: upperText(change.to),
     })),
     role: upperText(employee.role),
-    cpf: keepText(employee.cpf),
+    cpf: formatCpf(employee.cpf),
     nascimento: keepText(employee.nascimento),
     sindicato: upperText(employee.sindicato),
     sindicatoUf: keepText(employee.sindicatoUf),
@@ -575,7 +581,7 @@ function normalizeEmployeeRecord(employee: Employee): Employee {
     dependentes: employee.dependentes.map((dependente) => ({
       ...dependente,
       nome: upperText(dependente.nome),
-      cpf: keepText(dependente.cpf),
+      cpf: formatCpf(dependente.cpf),
       nascimento: keepText(dependente.nascimento),
       cidade: upperText(dependente.cidade),
       uf: keepText(dependente.uf),
