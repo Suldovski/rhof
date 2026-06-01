@@ -228,7 +228,7 @@ function Obras() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Responsável</p>
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Responsável RH</p>
                     <p className="mt-1 truncate text-sm font-medium">
                       {cardDetails[s.id]?.responsibleName ?? (trimText(s.manager) || "Não informado")}
                     </p>
@@ -401,7 +401,7 @@ function SiteFormDialog({
             <Input type="date" value={start} onChange={(e) => setStart(e.target.value)} required />
           </div>
           <div className="grid gap-1.5">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Responsável *</Label>
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Responsável RH*</Label>
             <Input value={manager} onChange={(e) => setManager(e.target.value)} required />
           </div>
           <DialogFooter>
