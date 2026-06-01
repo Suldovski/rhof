@@ -44,6 +44,7 @@ function NewEmployee() {
   useRouteProtection(roleChecks.funcionarios, "Funcionários");
   const [form, setForm] = useState<Employee>(() => makeEmpty());
   const [submitting, setSubmitting] = useState(false);
+  const [isMotorista, setIsMotorista] = useState(false);
 
   // Pre-fill obra/site when coming from obra detail (?site=...)
   useEffect(() => {
@@ -73,8 +74,6 @@ function NewEmployee() {
   const updDep = (id: string, patch: Partial<Dependente>) =>
     set("dependentes", form.dependentes.map((d) => (d.id === id ? { ...d, ...patch } : d)));
   const rmDep = (id: string) => set("dependentes", form.dependentes.filter((d) => d.id !== id));
-
-  const isMotorista = /motorist/i.test(`${form.cargoFuncao} ${form.role}`);
 
   const uploadDocument = async (category: EmployeeDocumentCategory, file: File | null) => {
     if (!file) return;
@@ -143,12 +142,14 @@ function NewEmployee() {
     requireText(form.telefoneRecado, "Telefone recado");
     requireText(form.email, "E-mail");
 
-    requireText(form.cnh?.numero ?? "", "Nº CNH");
-    requireText(form.cnh?.categoria ?? "", "Categoria CNH");
-    requireText(form.cnh?.uf ?? "", "UF CNH");
-    requireText(form.cnh?.primeiraHabilitacao ?? "", "1ª habilitação CNH");
-    requireText(form.cnh?.expedicao ?? "", "Expedição CNH");
-    requireText(form.cnh?.validade ?? "", "Validade CNH");
+    if (isMotorista) {
+      requireText(form.cnh?.numero ?? "", "Nº CNH");
+      requireText(form.cnh?.categoria ?? "", "Categoria CNH");
+      requireText(form.cnh?.uf ?? "", "UF CNH");
+      requireText(form.cnh?.primeiraHabilitacao ?? "", "1ª habilitação CNH");
+      requireText(form.cnh?.expedicao ?? "", "Expedição CNH");
+      requireText(form.cnh?.validade ?? "", "Validade CNH");
+    }
 
     requireText(form.admission, "Data de admissão");
     requireText(form.organograma, "Organograma (obra)");
@@ -201,7 +202,7 @@ function NewEmployee() {
     }
     setSubmitting(true);
     try {
-      const saved = employeesStore.add(form);
+      const saved = await employeesStore.add(form);
       toast.success(`Funcionário ${saved.name} cadastrado (matrícula #${saved.id}).`);
       navigate({ to: "/funcionarios/$id", params: { id: saved.id } });
     } catch (err: any) {
@@ -403,14 +404,23 @@ function NewEmployee() {
 
         {/* CNH */}
         <Card>
-          <CardHeader><CardTitle className="font-display text-lg">CNH (se possuir)</CardTitle></CardHeader>
+          <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <CardTitle className="font-display text-lg">CNH</CardTitle>
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={isMotorista}
+                onCheckedChange={(checked) => setIsMotorista(!!checked)}
+              />
+              Motorista (exigir CNH)
+            </label>
+          </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-3">
-            <Field label="Nº CNH"><Input value={form.cnh?.numero ?? ""} onChange={(e) => set("cnh", { ...(form.cnh ?? { numero: "", primeiraHabilitacao: "", expedicao: "", validade: "", uf: "", categoria: "" }), numero: e.target.value })} /></Field>
-            <Field label="Categoria"><Input value={form.cnh?.categoria ?? ""} onChange={(e) => set("cnh", { ...(form.cnh ?? { numero: "", primeiraHabilitacao: "", expedicao: "", validade: "", uf: "", categoria: "" }), categoria: e.target.value })} /></Field>
-            <Field label="UF"><Input value={form.cnh?.uf ?? ""} onChange={(e) => set("cnh", { ...(form.cnh ?? { numero: "", primeiraHabilitacao: "", expedicao: "", validade: "", uf: "", categoria: "" }), uf: e.target.value })} /></Field>
-            <Field label="1ª habilitação"><Input type="date" value={form.cnh?.primeiraHabilitacao ?? ""} onChange={(e) => set("cnh", { ...(form.cnh ?? { numero: "", primeiraHabilitacao: "", expedicao: "", validade: "", uf: "", categoria: "" }), primeiraHabilitacao: e.target.value })} /></Field>
-            <Field label="Expedição"><Input type="date" value={form.cnh?.expedicao ?? ""} onChange={(e) => set("cnh", { ...(form.cnh ?? { numero: "", primeiraHabilitacao: "", expedicao: "", validade: "", uf: "", categoria: "" }), expedicao: e.target.value })} /></Field>
-            <Field label="Validade"><Input type="date" value={form.cnh?.validade ?? ""} onChange={(e) => set("cnh", { ...(form.cnh ?? { numero: "", primeiraHabilitacao: "", expedicao: "", validade: "", uf: "", categoria: "" }), validade: e.target.value })} /></Field>
+            <Field label="Nº CNH"><Input disabled={!isMotorista} value={form.cnh?.numero ?? ""} onChange={(e) => set("cnh", { ...(form.cnh ?? { numero: "", primeiraHabilitacao: "", expedicao: "", validade: "", uf: "", categoria: "" }), numero: e.target.value })} /></Field>
+            <Field label="Categoria"><Input disabled={!isMotorista} value={form.cnh?.categoria ?? ""} onChange={(e) => set("cnh", { ...(form.cnh ?? { numero: "", primeiraHabilitacao: "", expedicao: "", validade: "", uf: "", categoria: "" }), categoria: e.target.value })} /></Field>
+            <Field label="UF"><Input disabled={!isMotorista} value={form.cnh?.uf ?? ""} onChange={(e) => set("cnh", { ...(form.cnh ?? { numero: "", primeiraHabilitacao: "", expedicao: "", validade: "", uf: "", categoria: "" }), uf: e.target.value })} /></Field>
+            <Field label="1ª habilitação"><Input disabled={!isMotorista} type="date" value={form.cnh?.primeiraHabilitacao ?? ""} onChange={(e) => set("cnh", { ...(form.cnh ?? { numero: "", primeiraHabilitacao: "", expedicao: "", validade: "", uf: "", categoria: "" }), primeiraHabilitacao: e.target.value })} /></Field>
+            <Field label="Expedição"><Input disabled={!isMotorista} type="date" value={form.cnh?.expedicao ?? ""} onChange={(e) => set("cnh", { ...(form.cnh ?? { numero: "", primeiraHabilitacao: "", expedicao: "", validade: "", uf: "", categoria: "" }), expedicao: e.target.value })} /></Field>
+            <Field label="Validade"><Input disabled={!isMotorista} type="date" value={form.cnh?.validade ?? ""} onChange={(e) => set("cnh", { ...(form.cnh ?? { numero: "", primeiraHabilitacao: "", expedicao: "", validade: "", uf: "", categoria: "" }), validade: e.target.value })} /></Field>
           </CardContent>
         </Card>
 

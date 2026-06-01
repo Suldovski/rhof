@@ -40,13 +40,14 @@ import {
 import { useSites } from "@/lib/sites-store";
 import { useHorarios, horariosStore } from "@/lib/horarios-store";
 import { UFS, SINDICATOS_POR_UF } from "@/lib/sindicatos";
-import { readFileAsDataURL } from "@/lib/doc-templates-store";
+import { readFileAsDataURL, useDocTemplates } from "@/lib/doc-templates-store";
 import { fetchCep } from "@/lib/cep";
 import { downloadFRE } from "@/lib/fre-pdf";
 import { dismissalsStore } from "@/lib/dismissals-store";
 import { authStore, useAuth } from "@/lib/auth-store";
 import { isWorkUser, getUserWorkName, isRhMatriz, isClienteObra } from "@/lib/permissions";
 import { useRouteProtection, roleChecks } from "@/lib/route-protection";
+import { exportTermoFromTemplate } from "@/lib/termo-docx";
 
 export const Route = createFileRoute("/funcionarios/$id")({
   head: ({ params }) => ({ meta: [{ title: `Funcionário #${params.id} · SIGA` }] }),
@@ -67,6 +68,8 @@ function Detail() {
   const e = useEmployee(id);
   const navigate = useNavigate();
   const auth = useAuth();
+  const templates = useDocTemplates();
+  const sites = useSites();
   const isClient = isClienteObra(auth.currentUser?.role);
   const [confirmDel, setConfirmDel] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -112,6 +115,9 @@ function Detail() {
     }
   }
   const initials = e.name.split(" ").slice(0, 2).map((n) => n[0]).join("");
+  const obraName = e.site || e.organograma || "";
+  const obraId = sites.find((s) => s.name === obraName)?.id;
+  const termoTemplate = templates.find((tpl) => tpl.category === "termo" && tpl.obraId === obraId);
 
   // 🔥 CORREÇÃO: Função assíncrona
   const setStatus = async (s: EmployeeStatus) => {
@@ -134,6 +140,21 @@ function Detail() {
               <Button variant="outline" onClick={() => { downloadFRE(e); toast.success("FRE exportada."); }}>
                 <Download className="mr-1 h-4 w-4" /> Exportar FRE
               </Button>
+              {termoTemplate && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    try {
+                      exportTermoFromTemplate(termoTemplate, e, obraName);
+                      toast.success("Termo gerado a partir do modelo da obra.");
+                    } catch (err: any) {
+                      toast.error(err?.message ?? "Erro ao gerar termo.");
+                    }
+                  }}
+                >
+                  <FileText className="mr-1 h-4 w-4" /> Exportar termo
+                </Button>
+              )}
               {e.status !== "ferias" ? (
                 <Button variant="outline" onClick={() => setStatus("ferias")}>
                   <Plane className="mr-1 h-4 w-4" /> Colocar em férias
