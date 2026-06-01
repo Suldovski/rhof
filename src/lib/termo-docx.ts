@@ -35,7 +35,11 @@ export function exportTermoFromTemplate(template: DocTemplate, employee: Employe
   }
 
   const zip = new PizZip(dataUrlToUint8Array(template.data));
-  const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
+  const doc = new Docxtemplater(zip, {
+    paragraphLoop: true,
+    linebreaks: true,
+    delimiters: { start: "{{", end: "}}" },
+  });
   const today = new Date().toLocaleDateString("pt-BR");
 
   doc.setData({
