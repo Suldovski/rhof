@@ -533,12 +533,13 @@ function NewEmployee() {
           </CardContent>
         </Card>
 
-        <Card>
+ {/* RDV PARA ADMISSÃO */}
+<Card>
   <CardHeader>
     <CardTitle className="font-display text-lg">RDV Para Admissão</CardTitle>
+    <p className="text-sm text-muted-foreground">Requerimento de Desligamento Voluntário</p>
   </CardHeader>
   <CardContent className="grid gap-4 md:grid-cols-2">
-        </Field>
     <Field label="Valor da RDV">
       <Input 
         type="number" 
@@ -554,7 +555,7 @@ function NewEmployee() {
         onChange={(e) => set("numeroRdv", e.target.value)} 
         placeholder="Ex: RDV-2024-001"
       />
-
+    </Field>
   </CardContent>
 </Card>
 
