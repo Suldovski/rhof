@@ -269,8 +269,8 @@ function Detail() {
                     <Info label="Remuneração" value="Informação restrita ao RH" />
                   )}
                   <Info label="Escala/Horário" value={e.escalaHorario} />
-                  <Info label="Número da RDV" value={e.numeroRdv || "—"} />
-                  <Info label="Valor da RDV" value={e.valorRdv ? e.valorRdv.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—"} />
+                  <Info label="Valor da RDV de Admissão" value={e.valorRdv ? e.valorRdv.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—"} />
+                  <Info label="Número da RDV de Admissão" value={e.numeroRdv || "—"} />
                 </CardContent>
               </Card>
             </TabsContent>
