@@ -31,6 +31,7 @@ import { UFS, SINDICATOS_POR_UF } from "@/lib/sindicatos";
 import { readFileAsDataURL } from "@/lib/doc-templates-store";
 import { useAuth } from "@/lib/auth-store";
 import { useRouteProtection, roleChecks } from "@/lib/route-protection";
+import EmployeeAvatar from "@/components/employee-avatar";
 
 export const Route = createFileRoute("/funcionarios/novo")({
   head: () => ({ meta: [{ title: "Novo cadastro · SIGA" }] }),
@@ -228,11 +229,7 @@ function NewEmployee() {
         <Card>
           <CardHeader><CardTitle className="font-display text-lg">Foto do colaborador</CardTitle></CardHeader>
           <CardContent className="flex items-center gap-4">
-            {form.photo ? (
-              <img src={form.photo} alt="Foto" className="h-20 w-20 rounded-full object-cover" />
-            ) : (
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted text-xs text-muted-foreground">Sem foto</div>
-            )}
+            <EmployeeAvatar src={form.photo} name={form.name || "Sem nome"} size="lg" />
             <label className="cursor-pointer">
               <input
                 type="file" accept="image/*" className="hidden"

@@ -5,6 +5,7 @@ import {
   ShieldCheck, Pencil, FileText, Download, Trash2, Plane, Save, Plus, Upload,
   Repeat, UserMinus, Camera,
 } from "lucide-react";
+import EmployeeAvatar from "@/components/employee-avatar";
 import { toast } from "sonner";
 import { PageShell } from "@/components/page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -206,13 +207,7 @@ function Detail() {
       <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
         <Card>
           <CardContent className="p-6 text-center">
-            {e.photo ? (
-              <img src={e.photo} alt={e.name} className="mx-auto h-24 w-24 rounded-full object-cover" />
-            ) : (
-              <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-primary text-2xl font-bold text-primary-foreground">
-                {initials}
-              </div>
-            )}
+            <EmployeeAvatar src={e.photo} name={e.name} size="xl" className="mx-auto" />
             <h2 className="mt-4 font-display text-xl">{e.name}</h2>
             <p className="text-sm text-muted-foreground">{e.role}</p>
             {e.tipo === "terceiro" && e.empresaTerceiro && (

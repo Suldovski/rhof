@@ -26,6 +26,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { employeesStore, useEmployees, type Employee, type EmployeeStatus } from "@/lib/employees";
+import { employeesStore, useEmployees, type Employee, type EmployeeStatus } from "@/lib/employees";
+import EmployeeAvatar from "@/components/employee-avatar";
 import { sitesStore, useSites, slugify } from "@/lib/sites-store";
 
 export const Route = createFileRoute("/funcionarios/")({
@@ -413,13 +415,8 @@ function List() {
               >
                 <div className="font-mono text-xs text-muted-foreground">#{e.id}</div>
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-                    {e.photo ? (
-                      <img src={e.photo} alt={e.name} className="h-full w-full object-cover" />
-                    ) : (
-                      e.name.split(" ").slice(0, 2).map((n) => n[0]).join("")
-                    )}
-                  </div>
+                    importEmployeeAvatar
+                  
                   <div className="min-w-0">
                     <p className="truncate font-semibold">{e.name}</p>
                     <p className="truncate text-xs text-muted-foreground">{e.role}</p>
