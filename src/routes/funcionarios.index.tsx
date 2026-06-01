@@ -414,8 +414,7 @@ function List() {
               >
                 <div className="font-mono text-xs text-muted-foreground">#{e.id}</div>
                 <div className="flex items-center gap-3 min-w-0">
-                    importEmployeeAvatar
-                  
+                  <EmployeeAvatar src={e.photo} name={e.name} size="md" />
                   <div className="min-w-0">
                     <p className="truncate font-semibold">{e.name}</p>
                     <p className="truncate text-xs text-muted-foreground">{e.role}</p>
